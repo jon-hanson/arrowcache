@@ -17,6 +17,7 @@ public class ArrowCacheProducer extends NoOpFlightProducer implements AutoClosea
 
     private final BufferAllocator allocator;
     private final Location location;
+
     private final ConcurrentMap<FlightDescriptor, Dataset> datasets;
 
     public ArrowCacheProducer(BufferAllocator allocator, Location location) {

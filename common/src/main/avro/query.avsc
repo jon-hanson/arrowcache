@@ -1,0 +1,48 @@
+[
+    {
+        "namespace": "org.typemeta.arrowcache.common.avro",
+        "type": "record",
+        "name": "SVFilter",
+        "fields": [
+            {"name": "attribute", "type": "string"},
+            {
+                "name": "operator",
+                "type": {
+                    "type": "enum",
+                    "name": "SVOperator",
+                    "symbols": [
+                        "EQUALS",
+                        "NOT_EQUALS"
+                    ]
+                }
+            },
+            {"name": "value", "type": "string"}
+        ]
+    },{
+        "namespace": "org.typemeta.arrowcache.common.avro",
+        "type": "record",
+        "name": "MVFilter",
+        "fields": [
+            {"name": "attribute", "type": "string"},
+            {
+                "name": "operator",
+                "type": {
+                    "type": "enum",
+                    "name": "MVOperator",
+                    "symbols": [
+                        "IN",
+                        "NOT_IN"
+                    ]
+                }
+            },
+            {"name": "values", "type": {"type": "array", "items": "string"}}
+        ]
+    },{
+        "namespace": "org.typemeta.arrowcache.common.avro",
+        "type": "record",
+        "name": "Query",
+        "fields": [
+            {"name": "filters", "type": {"type": "array", "items": ["SVFilter", "MVFilter"]}}
+        ]
+    }
+]
