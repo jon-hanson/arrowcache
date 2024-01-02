@@ -1,7 +1,7 @@
-package org.typemeta.arrowcache.common;
+package io.nson.arrowcache.common;
 
 import org.junit.jupiter.api.Test;
-import org.typemeta.arrowcache.common.avro.Query;
+import io.nson.arrowcache.common.avro.Query;
 
 import java.io.*;
 import java.util.function.Consumer;

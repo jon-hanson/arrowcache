@@ -1,4 +1,4 @@
-package org.typemeta.arrowcache.client;
+package io.nson.arrowcache.client;
 
 import java.io.*;
 import java.util.List;

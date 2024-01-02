@@ -1,4 +1,4 @@
-package org.typemeta.arrowcache.server;
+package io.nson.arrowcache.server;
 
 import org.apache.arrow.flight.*;
 import org.apache.arrow.memory.BufferAllocator;

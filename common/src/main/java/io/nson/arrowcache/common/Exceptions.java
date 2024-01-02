@@ -1,4 +1,4 @@
-package org.typemeta.arrowcache.common;
+package io.nson.arrowcache.common;
 
 import java.util.function.*;
 

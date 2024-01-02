@@ -1,4 +1,4 @@
-package org.typemeta.arrowcache.client;
+package io.nson.arrowcache.client;
 
 import org.apache.arrow.flight.*;
 import org.apache.arrow.memory.*;

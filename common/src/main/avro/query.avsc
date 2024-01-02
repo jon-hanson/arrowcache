@@ -1,6 +1,6 @@
 [
     {
-        "namespace": "org.typemeta.arrowcache.common.avro",
+        "namespace": "io.nson.arrowcache.common.avro",
         "type": "record",
         "name": "SVFilter",
         "fields": [
@@ -19,7 +19,7 @@
             {"name": "value", "type": "string"}
         ]
     },{
-        "namespace": "org.typemeta.arrowcache.common.avro",
+        "namespace": "io.nson.arrowcache.common.avro",
         "type": "record",
         "name": "MVFilter",
         "fields": [
@@ -38,7 +38,7 @@
             {"name": "values", "type": {"type": "array", "items": "string"}}
         ]
     },{
-        "namespace": "org.typemeta.arrowcache.common.avro",
+        "namespace": "io.nson.arrowcache.common.avro",
         "type": "record",
         "name": "Query",
         "fields": [

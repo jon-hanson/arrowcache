@@ -1,4 +1,4 @@
-package org.typemeta.arrowcache.server;
+package io.nson.arrowcache.server;
 
 import org.apache.arrow.util.AutoCloseables;
 import org.apache.arrow.vector.ipc.message.ArrowRecordBatch;
