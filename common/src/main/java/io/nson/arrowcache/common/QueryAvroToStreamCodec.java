@@ -1,6 +1,7 @@
 package io.nson.arrowcache.common;
 
 import io.nson.arrowcache.common.avro.Query;
+import io.nson.arrowcache.common.utils.BiCodec;
 
 import java.io.*;
 import java.util.function.Consumer;

@@ -1,4 +1,4 @@
-package io.nson.arrowcache.common;
+package io.nson.arrowcache.common.utils;
 
 import java.util.function.Function;
 
