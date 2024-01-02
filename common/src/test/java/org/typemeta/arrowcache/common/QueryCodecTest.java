@@ -15,22 +15,18 @@ public class QueryCodecTest {
     @Test
     public void roundTripQueryApiToAvro() {
         final Query avroQuery = QueryApiToAvroCodec.INSTANCE.encode(TestData.API_QUERY);
-
         assertEquals(TestData.AVRO_QUERY, avroQuery, "API query converted to Avro");
 
         final Api.Query apiQuery2 = QueryApiToAvroCodec.INSTANCE.decode(avroQuery);
-
         assertEquals(TestData.API_QUERY, apiQuery2, "API query round-tripped via Avro");
     }
 
     @Test
     public void roundTripQueryAvroToApi() {
         final Api.Query apiQuery = QueryApiToAvroCodec.INSTANCE.decode(TestData.AVRO_QUERY);
-
         assertEquals(TestData.API_QUERY, apiQuery, "Avro query converted to API");
 
         final Query avroQuery2 = QueryApiToAvroCodec.INSTANCE.encode(apiQuery);
-
         assertEquals(TestData.AVRO_QUERY, avroQuery2, "Avro query round-tripped via API");
     }
 
