@@ -16,7 +16,7 @@
                     ]
                 }
             },
-            {"name": "value", "type": "string"}
+            {"name": "value", "type": ["boolean", "int", "long", "string"]}
         ]
     },{
         "namespace": "io.nson.arrowcache.common.avro",
@@ -35,7 +35,7 @@
                     ]
                 }
             },
-            {"name": "values", "type": {"type": "array", "items": "string"}}
+            {"name": "values", "type": {"type": "array", "items": ["boolean", "int", "long", "string"]}}
         ]
     },{
         "namespace": "io.nson.arrowcache.common.avro",

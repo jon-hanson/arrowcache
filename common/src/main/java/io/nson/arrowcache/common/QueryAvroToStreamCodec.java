@@ -6,7 +6,7 @@ import io.nson.arrowcache.common.utils.BiCodec;
 import java.io.*;
 import java.util.function.Consumer;
 
-public class QueryAvroToStreamCodec implements BiCodec<Query, Consumer<OutputStream>, Query, InputStream> {
+public final class QueryAvroToStreamCodec implements BiCodec<Query, Consumer<OutputStream>, Query, InputStream> {
     public static final QueryAvroToStreamCodec INSTANCE = new QueryAvroToStreamCodec();
 
     @Override

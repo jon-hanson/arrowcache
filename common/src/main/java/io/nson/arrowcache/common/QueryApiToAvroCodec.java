@@ -5,7 +5,7 @@ import io.nson.arrowcache.common.utils.*;
 
 import java.util.*;
 
-public class QueryApiToAvroCodec implements Codec<Api.Query, Query> {
+public final class QueryApiToAvroCodec implements Codec<Api.Query, Query> {
     public static final QueryApiToAvroCodec INSTANCE = new QueryApiToAvroCodec();
 
     @Override
@@ -15,17 +15,17 @@ public class QueryApiToAvroCodec implements Codec<Api.Query, Query> {
         );
     }
 
-    private static Object encode(Api.Filter filter) {
+    private static <T> Object encode(Api.Filter<T> filter) {
         if (filter instanceof Api.SVFilter) {
-            return encode((Api.SVFilter)filter);
+            return encode((Api.SVFilter<?>)filter);
         } else if (filter instanceof Api.MVFilter) {
-            return encode((Api.MVFilter)filter);
+            return encode((Api.MVFilter<?>)filter);
         } else {
             throw new Codec.Exception("Unrecognised Api.Filter type - " + filter.getClass());
         }
     }
 
-    private static SVFilter encode(Api.SVFilter svFilter) {
+    private static <T> SVFilter encode(Api.SVFilter<T> svFilter) {
         return new SVFilter(
                 svFilter.attribute(),
                 encode(svFilter.operator()),
@@ -44,7 +44,7 @@ public class QueryApiToAvroCodec implements Codec<Api.Query, Query> {
         }
     }
 
-    private static MVFilter encode(Api.MVFilter mvFilter) {
+    private static <T> MVFilter encode(Api.MVFilter<T> mvFilter) {
         return new MVFilter(
                 mvFilter.attribute(),
                 encode(mvFilter.operator()),
@@ -70,7 +70,7 @@ public class QueryApiToAvroCodec implements Codec<Api.Query, Query> {
         );
     }
 
-    private static Api.Filter decodeFilter(Object filter) {
+    private static <T> Api.Filter<T> decodeFilter(Object filter) {
         if (filter instanceof SVFilter) {
             return decode((SVFilter)filter);
         } else if (filter instanceof MVFilter) {
@@ -80,11 +80,11 @@ public class QueryApiToAvroCodec implements Codec<Api.Query, Query> {
         }
     }
 
-    private static Api.SVFilter decode(SVFilter svFilter) {
-        return new Api.SVFilter(
+    private static <T> Api.SVFilter<T> decode(SVFilter svFilter) {
+        return new Api.SVFilter<T>(
                 svFilter.getAttribute().toString(),
                 decode(svFilter.getOperator()),
-                svFilter.getValue().toString()
+                (T)decodeValue(svFilter.getValue())
         );
     }
 
@@ -99,11 +99,11 @@ public class QueryApiToAvroCodec implements Codec<Api.Query, Query> {
         }
     }
 
-    private static Api.MVFilter decode(MVFilter mvFilter) {
-        return new Api.MVFilter(
+    private static <T> Api.MVFilter<T> decode(MVFilter mvFilter) {
+        return new Api.MVFilter<T>(
                 mvFilter.getAttribute().toString(),
                 decode(mvFilter.getOperator()),
-                Functors.setMap(mvFilter.getValues(), CharSequence::toString)
+                Functors.setMap((List<T>)mvFilter.getValues(), o -> (T)decodeValue(o))
         );
     }
 
@@ -115,6 +115,22 @@ public class QueryApiToAvroCodec implements Codec<Api.Query, Query> {
                 return Api.MVFilter.Operator.NOT_IN;
             default:
                 throw new Codec.Exception("Unrecognised MVOperator value - " + mvOperator);
+        }
+    }
+
+    private static Object decodeValue(Object value) {
+        if (value == null) {
+            return null;
+        } else if (value instanceof CharSequence) {
+            return value.toString();
+        } else if (value instanceof Integer) {
+            return value;
+        } else if (value instanceof Long) {
+            return value;
+        } else if (value instanceof Boolean) {
+            return value;
+        } else {
+            return value;
         }
     }
 }
