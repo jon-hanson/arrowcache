@@ -28,8 +28,7 @@
 
         <dependency>
             <groupId>org.apache.arrow</groupId>
-            <artifactId>flight-grpc</artifactId>
-            <version>${arrow.version}</version>
+            <artifactId>flight-core</artifactId>
         </dependency>
 
 <!--        <dependency>-->

@@ -19,6 +19,11 @@ public class TestClient {
 
     private static final CallOption TIMEOUT_CA = CallOptions.timeout(10, TimeUnit.MINUTES);
 
+    /*
+    Run with
+        --add-opens=java.base/java.nio=org.apache.arrow.memory.core,ALL-UNNAMED
+        --add-opens=java.base/java.nio=org.apache.arrow.flight.core,ALL-UNNAMED
+     */
     public static void main(String[] args) {
 
         final Location location = Location.forGrpcInsecure("localhost", 12233);

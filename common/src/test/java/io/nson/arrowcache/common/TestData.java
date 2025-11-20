@@ -16,15 +16,15 @@ public class TestData {
     private static final String VALUE_4 = "gamma";
 
     static {
-        final List<Api.Filter> filters = new ArrayList<>();
+        final List<Api.Filter<?>> filters = new ArrayList<>();
 
-        filters.add(new Api.SVFilter(
+        filters.add(new Api.SVFilter<>(
                 ATTR_A,
                 Api.SVFilter.Operator.NOT_EQUALS,
                 VALUE_1
         ));
 
-        filters.add(new Api.MVFilter(
+        filters.add(new Api.MVFilter<>(
                 ATTR_B,
                 Api.MVFilter.Operator.IN,
                 new TreeSet<>(Set.of(VALUE_2, VALUE_3, VALUE_4))

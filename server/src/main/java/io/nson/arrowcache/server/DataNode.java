@@ -33,15 +33,15 @@ public interface DataNode {
     }
 
     class ParentDataNode implements DataNode {
-        private final List<Api.Filter> filters;
+        private final List<Api.Filter<?>> filters;
         private final List<DataNode> childNodes;
 
-        public ParentDataNode(List<Api.Filter> filters, List<DataNode> childNodes) {
+        public ParentDataNode(List<Api.Filter<?>> filters, List<DataNode> childNodes) {
             this.filters = filters;
             this.childNodes = childNodes;
         }
 
-        public ParentDataNode(List<Api.Filter> filters) {
+        public ParentDataNode(List<Api.Filter<?>> filters) {
             this(filters, new ArrayList<>());
         }
 

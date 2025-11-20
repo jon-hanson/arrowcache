@@ -25,7 +25,7 @@ public class ArrowCacheServer implements AutoCloseable {
         this.flightProducer = new ArrowCacheProducer(allocator, location);
         this.flightServer = FlightServer.builder(allocator, location, flightProducer).build();
 
-        logger.info("New instance for location " + location);
+        logger.info("New instance for location {}", location);
     }
 
     public Location location() {
@@ -45,10 +45,15 @@ public class ArrowCacheServer implements AutoCloseable {
     }
 
     public void close() throws Exception {
-        logger.info("Instance closing for location " + location);
+        logger.info("Instance closing for location {}", location);
         AutoCloseables.close(this.flightServer, this.allocator);
     }
 
+    /*
+    Run with
+        --add-opens=java.base/java.nio=org.apache.arrow.memory.core,ALL-UNNAMED
+        --add-opens=java.base/java.nio=org.apache.arrow.flight.core,ALL-UNNAMED
+     */
     public static void main(String[] args) throws Exception {
         logger.info("Starting");
 
