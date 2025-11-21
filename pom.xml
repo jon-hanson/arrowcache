@@ -43,6 +43,7 @@
         <maven-resources-plugin.version>3.2.0</maven-resources-plugin.version>
         <maven-site-plugin.version>3.7.1</maven-site-plugin.version>
         <maven-surefire-plugin.version>3.0.0-M7</maven-surefire-plugin.version>
+        <os-maven-plugin.version>1.7.0</os-maven-plugin.version>
     </properties>
 
     <dependencyManagement>
@@ -75,11 +76,11 @@
                 <version>${slf4j.version}</version>
             </dependency>
 
-            <dependency>
-                <groupId>org.slf4j</groupId>
-                <artifactId>slf4j-simple</artifactId>
-                <version>${slf4j.version}</version>
-            </dependency>
+<!--            <dependency>-->
+<!--                <groupId>org.slf4j</groupId>-->
+<!--                <artifactId>slf4j-simple</artifactId>-->
+<!--                <version>${slf4j.version}</version>-->
+<!--            </dependency>-->
 
             <dependency>
                 <groupId>org.junit.jupiter</groupId>
@@ -92,18 +93,16 @@
                 <version>${junit.jupiter.version}</version>
             </dependency>
 
-    <!--        <dependency>-->
-    <!--            <groupId>ch.qos.logback</groupId>-->
-    <!--            <artifactId>logback-classic</artifactId>-->
-    <!--            <version>${logback.version}</version>-->
-    <!--            <scope>test</scope>-->
-    <!--        </dependency>-->
-    <!--        <dependency>-->
-    <!--            <groupId>ch.qos.logback</groupId>-->
-    <!--            <artifactId>logback-core</artifactId>-->
-    <!--            <version>${logback.version}</version>-->
-    <!--            <scope>test</scope>-->
-    <!--        </dependency>-->
+            <dependency>
+                <groupId>ch.qos.logback</groupId>
+                <artifactId>logback-classic</artifactId>
+                <version>${logback.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>ch.qos.logback</groupId>
+                <artifactId>logback-core</artifactId>
+                <version>${logback.version}</version>
+            </dependency>
 
         </dependencies>
 
@@ -123,6 +122,13 @@
     </dependencies>
 
     <build>
+        <extensions>
+            <extension>
+                <groupId>kr.motd.maven</groupId>
+                <artifactId>os-maven-plugin</artifactId>
+                <version>${os-maven-plugin.version}</version>
+            </extension>
+        </extensions>
         <pluginManagement>
             <plugins>
                 <plugin>

@@ -33,61 +33,65 @@ public class TestClient {
                 final VectorSchemaRoot vsc = createTestDataVSC(allocator);
                 final FlightClient client = FlightClient.builder(allocator, location).build()
         ) {
-            logger.info("FlightInfo:");
+            logger.info("FlightInfos:");
             client.listFlights(Criteria.ALL, TIMEOUT_CA)
                     .forEach(flightInfo -> {
-                        logger.info("" + flightInfo);
+                        logger.info("    {}", flightInfo);
                     });
 
             logger.info("Calling startPut");
 
             final FlightDescriptor flightDesc = FlightDescriptor.path("test");
-            final FlightClient.ClientStreamListener listener = client.startPut(
-                    flightDesc,
-                    vsc,
-                    new AsyncPutListener(),
-                    TIMEOUT_CA
-            );
 
-            loadTestData(vsc, "testdata.csv");
+            {
+                final FlightClient.ClientStreamListener listener = client.startPut(
+                        flightDesc,
+                        vsc,
+                        new AsyncPutListener(),
+                        TIMEOUT_CA
+                );
 
-            logger.info("VectorSchemaRoot:");
-            logger.info(vsc.contentToTSVString());
+                loadTestData(vsc, "testdata.csv");
 
-            logger.info("Calling listener.putNext");
-            listener.putNext();
+                logger.info("VectorSchemaRoot:");
+                logger.info(vsc.contentToTSVString());
 
-            logger.info("Calling listener.completed");
-            listener.completed();
+                logger.info("Calling listener.putNext");
+                listener.putNext();
 
-            logger.info("Calling listener.getResult");
-            listener.getResult();
+                logger.info("Calling listener.completed");
+                listener.completed();
 
-            logger.info("FlightInfo:");
+                logger.info("Calling listener.getResult");
+                listener.getResult();
+            }
+
+            logger.info("FlightInfos:");
             client.listFlights(Criteria.ALL, TIMEOUT_CA)
                     .forEach(flightInfo -> {
-                        logger.info("" + flightInfo);
+                        logger.info("    {}", flightInfo);
                     });
 
             final FlightInfo flightInfo = client.getInfo(flightDesc, TIMEOUT_CA);
-            logger.info("FlightInfo: " + flightInfo);
+            logger.info("FlightInfo: {}", flightInfo);
 
             flightInfo.getEndpoints().forEach(endPoint -> {
                 for (Location loc : endPoint.getLocations()) {
+                    logger.info("    Location: {}", loc);
                     final FlightClient flightClient = loc.equals(location) ? client : null;
                     try (final FlightStream flightStream = flightClient.getStream(endPoint.getTicket(), TIMEOUT_CA)) {
-
-                        logger.info("Schema: " + flightStream.getSchema());
+                        logger.info("    Schema: {}", flightStream.getSchema());
 
                         final VectorSchemaRoot vsc2 = flightStream.getRoot();
 
+                        logger.info("    Iterating over flightStream");
                         while (flightStream.next()) {
                             vsc2.getFieldVectors()
                                     .forEach(fv -> {
                                         final int count = fv.getValueCount();
-                                        logger.info("FieldVector: " + fv.getName() + " count=" + count);
+                                        logger.info("        FieldVector: {} count={}", fv.getName(), count);
                                         for (int i = 0; i < count; ++i) {
-                                            logger.info("    " + fv.getObject(i));
+                                            logger.info("    {}", fv.getObject(i));
                                         }
                                     });
                         }
@@ -136,7 +140,6 @@ public class TestClient {
     }
 
     private static VectorSchemaRoot loadTestData(VectorSchemaRoot vsc, String fileName) throws IOException {
-
 
         final IntVector idVector = (IntVector) vsc.getVector("id");
         final VarCharVector nameVector = (VarCharVector) vsc.getVector("name");

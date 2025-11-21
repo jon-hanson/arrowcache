@@ -27,8 +27,13 @@ public class ArrowCacheProducer extends NoOpFlightProducer implements AutoClosea
     }
 
     @Override
+    public void close() throws Exception {
+        AutoCloseables.close(datasets.values());
+    }
+
+    @Override
     public Runnable acceptPut(CallContext context, FlightStream flightStream, StreamListener<PutResult> ackStream) {
-        logger.info("acceptPut: " + context.peerIdentity());
+        logger.info("acceptPut: {}", context.peerIdentity());
 
         final List<ArrowRecordBatch> batches = new ArrayList<>();
 
@@ -41,13 +46,14 @@ public class ArrowCacheProducer extends NoOpFlightProducer implements AutoClosea
 
                 final VectorUnloader unloader = new VectorUnloader(flightStream.getRoot());
                 final ArrowRecordBatch arb = unloader.getRecordBatch();
-                logger.info("ArrowRecordBatch: " + arb);
+
+                logger.info("ArrowRecordBatch: {}", arb);
                 batches.add(arb);
 
                 rows += flightStream.getRoot().getRowCount();
             }
 
-            logger.info("Received " + rows + " rows");
+            logger.info("Received {} rows", rows);
 
             final Dataset dataset = new Dataset(batches, flightStream.getSchema(), rows);
             datasets.put(flightStream.getDescriptor(), dataset);
@@ -59,29 +65,32 @@ public class ArrowCacheProducer extends NoOpFlightProducer implements AutoClosea
 
     @Override
     public void getStream(CallContext context, Ticket ticket, ServerStreamListener listener) {
-        logger.info("getStream: " + context.peerIdentity());
+        logger.info("getStream: {}", context.peerIdentity());
 
         final FlightDescriptor flightDescriptor = FlightDescriptor.path(
                 new String(ticket.getBytes(), StandardCharsets.UTF_8)
         );
 
-        logger.info("FlightDescriptor: " + flightDescriptor);
+        logger.info("FlightDescriptor: {}", flightDescriptor);
 
         final Dataset dataset = this.datasets.get(flightDescriptor);
         if (dataset == null) {
             throw CallStatus.NOT_FOUND.withDescription("Unknown descriptor").toRuntimeException();
         }
 
-        try (VectorSchemaRoot root = VectorSchemaRoot.create(
-                this.datasets.get(flightDescriptor).getSchema(), allocator)
+        try (
+                VectorSchemaRoot root = VectorSchemaRoot.create(
+                        this.datasets.get(flightDescriptor).getSchema(),
+                        allocator
+                )
         ) {
-            logger.info("VectorSchemaRoot: " + root.getFieldVectors());
+            logger.info("VectorSchemaRoot: {}", root.getFieldVectors());
 
             final VectorLoader loader = new VectorLoader(root);
             listener.start(root);
 
             for (ArrowRecordBatch arb : this.datasets.get(flightDescriptor).getBatches()) {
-                logger.info("ArrowRecordBatch: " + arb);
+                logger.info("ArrowRecordBatch: {}", arb);
                 loader.load(arb);
                 listener.putNext();
             }
@@ -145,10 +154,5 @@ public class ArrowCacheProducer extends NoOpFlightProducer implements AutoClosea
     public void listFlights(CallContext context, Criteria criteria, StreamListener<FlightInfo> listener) {
         datasets.forEach((k, v) -> { listener.onNext(getFlightInfo(null, k)); });
         listener.onCompleted();
-    }
-
-    @Override
-    public void close() throws Exception {
-        AutoCloseables.close(datasets.values());
     }
 }

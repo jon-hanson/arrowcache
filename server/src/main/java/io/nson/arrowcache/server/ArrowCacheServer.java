@@ -15,7 +15,7 @@ public class ArrowCacheServer implements AutoCloseable {
     private static final Logger logger = LoggerFactory.getLogger(ArrowCacheServer.class);
 
     private final FlightServer flightServer;
-    private final FlightProducer flightProducer;
+    private final ArrowCacheProducer flightProducer;
     private final Location location;
     private final BufferAllocator allocator;
 
@@ -26,6 +26,13 @@ public class ArrowCacheServer implements AutoCloseable {
         this.flightServer = FlightServer.builder(allocator, location, flightProducer).build();
 
         logger.info("New instance for location {}", location);
+    }
+
+    public void close() throws Exception {
+        logger.info("Instance closing for location {}", location);
+        AutoCloseables.close(this.flightProducer);
+        AutoCloseables.close(this.flightServer);
+        AutoCloseables.close(this.allocator);
     }
 
     public Location location() {
@@ -44,32 +51,33 @@ public class ArrowCacheServer implements AutoCloseable {
         this.flightServer.awaitTermination();
     }
 
-    public void close() throws Exception {
-        logger.info("Instance closing for location {}", location);
-        AutoCloseables.close(this.flightServer, this.allocator);
-    }
-
     /*
     Run with
         --add-opens=java.base/java.nio=org.apache.arrow.memory.core,ALL-UNNAMED
         --add-opens=java.base/java.nio=org.apache.arrow.flight.core,ALL-UNNAMED
+    and for memory debugging:
+        -Darrow.memory.debug.allocator=true
      */
     public static void main(String[] args) throws Exception {
         logger.info("Starting");
 
         final BufferAllocator buffAlloc = new RootAllocator();
-        final ArrowCacheServer server = new ArrowCacheServer(buffAlloc, Location.forGrpcInsecure("localhost", 12233));
+
+        final ArrowCacheServer server = new ArrowCacheServer(
+                buffAlloc,
+                Location.forGrpcInsecure("localhost", 12233)
+        );
 
         server.start();
 
         Runtime.getRuntime().addShutdownHook(new Thread(() -> {
             try {
                 logger.info("Exiting...");
-                AutoCloseables.close(server, buffAlloc);
+                AutoCloseables.close(server);
+                AutoCloseables.close(buffAlloc);
             } catch (Exception ex) {
                 logger.error("Ignoring exception", ex);
             }
-
         }));
 
         logger.info("Awaiting termination");
