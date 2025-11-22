@@ -6,7 +6,8 @@ import io.nson.arrowcache.common.utils.BiCodec;
 import java.io.*;
 import java.util.function.Consumer;
 
-public final class QueryAvroToStreamCodec implements BiCodec<Query, Consumer<OutputStream>, Query, InputStream> {
+public final class QueryAvroToStreamCodec
+        implements BiCodec<Consumer<OutputStream>, Query, Query, InputStream> {
     public static final QueryAvroToStreamCodec INSTANCE = new QueryAvroToStreamCodec();
 
     @Override
@@ -21,9 +22,9 @@ public final class QueryAvroToStreamCodec implements BiCodec<Query, Consumer<Out
     }
 
     @Override
-    public Query decode(InputStream is) {
+    public Query decode(InputStream enc) {
         try {
-            return Query.getDecoder().decode(is);
+            return Query.getDecoder().decode(enc);
         } catch (IOException ex) {
             throw new BiCodec.Exception("Decoding error", ex);
         }

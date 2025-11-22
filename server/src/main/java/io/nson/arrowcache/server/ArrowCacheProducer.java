@@ -1,5 +1,6 @@
 package io.nson.arrowcache.server;
 
+import io.nson.arrowcache.server.utils.ArrowUtils;
 import org.apache.arrow.flight.*;
 import org.apache.arrow.memory.BufferAllocator;
 import org.apache.arrow.util.AutoCloseables;
@@ -104,7 +105,7 @@ public class ArrowCacheProducer extends NoOpFlightProducer implements AutoClosea
     @Override
     public void doAction(CallContext context, Action action, StreamListener<Result> listener) {
         final FlightDescriptor flightDescriptor = FlightDescriptor.path(
-                new String(action.getBody(), StandardCharsets.UTF_8)
+                ArrowUtils.bytesToString(action.getBody())
         );
 
         switch (action.getType()) {
@@ -120,12 +121,11 @@ public class ArrowCacheProducer extends NoOpFlightProducer implements AutoClosea
                         return;
                     }
 
-                    final Result result = new Result("Delete completed".getBytes(StandardCharsets.UTF_8));
+                    final Result result = ArrowUtils.stringToResult("Delete completed");
 
                     listener.onNext(result);
                 } else {
-                    final Result result = new Result("Delete not completed. Reason: Key did not exist."
-                            .getBytes(StandardCharsets.UTF_8));
+                    final Result result = ArrowUtils.stringToResult("Delete not completed. Reason: Key did not exist.");
                     listener.onNext(result);
                 }
 

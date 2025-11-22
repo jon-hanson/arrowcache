@@ -2,7 +2,7 @@ package io.nson.arrowcache.common.utils;
 
 import java.util.function.Function;
 
-public interface Codec<T1, T2> extends BiCodec<T1, T2, T1, T2> {
+public interface Codec<RAW, ENC> extends BiCodec<ENC, RAW, RAW, ENC> {
     class Exception extends BiCodec.Exception {
         public Exception() {
         }
@@ -24,35 +24,28 @@ public interface Codec<T1, T2> extends BiCodec<T1, T2, T1, T2> {
         }
     }
 
-    static <T1, T2> Codec<T1, T2> valueOf(Function<T1, T2> encoder, Function<T2, T1> decoder) {
-        return new Codec<T1, T2>() {
+    static <RAW, ENC> Codec<RAW, ENC> valueOf(Function<RAW, ENC> encoder, Function<ENC, RAW> decoder) {
+        return new Codec<RAW, ENC>() {
             @Override
-            public T2 encode(T1 t1) {
+            public ENC encode(RAW t1) {
                 return encoder.apply(t1);
             }
 
             @Override
-            public T1 decode(T2 t2) {
-                return decoder.apply(t2);
+            public RAW decode(ENC enc) {
+                return decoder.apply(enc);
             }
         };
     }
 
-    T2 encode(T1 t1);
+    ENC encode(RAW t1);
 
-    T1 decode(T2 t2);
+    RAW decode(ENC enc);
 
-    default <T3> Codec<T1, T3> andThen(Codec<T2, T3> next) {
+    default <ENC2> Codec<RAW, ENC2> andThen(Codec<ENC, ENC2> next) {
         return valueOf(
                 t1 -> next.encode(encode(t1)),
                 t3 -> decode(next.decode(t3))
-        );
-    }
-
-    default <T0> Codec<T0, T2> combine(Codec<T0, T1> before) {
-        return valueOf(
-                t0 -> encode(before.encode(t0)),
-                t2 -> before.decode(decode(t2))
         );
     }
 }

@@ -17,7 +17,7 @@ import java.util.concurrent.TimeUnit;
 public class TestClient {
     private static final Logger logger = LoggerFactory.getLogger(TestClient.class);
 
-    private static final CallOption TIMEOUT_CA = CallOptions.timeout(10, TimeUnit.MINUTES);
+    private static final CallOption TIMEOUT_CA = CallOptions.timeout(1, TimeUnit.MINUTES);
 
     /*
     Run with
@@ -33,19 +33,15 @@ public class TestClient {
                 final VectorSchemaRoot vsc = createTestDataVSC(allocator);
                 final FlightClient client = FlightClient.builder(allocator, location).build()
         ) {
-            logger.info("FlightInfos:");
-            client.listFlights(Criteria.ALL, TIMEOUT_CA)
-                    .forEach(flightInfo -> {
-                        logger.info("    {}", flightInfo);
-                    });
+            listFlights(client);
 
             logger.info("Calling startPut");
 
-            final FlightDescriptor flightDesc = FlightDescriptor.path("test");
+            final FlightDescriptor FLIGHT_DESC = FlightDescriptor.path("test");
 
             {
                 final FlightClient.ClientStreamListener listener = client.startPut(
-                        flightDesc,
+                        FLIGHT_DESC,
                         vsc,
                         new AsyncPutListener(),
                         TIMEOUT_CA
@@ -66,13 +62,9 @@ public class TestClient {
                 listener.getResult();
             }
 
-            logger.info("FlightInfos:");
-            client.listFlights(Criteria.ALL, TIMEOUT_CA)
-                    .forEach(flightInfo -> {
-                        logger.info("    {}", flightInfo);
-                    });
+            listFlights(client);
 
-            final FlightInfo flightInfo = client.getInfo(flightDesc, TIMEOUT_CA);
+            final FlightInfo flightInfo = client.getInfo(FLIGHT_DESC, TIMEOUT_CA);
             logger.info("FlightInfo: {}", flightInfo);
 
             flightInfo.getEndpoints().forEach(endPoint -> {
@@ -101,11 +93,32 @@ public class TestClient {
                 }
             });
 
+            listFlights(client);
+
+            {
+                // Do delete action
+                final Iterator<Result> deleteActionResult = client.doAction(new Action("DELETE",
+                        FLIGHT_DESC.getPath().get(0).getBytes(StandardCharsets.UTF_8)));
+                while (deleteActionResult.hasNext()) {
+                    Result result = deleteActionResult.next();
+                    logger.info("Client (Do Delete Action): {}", ArrowUtils.resultToString(result));
+                }
+            }
+
+            listFlights(client);
 
             logger.info("Done");
         } catch (Exception ex) {
             logger.error("Unexpected exception", ex);
         }
+    }
+
+    private static void listFlights(FlightClient client) {
+        logger.info("Flights:");
+        client.listFlights(Criteria.ALL, TIMEOUT_CA)
+                .forEach(flightInfo -> {
+                    logger.info("    {}", flightInfo);
+                });
     }
 
     private static VectorSchemaRoot createTestDataVSC(BufferAllocator allocator) {

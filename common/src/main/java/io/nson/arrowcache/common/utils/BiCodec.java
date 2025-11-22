@@ -2,7 +2,16 @@ package io.nson.arrowcache.common.utils;
 
 import java.util.function.Function;
 
-public interface BiCodec<F1, F2, R1, R2> {
+/**
+ * A BiCodec instance encodes values of type ENC2 to values of type ENC1,
+ * and decodes values of type DEC2 to values of type DEC1.
+ * In effect, it's a generalisation of Codec.
+ * @param <ENC1>
+ * @param <ENC2>
+ * @param <DEC1>
+ * @param <DEC2>
+ */
+public interface BiCodec<ENC1, ENC2, DEC1, DEC2> {
     class Exception extends RuntimeException {
         public Exception() {
         }
@@ -24,36 +33,32 @@ public interface BiCodec<F1, F2, R1, R2> {
         }
     }
 
-    static <F1, F2, R1, R2> BiCodec<F1, F2, R1, R2> valueOf(Function<F1, F2> encoder, Function<R2, R1> decoder) {
+    static <ENC1, ENC2, DEC1, DEC2> BiCodec<ENC1, ENC2, DEC1, DEC2> valueOf(
+            Function<ENC2, ENC1> encoder,
+            Function<DEC2, DEC1> decoder
+    ) {
         return new BiCodec<>() {
             @Override
-            public F2 encode(F1 raw) {
+            public ENC1 encode(ENC2 raw) {
                 return encoder.apply(raw);
             }
 
             @Override
-            public R1 decode(R2 dec) {
-                return decoder.apply(dec);
+            public DEC1 decode(DEC2 enc) {
+                return decoder.apply(enc);
             }
         };
     }
 
-    F2 encode(F1 raw);
+    ENC1 encode(ENC2 raw);
 
-    R1 decode(R2 dec);
+    DEC1 decode(DEC2 enc);
 
 
-    default <F3, R3> BiCodec<F1, F3, R1, R3> andThen(BiCodec<F2, F3, R2, R3> next) {
+    default <ENC3, DEC3> BiCodec<ENC3, ENC2, DEC1, DEC3> andThen(BiCodec<ENC3, ENC1, DEC2, DEC3> next) {
         return valueOf(
-                f1 -> next.encode(encode(f1)),
-                r3 -> decode(next.decode(r3))
-        );
-    }
-
-    default <F0, R0> BiCodec<F0, F2, R0, R2> combine(BiCodec<F0, F1, R0, R1> before) {
-        return valueOf(
-                f0 -> encode(before.encode(f0)),
-                r2 -> before.decode(decode(r2))
+                enc2 -> next.encode(encode(enc2)),
+                dec3 -> decode(next.decode(dec3))
         );
     }
 }

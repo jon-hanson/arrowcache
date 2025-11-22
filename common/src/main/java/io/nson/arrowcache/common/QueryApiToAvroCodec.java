@@ -64,9 +64,9 @@ public final class QueryApiToAvroCodec implements Codec<Api.Query, Query> {
     }
 
     @Override
-    public Api.Query decode(Query query) {
+    public Api.Query decode(Query enc) {
         return new Api.Query(
-                Functors.listMap(query.getFilters(), QueryApiToAvroCodec::decodeFilter)
+                Functors.listMap(enc.getFilters(), QueryApiToAvroCodec::decodeFilter)
         );
     }
 

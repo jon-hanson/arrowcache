@@ -10,6 +10,6 @@ public abstract class QueryCodecs {
 
     public static final QueryAvroToStreamCodec AVRO_TO_STREAM = QueryAvroToStreamCodec.INSTANCE;
 
-    public static final BiCodec<Api.Query, Consumer<OutputStream>, Api.Query, InputStream> API_TO_BYTES =
+    public static final BiCodec<Consumer<OutputStream>, Api.Query, Api.Query, InputStream> API_TO_BYTES =
             API_TO_AVRO.andThen(AVRO_TO_STREAM);
 }
