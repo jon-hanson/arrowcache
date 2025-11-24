@@ -1,5 +1,7 @@
 package io.nson.arrowcache.server.utils;
 
+import org.apache.arrow.flight.Action;
+import org.apache.arrow.flight.FlightProducer;
 import org.apache.arrow.flight.Result;
 
 import java.nio.charset.StandardCharsets;
@@ -17,5 +19,18 @@ public abstract class ArrowUtils {
 
     public static String bytesToString(byte[] bytes) {
         return new String(bytes, StandardCharsets.UTF_8);
+    }
+
+    public static String toString(FlightProducer.CallContext context) {
+        return "Context{peerIdentity=" + context.peerIdentity() +
+                "; isCancelled=" + context.isCancelled()
+                +"}";
+    }
+
+
+    public static String toString(Action action) {
+        return "Action{type=" + action.getType() +
+                "; body=" + bytesToString(action.getBody())
+                +"}";
     }
 }

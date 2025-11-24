@@ -104,13 +104,23 @@ public class ArrowCacheProducer extends NoOpFlightProducer implements AutoClosea
 
     @Override
     public void doAction(CallContext context, Action action, StreamListener<Result> listener) {
+
+        logger.info(
+                "doAction called - CallContext: {}, Action:{} ",
+                ArrowUtils.toString(context),
+                ArrowUtils.toString(action)
+        );
+
         final FlightDescriptor flightDescriptor = FlightDescriptor.path(
                 ArrowUtils.bytesToString(action.getBody())
         );
 
         switch (action.getType()) {
             case "DELETE": {
+                logger.info("Delete: {}", flightDescriptor);
                 final Dataset removed = datasets.remove(flightDescriptor);
+                logger.info("    Removed dataset: {}", removed);
+
                 if (removed != null) {
                     try {
                         removed.close();

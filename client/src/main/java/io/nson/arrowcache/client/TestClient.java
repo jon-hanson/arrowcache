@@ -17,7 +17,7 @@ import java.util.concurrent.TimeUnit;
 public class TestClient {
     private static final Logger logger = LoggerFactory.getLogger(TestClient.class);
 
-    private static final CallOption TIMEOUT_CA = CallOptions.timeout(1, TimeUnit.MINUTES);
+    private static final CallOption CALL_TIMEOUT = CallOptions.timeout(1, TimeUnit.MINUTES);
 
     /*
     Run with
@@ -44,7 +44,7 @@ public class TestClient {
                         FLIGHT_DESC,
                         vsc,
                         new AsyncPutListener(),
-                        TIMEOUT_CA
+                        CALL_TIMEOUT
                 );
 
                 loadTestData(vsc, "testdata.csv");
@@ -64,14 +64,14 @@ public class TestClient {
 
             listFlights(client);
 
-            final FlightInfo flightInfo = client.getInfo(FLIGHT_DESC, TIMEOUT_CA);
+            final FlightInfo flightInfo = client.getInfo(FLIGHT_DESC, CALL_TIMEOUT);
             logger.info("FlightInfo: {}", flightInfo);
 
             flightInfo.getEndpoints().forEach(endPoint -> {
                 for (Location loc : endPoint.getLocations()) {
                     logger.info("    Location: {}", loc);
                     final FlightClient flightClient = loc.equals(location) ? client : null;
-                    try (final FlightStream flightStream = flightClient.getStream(endPoint.getTicket(), TIMEOUT_CA)) {
+                    try (final FlightStream flightStream = flightClient.getStream(endPoint.getTicket(), CALL_TIMEOUT)) {
                         logger.info("    Schema: {}", flightStream.getSchema());
 
                         final VectorSchemaRoot vsc2 = flightStream.getRoot();
@@ -115,7 +115,7 @@ public class TestClient {
 
     private static void listFlights(FlightClient client) {
         logger.info("Flights:");
-        client.listFlights(Criteria.ALL, TIMEOUT_CA)
+        client.listFlights(Criteria.ALL, CALL_TIMEOUT)
                 .forEach(flightInfo -> {
                     logger.info("    {}", flightInfo);
                 });
@@ -148,6 +148,8 @@ public class TestClient {
         );
 
         final Schema schema = new Schema(Arrays.asList(idField, nameField, ageField, dateField), null);
+
+        logger.info("Schema: {}", schema.toJson());
 
         return VectorSchemaRoot.create(schema, allocator);
     }
