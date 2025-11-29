@@ -82,7 +82,7 @@ public final class QueryApiToAvroCodec implements Codec<Api.Query, Query> {
 
     private static <T> Api.SVFilter<T> decode(SVFilter svFilter) {
         return new Api.SVFilter<T>(
-                svFilter.getAttribute().toString(),
+                svFilter.getAttribute(),
                 decode(svFilter.getOperator()),
                 (T)decodeValue(svFilter.getValue())
         );
@@ -101,7 +101,7 @@ public final class QueryApiToAvroCodec implements Codec<Api.Query, Query> {
 
     private static <T> Api.MVFilter<T> decode(MVFilter mvFilter) {
         return new Api.MVFilter<T>(
-                mvFilter.getAttribute().toString(),
+                mvFilter.getAttribute(),
                 decode(mvFilter.getOperator()),
                 Functors.setMap((List<T>)mvFilter.getValues(), o -> (T)decodeValue(o))
         );
@@ -123,12 +123,6 @@ public final class QueryApiToAvroCodec implements Codec<Api.Query, Query> {
             return null;
         } else if (value instanceof CharSequence) {
             return value.toString();
-        } else if (value instanceof Integer) {
-            return value;
-        } else if (value instanceof Long) {
-            return value;
-        } else if (value instanceof Boolean) {
-            return value;
         } else {
             return value;
         }

@@ -5,15 +5,15 @@ import java.util.function.*;
 public abstract class Exceptions {
     private Exceptions() {}
 
-    interface SideEffect {
+    public interface SideEffect {
         void apply();
     }
 
-    interface CheckedSideEffect<EX extends Exception> {
+    public interface CheckedSideEffect<EX extends Exception> {
         void apply() throws EX;
     }
 
-    static <EX extends Exception> SideEffect uncheckedSideEffect(CheckedSideEffect<EX> f) {
+    public static <EX extends Exception> SideEffect uncheckedSideEffect(CheckedSideEffect<EX> f) {
         return () -> {
             try {
                 f.apply();
@@ -23,11 +23,11 @@ public abstract class Exceptions {
         };
     }
 
-    interface CheckedSupplier<T, EX extends Exception> {
+    public interface CheckedSupplier<T, EX extends Exception> {
         T get() throws EX;
     }
 
-    static <T, EX extends Exception> Supplier<T> uncheckedSupplier(CheckedSupplier<T, EX> f) {
+    public static <T, EX extends Exception> Supplier<T> uncheckedSupplier(CheckedSupplier<T, EX> f) {
         return () -> {
             try {
                 return f.get();
@@ -37,11 +37,11 @@ public abstract class Exceptions {
         };
     }
 
-    interface CheckedConsumer<T, EX extends Exception> {
+    public interface CheckedConsumer<T, EX extends Exception> {
         void consume(T t) throws EX;
     }
 
-    static <T, EX extends Exception> Consumer<T> uncheckedConsumer(CheckedConsumer<T, EX> f) {
+    public static <T, EX extends Exception> Consumer<T> uncheckedConsumer(CheckedConsumer<T, EX> f) {
         return (T t) -> {
             try {
                 f.consume(t);
@@ -51,11 +51,11 @@ public abstract class Exceptions {
         };
     }
 
-    interface CheckedFunction<T, R, EX extends Exception> {
+    public interface CheckedFunction<T, R, EX extends Exception> {
         R apply(T t) throws EX;
     }
 
-    static <T, R, EX extends Exception> Function<T, R> uncheckedFunction(CheckedFunction<T, R, EX> f) {
+    public static <T, R, EX extends Exception> Function<T, R> uncheckedFunction(CheckedFunction<T, R, EX> f) {
         return t -> {
             try {
                 return f.apply(t);

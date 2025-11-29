@@ -14,7 +14,7 @@ public final class QueryAvroToStreamCodec
     public Consumer<OutputStream> encode(Query query) {
         return os -> {
             try {
-                Query.getEncoder().encode(query, os);
+                encodeQuery(query, os);
             } catch (IOException ex) {
                 throw new BiCodec.Exception("Encoding error", ex);
             }
@@ -24,7 +24,7 @@ public final class QueryAvroToStreamCodec
     @Override
     public Query decode(InputStream enc) {
         try {
-            return Query.getDecoder().decode(enc);
+            return decodeQuery(enc);
         } catch (IOException ex) {
             throw new BiCodec.Exception("Decoding error", ex);
         }

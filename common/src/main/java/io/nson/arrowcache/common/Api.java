@@ -9,6 +9,11 @@ public abstract class Api {
 
         public interface Operator {}
 
+        public interface Alg<U> {
+            U svFilter(String attribute, SVFilter.Operator op, Object value);
+            U mvFilter(String attribute, MVFilter.Operator op, Set<?> values);
+        }
+
         protected final String attribute;
 
         public Filter(String attribute) {
@@ -44,6 +49,8 @@ public abstract class Api {
         }
 
         public abstract Operator operator();
+
+        public abstract <U> U alg(Alg<U> alg);
     }
 
     public static class SVFilter<T> extends Filter<T> {
@@ -90,6 +97,11 @@ public abstract class Api {
 
         public Operator operator() {
             return operator;
+        }
+
+        @Override
+        public <U> U alg(Alg<U> alg) {
+            return alg.svFilter(attribute, operator, value);
         }
 
         public T value() {
@@ -141,6 +153,11 @@ public abstract class Api {
 
         public Operator operator() {
             return operator;
+        }
+
+        @Override
+        public <U> U alg(Alg<U> alg) {
+            return alg.mvFilter(attribute, operator, values);
         }
 
         public Set<T> values() {

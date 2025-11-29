@@ -1,5 +1,7 @@
 package io.nson.arrowcache.client;
 
+import io.nson.arrowcache.common.Api;
+import io.nson.arrowcache.common.QueryCodecs;
 import org.apache.arrow.flight.*;
 import org.apache.arrow.memory.*;
 import org.apache.arrow.vector.*;
@@ -17,7 +19,29 @@ import java.util.concurrent.TimeUnit;
 public class TestClient {
     private static final Logger logger = LoggerFactory.getLogger(TestClient.class);
 
-    private static final CallOption CALL_TIMEOUT = CallOptions.timeout(1, TimeUnit.MINUTES);
+    private static final CallOption CALL_TIMEOUT = CallOptions.timeout(1, TimeUnit.HOURS);
+
+    private static final Api.Query QUERY1 = new Api.Query(
+            List.of(
+                    new Api.MVFilter<String>(
+                            "name",
+                            Api.MVFilter.Operator.IN,
+                            Set.of("abc", "def")
+                    )
+            )
+    );
+
+    private static final Api.Query QUERY2 = new Api.Query(
+            List.of(
+                    new Api.SVFilter<Float>(
+                            "age",
+                            Api.SVFilter.Operator.NOT_EQUALS,
+                            2.3f
+                    )
+            )
+    );
+
+    private static final Map<Location, FlightClient> locationClientMap = new HashMap<>();
 
     /*
     Run with
@@ -33,6 +57,8 @@ public class TestClient {
                 final VectorSchemaRoot vsc = createTestDataVSC(allocator);
                 final FlightClient client = FlightClient.builder(allocator, location).build()
         ) {
+            locationClientMap.put(location, client);
+
             listFlights(client);
 
             logger.info("Calling startPut");
@@ -62,36 +88,32 @@ public class TestClient {
                 listener.getResult();
             }
 
+            logger.info("ActionTypes:");
+            {
+                for(ActionType actionType : client.listActions(CALL_TIMEOUT)) {
+                    logger.info("    {}", actionType);
+                }
+            }
+
             listFlights(client);
 
-            final FlightInfo flightInfo = client.getInfo(FLIGHT_DESC, CALL_TIMEOUT);
-            logger.info("FlightInfo: {}", flightInfo);
+            doGetFlight(client, FLIGHT_DESC);
 
-            flightInfo.getEndpoints().forEach(endPoint -> {
-                for (Location loc : endPoint.getLocations()) {
-                    logger.info("    Location: {}", loc);
-                    final FlightClient flightClient = loc.equals(location) ? client : null;
-                    try (final FlightStream flightStream = flightClient.getStream(endPoint.getTicket(), CALL_TIMEOUT)) {
-                        logger.info("    Schema: {}", flightStream.getSchema());
+//            {
+//                logger.info("QUERY1: {}", QueryCodecs.API_TO_AVRO.encode(QUERY1));
+//                final byte[] bytes = QueryCodecs.API_TO_BYTES.encode(QUERY1);
+//                final FlightDescriptor FLIGHT_DESC_QUERY = FlightDescriptor.command(bytes);
+//
+//                doGetFlight(client, FLIGHT_DESC_QUERY);
+//            }
 
-                        final VectorSchemaRoot vsc2 = flightStream.getRoot();
+            {
+                logger.info("QUERY2: {}", QueryCodecs.API_TO_AVRO.encode(QUERY2));
+                final byte[] bytes = QueryCodecs.API_TO_BYTES.encode(QUERY2);
+                final FlightDescriptor FLIGHT_DESC_QUERY = FlightDescriptor.command(bytes);
 
-                        logger.info("    Iterating over flightStream");
-                        while (flightStream.next()) {
-                            vsc2.getFieldVectors()
-                                    .forEach(fv -> {
-                                        final int count = fv.getValueCount();
-                                        logger.info("        FieldVector: {} count={}", fv.getName(), count);
-                                        for (int i = 0; i < count; ++i) {
-                                            logger.info("    {}", fv.getObject(i));
-                                        }
-                                    });
-                        }
-                    } catch (Exception ex) {
-                        throw new RuntimeException(ex);
-                    }
-                }
-            });
+                doGetFlight(client, FLIGHT_DESC_QUERY);
+            }
 
             listFlights(client);
 
@@ -119,6 +141,38 @@ public class TestClient {
                 .forEach(flightInfo -> {
                     logger.info("    {}", flightInfo);
                 });
+    }
+
+    private static void doGetFlight(FlightClient client, FlightDescriptor flightDescriptor) {
+        final FlightInfo flightInfo = client.getInfo(flightDescriptor, CALL_TIMEOUT);
+        logger.info("FlightInfo: {}", flightInfo);
+
+        flightInfo.getEndpoints().forEach(endPoint -> {
+            for (Location loc : endPoint.getLocations()) {
+                logger.info("    Location: {}", loc);
+                final FlightClient flightClient = locationClientMap.get(loc);
+
+                try (final FlightStream flightStream = flightClient.getStream(endPoint.getTicket(), CALL_TIMEOUT)) {
+                    logger.info("    Schema: {}", flightStream.getSchema());
+
+                    final VectorSchemaRoot vsc = flightStream.getRoot();
+
+                    logger.info("    Iterating over flightStream");
+                    while (flightStream.next()) {
+                        vsc.getFieldVectors()
+                                .forEach(fv -> {
+                                    final int count = fv.getValueCount();
+                                    logger.info("        FieldVector: {} count={}", fv.getName(), count);
+                                    for (int i = 0; i < count; ++i) {
+                                        logger.info("            {}", fv.getObject(i));
+                                    }
+                                });
+                    }
+                } catch (Exception ex) {
+                    throw new RuntimeException(ex);
+                }
+            }
+        });
     }
 
     private static VectorSchemaRoot createTestDataVSC(BufferAllocator allocator) {

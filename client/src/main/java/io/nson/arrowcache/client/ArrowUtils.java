@@ -1,5 +1,6 @@
 package io.nson.arrowcache.client;
 
+import io.nson.arrowcache.common.ByteUtils;
 import org.apache.arrow.flight.Result;
 
 import java.nio.charset.StandardCharsets;
@@ -8,10 +9,10 @@ public abstract class ArrowUtils {
     private ArrowUtils() {}
 
     public static Result stringToResult(String s) {
-        return new Result(s.getBytes(StandardCharsets.UTF_8));
+        return new Result(ByteUtils.stringToBytes(s));
     }
 
     public static String resultToString(Result res) {
-        return new String(res.getBody(), StandardCharsets.UTF_8);
+        return ByteUtils.bytesToString(res.getBody());
     }
 }

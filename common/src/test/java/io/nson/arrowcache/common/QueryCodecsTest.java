@@ -42,10 +42,10 @@ public class QueryCodecsTest {
     @Test
     public void roundTripQueryApiToBytes() {
         final ByteArrayOutputStream baos = new ByteArrayOutputStream();
-        QueryCodecs.API_TO_BYTES.encode(TestData.API_QUERY).accept(baos);
+        QueryCodecs.API_TO_STREAM.encode(TestData.API_QUERY).accept(baos);
 
         final ByteArrayInputStream bais = new ByteArrayInputStream(baos.toByteArray());
-        final Api.Query apiQuery2 = QueryCodecs.API_TO_BYTES.decode(bais);
+        final Api.Query apiQuery2 = QueryCodecs.API_TO_STREAM.decode(bais);
 
         assertEquals(TestData.API_QUERY, apiQuery2, "API query round-tripped via byte array");
         assertTrue(bais.available() == 0, "Byte array stream has been completely consumed");

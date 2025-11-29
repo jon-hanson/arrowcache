@@ -1,0 +1,17 @@
+package io.nson.arrowcache.common;
+
+import java.io.ByteArrayInputStream;
+import java.io.IOException;
+import java.nio.charset.StandardCharsets;
+
+public abstract class ByteUtils {
+    private ByteUtils() {}
+
+    public static byte[] stringToBytes(String s) {
+        return s.getBytes(StandardCharsets.UTF_8);
+    }
+
+    public static String bytesToString(byte[] bytes) {
+        return new String(bytes, StandardCharsets.UTF_8);
+    }
+}
