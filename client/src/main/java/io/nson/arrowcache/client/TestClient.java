@@ -99,13 +99,13 @@ public class TestClient {
 
             doGetFlight(client, FLIGHT_DESC);
 
-//            {
-//                logger.info("QUERY1: {}", QueryCodecs.API_TO_AVRO.encode(QUERY1));
-//                final byte[] bytes = QueryCodecs.API_TO_BYTES.encode(QUERY1);
-//                final FlightDescriptor FLIGHT_DESC_QUERY = FlightDescriptor.command(bytes);
-//
-//                doGetFlight(client, FLIGHT_DESC_QUERY);
-//            }
+            {
+                logger.info("QUERY1: {}", QueryCodecs.API_TO_AVRO.encode(QUERY1));
+                final byte[] bytes = QueryCodecs.API_TO_BYTES.encode(QUERY1);
+                final FlightDescriptor FLIGHT_DESC_QUERY = FlightDescriptor.command(bytes);
+
+                doGetFlight(client, FLIGHT_DESC_QUERY);
+            }
 
             {
                 logger.info("QUERY2: {}", QueryCodecs.API_TO_AVRO.encode(QUERY2));

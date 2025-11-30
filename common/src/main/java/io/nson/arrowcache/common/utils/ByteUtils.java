@@ -1,7 +1,5 @@
-package io.nson.arrowcache.common;
+package io.nson.arrowcache.common.utils;
 
-import java.io.ByteArrayInputStream;
-import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 
 public abstract class ByteUtils {

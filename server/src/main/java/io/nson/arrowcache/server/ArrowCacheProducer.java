@@ -1,7 +1,7 @@
 package io.nson.arrowcache.server;
 
 import io.nson.arrowcache.common.Api;
-import io.nson.arrowcache.common.ByteUtils;
+import io.nson.arrowcache.common.utils.ByteUtils;
 import io.nson.arrowcache.common.QueryCodecs;
 import io.nson.arrowcache.common.utils.Exceptions;
 import io.nson.arrowcache.server.utils.ArrowUtils;
@@ -11,17 +11,16 @@ import org.apache.arrow.memory.BufferAllocator;
 import org.apache.arrow.util.AutoCloseables;
 import org.apache.arrow.vector.*;
 import org.apache.arrow.vector.ipc.message.ArrowRecordBatch;
-import org.apache.arrow.vector.types.pojo.Field;
 import org.apache.arrow.vector.types.pojo.Schema;
 import org.apache.arrow.vector.util.VectorSchemaRootAppender;
 import org.slf4j.*;
 
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
+import java.io.IOException;
 import java.util.*;
 import java.util.concurrent.*;
 import java.util.function.BiPredicate;
-import java.util.function.Predicate;
 
 import static java.util.stream.Collectors.toMap;
 
@@ -99,45 +98,51 @@ public class ArrowCacheProducer extends NoOpFlightProducer implements AutoClosea
 
     @Override
     public FlightInfo getFlightInfo(CallContext context, FlightDescriptor descriptor) {
-        final ByteArrayOutputStream baos = new ByteArrayOutputStream();
-        final long records;
-        final Schema schema;
-        if (descriptor.isCommand()) {
-            final Api.Query query = QueryCodecs.API_TO_BYTES.decode(descriptor.getCommand());
+        try {
+            final ByteArrayOutputStream baos = new ByteArrayOutputStream();
+            final long records;
+            final Schema schema;
+            if (descriptor.isCommand()) {
+                final Api.Query query = QueryCodecs.API_TO_BYTES.decode(descriptor.getCommand());
 
-            baos.write(1);
-            QueryCodecs.API_TO_STREAM.encode(query).accept(baos);
+                baos.write(1);
+                QueryCodecs.API_TO_STREAM.encode(query).accept(baos);
 
-            records = -1;
-            schema = datasets.values().stream().findFirst().map(Dataset::getSchema).orElseThrow();
-        } else {
-            baos.write(0);
-            Exceptions.uncheckedSideEffect(
-                    () -> baos.write(ByteUtils.stringToBytes(descriptor.getPath().get(0)))
-            ).apply();
-
-            final Dataset dataset = datasets.get(descriptor);
-            if (dataset == null) {
-                logger.error("Unknown descriptor");
-                throw CallStatus.NOT_FOUND.withDescription("Unknown descriptor").toRuntimeException();
+                records = -1;
+                schema = datasets.values().stream().findFirst().map(Dataset::getSchema).orElseThrow();
             } else {
-                records = dataset.getRows();
-                schema = dataset.getSchema();
+                baos.write(0);
+
+                baos.write(ByteUtils.stringToBytes(descriptor.getPath().get(0)));
+
+                final Dataset dataset = datasets.get(descriptor);
+                if (dataset == null) {
+                    logger.error("Unknown descriptor");
+                    throw CallStatus.NOT_FOUND.withDescription("Unknown descriptor").toRuntimeException();
+                } else {
+                    records = dataset.getRows();
+                    schema = dataset.getSchema();
+                }
             }
+
+            final FlightEndpoint flightEndpoint = new FlightEndpoint(
+                    new Ticket(baos.toByteArray()),
+                    location
+            );
+
+            return new FlightInfo(
+                    schema,
+                    descriptor,
+                    Collections.singletonList(flightEndpoint),
+                    /*bytes=*/-1,
+                    records
+            );
+        } catch (Exception ex) {
+            logger.error("Error servicing query", ex);
+            throw CallStatus.UNKNOWN.withDescription("Unexpected exception")
+                    .withCause(ex)
+                    .toRuntimeException();
         }
-
-        final FlightEndpoint flightEndpoint = new FlightEndpoint(
-                new Ticket(baos.toByteArray()),
-                location
-        );
-
-        return new FlightInfo(
-                schema,
-                descriptor,
-                Collections.singletonList(flightEndpoint),
-                /*bytes=*/-1,
-                records
-        );
     }
 
     @Override
@@ -151,119 +156,13 @@ public class ArrowCacheProducer extends NoOpFlightProducer implements AutoClosea
                 case -1:
                     logger.error("Ticket payload is empty");
                     throw CallStatus.INVALID_ARGUMENT.withDescription("Ticket payload is empty").toRuntimeException();
-                case 0: {
+                case 0:
                     logger.info("Ticket case 0: path");
-
-                    final FlightDescriptor flightDescriptor = FlightDescriptor.path(
-                            ByteUtils.bytesToString(bais.readAllBytes())
-                    );
-
-                    logger.info("FlightDescriptor: {}", flightDescriptor);
-
-                    final Dataset dataset = this.datasets.get(flightDescriptor);
-                    if (dataset == null) {
-                        logger.error("Unknown descriptor");
-                        throw CallStatus.NOT_FOUND.withDescription("Unknown descriptor").toRuntimeException();
-                    }
-
-                    try (
-                            VectorSchemaRoot root = VectorSchemaRoot.create(
-                                    dataset.getSchema(),
-                                    allocator
-                            )
-                    ) {
-                        logger.info("VectorSchemaRoot: {}", root.getFieldVectors());
-
-                        final VectorLoader loader = new VectorLoader(root);
-                        listener.start(root);
-
-                        for (ArrowRecordBatch arb : dataset.getBatches()) {
-                            logger.info("ArrowRecordBatch: {}", arb);
-                            loader.load(arb);
-                            listener.putNext();
-                        }
-
-                        listener.completed();
-
-                        logger.info("Done");
-                    }
-                }
+                    executeGetAll(bais, listener);
                 break;
-                case 1: {
+                case 1:
                     logger.info("Ticket case 1: query");
-                    final Api.Query query = QueryCodecs.API_TO_STREAM.decode(bais);
-                    final Api.Query query2 = TranslateStrings.applyQuery(query);
-                    for (Dataset dataset : this.datasets.values()) {
-                        for (ArrowRecordBatch arb : dataset.getBatches()) {
-                            try (
-                                    VectorSchemaRoot vsc = VectorSchemaRoot.create(
-                                            dataset.getSchema(),
-                                            allocator
-                                    )
-                            ) {
-                                logger.info("VectorSchemaRoot: {}", vsc.getFieldVectors());
-
-                                final VectorLoader loader = new VectorLoader(vsc);
-                                loader.load(arb);
-
-                                final Map<String, FieldVector> fvMap =
-                                        vsc.getFieldVectors().stream()
-                                                .collect(toMap(
-                                                        fv -> fv.getField().getName(),
-                                                        fv -> fv
-                                                ));
-
-                                Set<Integer> matches = null;
-                                for (Api.Filter<?> filter : query2.filters()) {
-                                    final String attrName = filter.attribute();
-                                    final FieldVector fv = fvMap.get(attrName);
-                                    if (matches == null) {
-                                        matches = new TreeSet<>();
-                                        for (int i = 0; i < dataset.getRows(); ++i) {
-                                            if (filter.alg(ARROW_FILTER_ALG).test(fv, i)) {
-                                                matches.add(i);
-                                            }
-                                        }
-                                    } else {
-                                        Set<Integer> matches2 = new TreeSet<>();
-                                        for (int i : matches) {
-                                            if (filter.alg(ARROW_FILTER_ALG).test(fv, i)) {
-                                                matches2.add(i);
-                                            }
-                                        }
-
-                                        matches = matches2;
-                                    }
-
-                                    if (matches.isEmpty()) {
-                                        break;
-                                    }
-                                }
-
-                                final int numRecords = matches == null ? 0 : matches.size();
-
-                                logger.info("Found {} matches", numRecords);
-
-                                try (
-                                    final VectorSchemaRoot resultVsc = VectorSchemaRoot.create(vsc.getSchema(), allocator)
-                                ) {
-                                    if (numRecords > 0) {
-                                        final VectorSchemaRoot[] slices =
-                                                matches.stream()
-                                                        .map(i -> vsc.slice(i, 1))
-                                                        .toArray(VectorSchemaRoot[]::new);
-
-                                        resultVsc.allocateNew();
-                                        listener.start(resultVsc);
-                                        VectorSchemaRootAppender.append(false, resultVsc, slices);
-                                        listener.putNext();
-                                        listener.completed();
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
+                    executeQuery(bais, listener);
                 break;
             }
         } catch (Exception ex) {
@@ -274,8 +173,121 @@ public class ArrowCacheProducer extends NoOpFlightProducer implements AutoClosea
         }
     }
 
-    private static class ArrowFilterAlg implements Api.Filter.Alg<BiPredicate<FieldVector, Integer>> {
+    private void executeGetAll(ByteArrayInputStream bais, ServerStreamListener listener) {
 
+        final FlightDescriptor flightDescriptor = FlightDescriptor.path(
+                ByteUtils.bytesToString(bais.readAllBytes())
+        );
+
+        logger.info("FlightDescriptor: {}", flightDescriptor);
+
+        final Dataset dataset = this.datasets.get(flightDescriptor);
+        if (dataset == null) {
+            logger.error("Unknown descriptor");
+            throw CallStatus.NOT_FOUND.withDescription("Unknown descriptor").toRuntimeException();
+        }
+
+        try (
+                VectorSchemaRoot root = VectorSchemaRoot.create(
+                        dataset.getSchema(),
+                        allocator
+                )
+        ) {
+            logger.info("VectorSchemaRoot: {}", root.getFieldVectors());
+
+            final VectorLoader loader = new VectorLoader(root);
+            listener.start(root);
+
+            for (ArrowRecordBatch arb : dataset.getBatches()) {
+                logger.info("ArrowRecordBatch: {}", arb);
+                loader.load(arb);
+                listener.putNext();
+            }
+
+            listener.completed();
+
+            logger.info("Done");
+        }
+    }
+
+    private void executeQuery(ByteArrayInputStream bais, ServerStreamListener listener) {
+        final Api.Query query = QueryCodecs.API_TO_STREAM.decode(bais);
+        final Api.Query query2 = TranslateStrings.applyQuery(query);
+        for (Dataset dataset : this.datasets.values()) {
+            for (ArrowRecordBatch arb : dataset.getBatches()) {
+                try (
+                        VectorSchemaRoot vsc = VectorSchemaRoot.create(
+                                dataset.getSchema(),
+                                allocator
+                        )
+                ) {
+                    logger.info("VectorSchemaRoot: {}", vsc.getFieldVectors());
+
+                    final VectorLoader loader = new VectorLoader(vsc);
+                    loader.load(arb);
+
+                    final Map<String, FieldVector> fvMap =
+                            vsc.getFieldVectors().stream()
+                                    .collect(toMap(
+                                            fv -> fv.getField().getName(),
+                                            fv -> fv
+                                    ));
+
+                    Set<Integer> matches = null;
+                    for (Api.Filter<?> filter : query2.filters()) {
+                        final String attrName = filter.attribute();
+                        final FieldVector fv = fvMap.get(attrName);
+                        if (matches == null) {
+                            matches = new TreeSet<>();
+                            for (int i = 0; i < dataset.getRows(); ++i) {
+                                if (filter.alg(ARROW_FILTER_ALG).test(fv, i)) {
+                                    matches.add(i);
+                                }
+                            }
+                        } else {
+                            Set<Integer> matches2 = new TreeSet<>();
+                            for (int i : matches) {
+                                if (filter.alg(ARROW_FILTER_ALG).test(fv, i)) {
+                                    matches2.add(i);
+                                }
+                            }
+
+                            matches = matches2;
+                        }
+
+                        if (matches.isEmpty()) {
+                            break;
+                        }
+                    }
+
+                    final int numRecords = matches == null ? 0 : matches.size();
+
+                    logger.info("Found {} matches", numRecords);
+
+                    try (final VectorSchemaRoot resultVsc = VectorSchemaRoot.create(vsc.getSchema(), allocator)) {
+                        VectorSchemaRoot[] slices = null;
+                        try {
+                            slices = matches.stream()
+                                    .map(i -> vsc.slice(i, 1))
+                                    .toArray(VectorSchemaRoot[]::new);
+
+                            resultVsc.allocateNew();
+                            listener.start(resultVsc);
+                            VectorSchemaRootAppender.append(false, resultVsc, slices);
+                            listener.putNext();
+                            listener.completed();
+                        } finally {
+                            for (VectorSchemaRoot slice : slices) {
+                                slice.close();
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    private static final Api.Filter.Alg<BiPredicate<FieldVector, Integer>> ARROW_FILTER_ALG = new Api.Filter.Alg<>() {
         @Override
         public BiPredicate<FieldVector, Integer> svFilter(String attribute, Api.SVFilter.Operator op, Object value) {
             return (fv, i) -> {
@@ -307,9 +319,7 @@ public class ArrowCacheProducer extends NoOpFlightProducer implements AutoClosea
                 }
             };
         }
-    }
-
-    private static final ArrowFilterAlg ARROW_FILTER_ALG = new ArrowFilterAlg();
+    };
 
     @Override
     public void doAction(CallContext context, Action action, StreamListener<Result> listener) {

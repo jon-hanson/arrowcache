@@ -8,6 +8,27 @@ import java.util.*;
 public final class QueryApiToAvroCodec implements Codec<Api.Query, Query> {
     public static final QueryApiToAvroCodec INSTANCE = new QueryApiToAvroCodec();
 
+    private static final Api.Filter.Alg<Object> ENCODE_FILTER_ALG = new Api.Filter.Alg<>() {
+
+        @Override
+        public Object svFilter(String attribute, Api.SVFilter.Operator op, Object value) {
+            return new SVFilter(
+                    attribute,
+                    encode(op),
+                    value
+            );
+        }
+
+        @Override
+        public Object mvFilter(String attribute, Api.MVFilter.Operator op, Set<?> values) {
+            return new MVFilter(
+                    attribute,
+                    encode(op),
+                    new ArrayList<>(values)
+            );
+        }
+    };
+
     @Override
     public Query encode(Api.Query query) {
         return new Query(
@@ -16,21 +37,7 @@ public final class QueryApiToAvroCodec implements Codec<Api.Query, Query> {
     }
 
     private static <T> Object encode(Api.Filter<T> filter) {
-        if (filter instanceof Api.SVFilter) {
-            return encode((Api.SVFilter<?>)filter);
-        } else if (filter instanceof Api.MVFilter) {
-            return encode((Api.MVFilter<?>)filter);
-        } else {
-            throw new Codec.Exception("Unrecognised Api.Filter type - " + filter.getClass());
-        }
-    }
-
-    private static <T> SVFilter encode(Api.SVFilter<T> svFilter) {
-        return new SVFilter(
-                svFilter.attribute(),
-                encode(svFilter.operator()),
-                svFilter.value()
-        );
+        return filter.alg(ENCODE_FILTER_ALG);
     }
 
     private static SVOperator encode(Api.SVFilter.Operator svOperator) {
@@ -42,14 +49,6 @@ public final class QueryApiToAvroCodec implements Codec<Api.Query, Query> {
             default:
                 throw new Codec.Exception("Unrecognised SVFilter.Operator value - " + svOperator);
         }
-    }
-
-    private static <T> MVFilter encode(Api.MVFilter<T> mvFilter) {
-        return new MVFilter(
-                mvFilter.attribute(),
-                encode(mvFilter.operator()),
-                new ArrayList<>(mvFilter.values())
-        );
     }
 
     private static MVOperator encode(Api.MVFilter.Operator mvOperator) {
@@ -119,9 +118,7 @@ public final class QueryApiToAvroCodec implements Codec<Api.Query, Query> {
     }
 
     private static Object decodeValue(Object value) {
-        if (value == null) {
-            return null;
-        } else if (value instanceof CharSequence) {
+        if (value instanceof CharSequence) {
             return value.toString();
         } else {
             return value;

@@ -73,17 +73,17 @@ public abstract class Api {
                 return true;
             } else if (rhs == null || getClass() != rhs.getClass()) {
                 return false;
-            } else if (!super.equals(rhs)) {
-                return false;
             } else {
                 final SVFilter<?> rhsT = (SVFilter<?>) rhs;
-                return operator == rhsT.operator && Objects.equals(value, rhsT.value);
+                return Objects.equals(attribute, rhsT.attribute) &&
+                        operator == rhsT.operator &&
+                        Objects.equals(value, rhsT.value);
             }
         }
 
         @Override
         public int hashCode() {
-            return Objects.hash(super.hashCode(), operator, value);
+            return Objects.hash(attribute, operator, value);
         }
 
         @Override
@@ -129,17 +129,17 @@ public abstract class Api {
                 return true;
             } else if (rhs == null || getClass() != rhs.getClass()) {
                 return false;
-            } else if (!super.equals(rhs)) {
-                return false;
             } else {
                 final MVFilter<?> rhsT = (MVFilter<?>) rhs;
-                return operator == rhsT.operator && Objects.equals(values, rhsT.values);
+                return Objects.equals(attribute, rhsT.attribute) &&
+                        operator == rhsT.operator &&
+                        Objects.equals(values, rhsT.values);
             }
         }
 
         @Override
         public int hashCode() {
-            return Objects.hash(super.hashCode(), operator, values);
+            return Objects.hash(attribute, operator, values);
         }
 
         @Override

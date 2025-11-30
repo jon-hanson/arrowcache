@@ -1,9 +1,7 @@
 package io.nson.arrowcache.client;
 
-import io.nson.arrowcache.common.ByteUtils;
+import io.nson.arrowcache.common.utils.ByteUtils;
 import org.apache.arrow.flight.Result;
-
-import java.nio.charset.StandardCharsets;
 
 public abstract class ArrowUtils {
     private ArrowUtils() {}
