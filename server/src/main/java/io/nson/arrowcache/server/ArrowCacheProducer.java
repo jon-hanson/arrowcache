@@ -3,7 +3,6 @@ package io.nson.arrowcache.server;
 import io.nson.arrowcache.common.Api;
 import io.nson.arrowcache.common.utils.ByteUtils;
 import io.nson.arrowcache.common.QueryCodecs;
-import io.nson.arrowcache.common.utils.Exceptions;
 import io.nson.arrowcache.server.utils.ArrowUtils;
 import io.nson.arrowcache.server.utils.TranslateStrings;
 import org.apache.arrow.flight.*;
@@ -17,7 +16,6 @@ import org.slf4j.*;
 
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
-import java.io.IOException;
 import java.util.*;
 import java.util.concurrent.*;
 import java.util.function.BiPredicate;

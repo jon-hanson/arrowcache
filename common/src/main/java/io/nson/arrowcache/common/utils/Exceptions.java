@@ -11,57 +11,75 @@ public abstract class Exceptions {
 
     public interface CheckedSideEffect<EX extends Exception> {
         void apply() throws EX;
-    }
 
-    public static <EX extends Exception> SideEffect uncheckedSideEffect(CheckedSideEffect<EX> f) {
-        return () -> {
-            try {
-                f.apply();
-            } catch (Exception ex) {
-                throw new RuntimeException(ex);
-            }
-        };
-    }
+        default SideEffect unchecked() {
+            return () -> {
+                try {
+                    apply();
+                } catch (Exception ex) {
+                    throw new RuntimeException(ex);
+                }
+            };
+        }
 
+    }
     public interface CheckedSupplier<T, EX extends Exception> {
         T get() throws EX;
-    }
 
-    public static <T, EX extends Exception> Supplier<T> uncheckedSupplier(CheckedSupplier<T, EX> f) {
-        return () -> {
-            try {
-                return f.get();
-            } catch (Exception ex) {
-                throw new RuntimeException(ex);
-            }
-        };
+        default Supplier<T> unchecked() {
+            return () -> {
+                try {
+                    return get();
+                } catch (Exception ex) {
+                    throw new RuntimeException(ex);
+                }
+            };
+        }
     }
 
     public interface CheckedConsumer<T, EX extends Exception> {
         void consume(T t) throws EX;
-    }
 
-    public static <T, EX extends Exception> Consumer<T> uncheckedConsumer(CheckedConsumer<T, EX> f) {
-        return (T t) -> {
-            try {
-                f.consume(t);
-            } catch (Exception ex) {
-                throw new RuntimeException(ex);
-            }
-        };
+        default Consumer<T> uncheckedC() {
+            return (T t) -> {
+                try {
+                    consume(t);
+                } catch (Exception ex) {
+                    throw new RuntimeException(ex);
+                }
+            };
+        }
     }
 
     public interface CheckedFunction<T, R, EX extends Exception> {
         R apply(T t) throws EX;
+
+        default Function<T, R> unchecked() {
+            return t -> {
+                try {
+                    return apply(t);
+                } catch (Exception ex) {
+                    throw new RuntimeException(ex);
+                }
+            };
+        }
     }
 
-    public static <T, R, EX extends Exception> Function<T, R> uncheckedFunction(CheckedFunction<T, R, EX> f) {
-        return t -> {
-            try {
-                return f.apply(t);
-            } catch (Exception ex) {
-                throw new RuntimeException(ex);
-            }
-        };
+    public interface CheckedRunnable<E extends Exception> {
+        void run() throws E;
+
+        default Runnable unchecked() {
+            return () -> {
+                try {
+                    run();
+                } catch (Exception ex) {
+                    throw new RuntimeException(ex);
+                }
+            };
+        }
+    }
+
+    public static <E extends Exception> Runnable unchecked(CheckedRunnable<E> run) {
+        return run.unchecked();
     }
 }

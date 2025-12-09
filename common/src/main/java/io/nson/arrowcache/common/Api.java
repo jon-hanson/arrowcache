@@ -7,6 +7,22 @@ public abstract class Api {
 
     public static abstract class Filter<T> {
 
+        public static <T> SVFilter<T> eq(String attribute, T value) {
+            return new SVFilter<T>(attribute, SVFilter.Operator.EQUALS, value);
+        }
+
+        public static <T> SVFilter<T> neq(String attribute, T value) {
+            return new SVFilter<T>(attribute, SVFilter.Operator.NOT_EQUALS, value);
+        }
+
+        public static <T> MVFilter<T> in(String attribute, Set<T> values) {
+            return new MVFilter<T>(attribute, MVFilter.Operator.IN, values);
+        }
+
+        public static <T> MVFilter<T> notIn(String attribute, Set<T> values) {
+            return new MVFilter<T>(attribute, MVFilter.Operator.NOT_IN, values);
+        }
+
         public interface Operator {}
 
         public interface Alg<U> {
