@@ -18,6 +18,7 @@ import java.util.*;
 import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 
+import static java.util.stream.Collectors.toList;
 import static java.util.stream.Collectors.toMap;
 
 public class DataNode implements AutoCloseable {
@@ -34,35 +35,58 @@ public class DataNode implements AutoCloseable {
         }
     }
 
+    private static class Batch implements AutoCloseable {
+        private final ArrowRecordBatch batch;
+        private final Set<Integer> replaced;
+
+        private Batch(ArrowRecordBatch batch, Set<Integer> replaced) {
+            this.batch = batch;
+            this.replaced = replaced;
+        }
+
+        private Batch(ArrowRecordBatch batch) {
+            this(batch, new HashSet<>());
+        }
+
+        @Override
+        public void close() {
+            batch.close();
+        }
+
+        public void markAsReplaced(int rowIndex) {
+            replaced.add(rowIndex);
+        }
+    }
+
     private final BufferAllocator allocator;
     private final Schema schema;
     private final String keyName;
     private final int keyIndex;
-    private final List<ArrowRecordBatch> batches;
-    private final List<Set<Integer>> batchReplacedSet = new ArrayList<>();
-    private final Map<Comparable<?>, RowCoordinate> rowCoordinateMap = new HashMap<>();
+    private final List<Batch> batches;
+    //private final List<Set<Integer>> batchReplacedSet = new ArrayList<>();
+    private final Map<Object, RowCoordinate> rowCoordinateMap = new HashMap<>();
     private final ReadWriteLock rwLock = new ReentrantReadWriteLock();
 
     public DataNode(
             BufferAllocator allocator,
             Schema schema,
             String keyName,
-            List<ArrowRecordBatch> batches
+            List<ArrowRecordBatch> arbs
     ) {
         this.allocator = allocator;
         this.schema = schema;
         this.keyName = keyName;
         this.keyIndex = CacheUtils.findKeyColumn(schema, keyName);
-        this.batches = batches;
+        this.batches = arbs.stream().map(Batch::new).collect(toList());
     }
 
     public DataNode(BufferAllocator allocator, Schema schema, String keyName) {
-        this(allocator, schema, keyName, new ArrayList<>());
+        this(allocator, schema, keyName, Collections.emptyList());
     }
 
     @Override
     public void close() {
-        for (ArrowRecordBatch batch : batches) {
+        for (Batch batch : batches) {
             batch.close();
         }
     }
@@ -73,20 +97,14 @@ public class DataNode implements AutoCloseable {
         }
     }
 
-    public synchronized void add(List<ArrowRecordBatch> batches) {
+    public synchronized void add(List<ArrowRecordBatch> arbs) {
         synchronized (rwLock.writeLock()) {
-            try (
-                    VectorSchemaRoot vsc = VectorSchemaRoot.create(
-                            schema,
-                            allocator
-                    )
-            ) {
+            try (VectorSchemaRoot vsc = VectorSchemaRoot.create(schema, allocator)) {
                 final VectorLoader loader = new VectorLoader(vsc);
-                for (int batchIndex = 0; batchIndex < batches.size(); ++batchIndex) {
-                    final ArrowRecordBatch batch = batches.get(batchIndex);
-                    this.batches.add(batch);
-                    this.batchReplacedSet.add(new HashSet<>());
-                    loader.load(batch);
+                for (int batchIndex = 0; batchIndex < arbs.size(); ++batchIndex) {
+                    final ArrowRecordBatch arb = arbs.get(batchIndex);
+                    this.batches.add(new Batch(arb));
+                    loader.load(arb);
                     processBatch(this.batches.size() - 1, vsc);
                 }
             }
@@ -97,10 +115,10 @@ public class DataNode implements AutoCloseable {
         final int rowCount =  vsc.getRowCount();
         final FieldVector fv = vsc.getFieldVectors().get(keyIndex);
         for (int rowIndex = 0; rowIndex < rowCount; ++rowIndex) {
-            final String key = fv.getObject(rowIndex).toString();
+            final Object key = fv.getObject(rowIndex);
             final RowCoordinate oldRowCoordinate = rowCoordinateMap.get(key);
             if (oldRowCoordinate != null) {
-                batchReplacedSet.get(oldRowCoordinate.batchIndex).add(oldRowCoordinate.rowIndex);
+                batches.get(oldRowCoordinate.batchIndex).markAsReplaced(oldRowCoordinate.rowIndex);
             }
             rowCoordinateMap.put(key, new RowCoordinate(batchIndex, rowIndex));
         }
@@ -124,22 +142,21 @@ public class DataNode implements AutoCloseable {
                 listener.start(resultVsc);
 
                 for (int batchIndex = 0; batchIndex < batches.size(); ++batchIndex) {
-
-                    final ArrowRecordBatch batch = batches.get(batchIndex);
-                    loader.load(batch);
+                    final Batch batch = batches.get(batchIndex);;
+                    final ArrowRecordBatch arb = batch.batch;
+                    loader.load(arb);
                     final Map<String, FieldVector> fvMap =
                             vsc.getFieldVectors().stream()
                                     .collect(toMap(
                                             fv -> fv.getField().getName(),
                                             fv -> fv
                                     ));
-                    final Set<Integer> replaced = batchReplacedSet.get(batchIndex);
 
                     Set<Integer> matches = null;
 
                     boolean first = true;
 
-                    for (QueryLogic.Filter<?> filter : queryLogic) {
+                    for (QueryLogic.Filter<?> filter : queryLogic.filters()) {
                         final String filterAttr = filter.attribute();
                         final FieldVector fv = fvMap.get(filterAttr);
 
@@ -149,7 +166,7 @@ public class DataNode implements AutoCloseable {
                                     final RowCoordinate rowCoord = rowCoordinateMap.get(value);
                                     if (rowCoord != null &&
                                             rowCoord.batchIndex == batchIndex &&
-                                            !replaced.contains(rowCoord.rowIndex)
+                                            !batch.replaced.contains(rowCoord.rowIndex)
                                     ) {
                                         if (matches == null) {
                                             matches = new HashSet<>();
@@ -157,10 +174,9 @@ public class DataNode implements AutoCloseable {
                                         matches.add(rowCoord.rowIndex);
                                     }
                                 }
-                                matches = new HashSet<>();
                             } else {
                                 for (int rowIndex = 0; rowIndex < vsc.getRowCount(); ++rowIndex) {
-                                    if (!replaced.contains(rowIndex) && filter.match(fv, rowIndex)) {
+                                    if (!batch.replaced.contains(rowIndex) && filter.match(fv, rowIndex)) {
                                         if (matches == null) {
                                             matches = new HashSet<>();
                                         }
@@ -177,17 +193,16 @@ public class DataNode implements AutoCloseable {
                                         final RowCoordinate rowCoord = rowCoordinateMap.get(value);
                                         if (rowCoord != null &&
                                                 rowCoord.batchIndex == batchIndex &&
-                                                !replaced.contains(rowCoord.rowIndex)
+                                                !batch.replaced.contains(rowCoord.rowIndex)
                                         ) {
                                             matches.add(rowCoord.rowIndex);
                                         }
                                     }
-                                    matches = new HashSet<>();
                                 } else {
                                     Set<Integer> matches2 = null;
 
                                     for (int rowIndex : matches) {
-                                        if (!replaced.contains(rowIndex)) {
+                                        if (!batch.replaced.contains(rowIndex)) {
                                             if (filter.match(fv, rowIndex)) {
                                                 if (matches2 == null) {
                                                     matches2 = new HashSet<>();
@@ -204,7 +219,6 @@ public class DataNode implements AutoCloseable {
                             }
                         }
                     }
-
 
                     if (matches != null && !matches.isEmpty()) {
                         VectorSchemaRoot[] slices = null;

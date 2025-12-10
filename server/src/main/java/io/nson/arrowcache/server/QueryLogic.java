@@ -5,7 +5,7 @@ import org.apache.arrow.vector.FieldVector;
 
 import java.util.*;
 
-public class QueryLogic implements Iterable<QueryLogic.Filter<?>> {
+public class QueryLogic {
 
     private static final class Values<T> {
         Set<T> inclusions = null;
@@ -150,27 +150,9 @@ public class QueryLogic implements Iterable<QueryLogic.Filter<?>> {
         }
     }
 
-    @Override
-    public Iterator<Filter<?>> iterator() {
-        return new Iterator<Filter<?>>() {
-            int filterIndex = 0;
-
-            @Override
-            public boolean hasNext() {
-                return filterIndex < inFilters.size() + notInFilters.size();
-            }
-
-            @Override
-            public Filter<?> next() {
-                final Filter<?> result;
-                if (filterIndex < inFilters.size()) {
-                    result = inFilters.get(filterIndex);
-                } else {
-                    result = notInFilters.get(filterIndex - inFilters.size());
-                }
-                filterIndex++;
-                return result;
-            }
-        };
+    public List<Filter<?>> filters() {
+        final List<Filter<?>> filters = new ArrayList<>(inFilters);
+        filters.addAll(notInFilters);
+        return filters;
     }
 }
