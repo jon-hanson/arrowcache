@@ -9,16 +9,15 @@ import org.apache.arrow.vector.FieldVector;
 import org.apache.arrow.vector.VectorLoader;
 import org.apache.arrow.vector.VectorSchemaRoot;
 import org.apache.arrow.vector.ipc.message.ArrowRecordBatch;
-import org.apache.arrow.vector.types.pojo.Field;
 import org.apache.arrow.vector.types.pojo.Schema;
 import org.apache.arrow.vector.util.VectorSchemaRootAppender;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.util.*;
-import java.util.function.BiPredicate;
+import java.util.concurrent.locks.ReadWriteLock;
+import java.util.concurrent.locks.ReentrantReadWriteLock;
 
-import static java.util.stream.Collectors.toList;
 import static java.util.stream.Collectors.toMap;
 
 public class DataNode implements AutoCloseable {
@@ -35,17 +34,6 @@ public class DataNode implements AutoCloseable {
         }
     }
 
-    private static int findKeyColumn(Schema schema, String name) {
-        final List<Field> fields = schema.getFields();
-        for (int i = 0; i < fields.size(); ++i) {
-            if (fields.get(i).getName().equals(name)) {
-                return i;
-            }
-        }
-
-        throw new RuntimeException("Key column name '" + name + "' not found in schema");
-    }
-
     private final BufferAllocator allocator;
     private final Schema schema;
     private final String keyName;
@@ -53,6 +41,7 @@ public class DataNode implements AutoCloseable {
     private final List<ArrowRecordBatch> batches;
     private final List<Set<Integer>> batchReplacedSet = new ArrayList<>();
     private final Map<Comparable<?>, RowCoordinate> rowCoordinateMap = new HashMap<>();
+    private final ReadWriteLock rwLock = new ReentrantReadWriteLock();
 
     public DataNode(
             BufferAllocator allocator,
@@ -63,7 +52,7 @@ public class DataNode implements AutoCloseable {
         this.allocator = allocator;
         this.schema = schema;
         this.keyName = keyName;
-        this.keyIndex = findKeyColumn(schema, keyName);
+        this.keyIndex = CacheUtils.findKeyColumn(schema, keyName);
         this.batches = batches;
     }
 
@@ -79,23 +68,27 @@ public class DataNode implements AutoCloseable {
     }
 
     public synchronized void add(ArrowRecordBatch batches) {
-        add(Collections.singletonList(batches));
+        synchronized (rwLock.writeLock()) {
+            add(Collections.singletonList(batches));
+        }
     }
 
     public synchronized void add(List<ArrowRecordBatch> batches) {
-        try (
-                VectorSchemaRoot vsc = VectorSchemaRoot.create(
-                        schema,
-                        allocator
-                )
-        ) {
-            final VectorLoader loader = new VectorLoader(vsc);
-            for (int batchIndex = 0; batchIndex < batches.size(); ++batchIndex) {
-                final ArrowRecordBatch batch = batches.get(batchIndex);
-                this.batches.add(batch);
-                this.batchReplacedSet.add(new HashSet<>());
-                loader.load(batch);
-                processBatch(this.batches.size() - 1, vsc);
+        synchronized (rwLock.writeLock()) {
+            try (
+                    VectorSchemaRoot vsc = VectorSchemaRoot.create(
+                            schema,
+                            allocator
+                    )
+            ) {
+                final VectorLoader loader = new VectorLoader(vsc);
+                for (int batchIndex = 0; batchIndex < batches.size(); ++batchIndex) {
+                    final ArrowRecordBatch batch = batches.get(batchIndex);
+                    this.batches.add(batch);
+                    this.batchReplacedSet.add(new HashSet<>());
+                    loader.load(batch);
+                    processBatch(this.batches.size() - 1, vsc);
+                }
             }
         }
     }
@@ -117,98 +110,105 @@ public class DataNode implements AutoCloseable {
             Api.Query query,
             FlightProducer.ServerStreamListener listener
     ) {
-        final Api.Query query2 = TranslateStrings.applyQuery(query);
+        query = TranslateStrings.applyQuery(query);
 
-        try (
-                VectorSchemaRoot vsc = VectorSchemaRoot.create(
-                        schema,
-                        allocator
-                )
-        ) {
-            logger.info("VectorSchemaRoot: {}", vsc.getFieldVectors());
+        final QueryLogic queryLogic = new QueryLogic(keyName, query);
 
-            final VectorLoader loader = new VectorLoader(vsc);
+        synchronized (rwLock.readLock()) {
+            try (
+                    final VectorSchemaRoot resultVsc = VectorSchemaRoot.create(schema, allocator);
+                    final VectorSchemaRoot vsc = VectorSchemaRoot.create(schema, allocator)
+            ) {
+                final VectorLoader loader = new VectorLoader(vsc);
 
-            final QueryLogic queryLogic = new QueryLogic(keyName, query2);
-
-            final List<Set<Integer>> batchMatches =
-                    batches.stream()
-                            .map(b -> (Set<Integer>)null)
-                            .collect(toList());
-
-            boolean first = true;
-
-            for (QueryLogic.Filter<?> filter : queryLogic) {
-
-                if (first) {
-                    for (int batchIndex = 0; batchIndex < batches.size(); ++batchIndex) {
-                        final ArrowRecordBatch batch = batches.get(batchIndex);
-                        loader.load(batch);
-
-                        final Map<String, FieldVector> fvMap = getFieldVectors(vsc);
-
-                        final FieldVector fv = fvMap.get(filter.attribute());
-
-                        final Set<Integer> replaced = batchReplacedSet.get(batchIndex);
-
-                        Set<Integer> matches = batchMatches.get(batchIndex);
-
-                        for (int rowIndex = 0; rowIndex < vsc.getRowCount(); ++rowIndex) {
-                            if (!replaced.contains(rowIndex)) {
-                                if (filter.match(fv, rowIndex)) {
-                                    if (matches == null) {
-                                        matches = new HashSet<>();
-                                        batchMatches.set(batchIndex, matches);
-                                    }
-                                    matches.add(rowIndex);
-                                }
-                            }
-                        }
-                    }
-
-                    first = false;
-                } else {
-                    for (int batchIndex = 0; batchIndex < batches.size(); ++batchIndex) {
-                        final ArrowRecordBatch batch = batches.get(batchIndex);
-                        loader.load(batch);
-
-                        final Set<Integer> replaced = batchReplacedSet.get(batchIndex);
-
-                        final Map<String, FieldVector> fvMap = getFieldVectors(vsc);
-
-                        final FieldVector fv = fvMap.get(filter.attribute());
-
-                        Set<Integer> matches = batchMatches.get(batchIndex);
-                        Set<Integer> matches2 = null;
-                        for (int rowIndex : matches) {
-                            if (!replaced.contains(rowIndex)) {
-                                if (filter.match(fv, rowIndex)) {
-                                    if (matches2 == null) {
-                                        matches2 = new HashSet<>();
-                                    }
-                                    matches2.add(rowIndex);
-                                }
-                            }
-                        }
-
-                        if (matches2 != null) {
-                            batchMatches.set(batchIndex, matches2);;
-                        }
-                    }
-                }
-            }
-
-            try (final VectorSchemaRoot resultVsc = VectorSchemaRoot.create(vsc.getSchema(), allocator)) {
                 listener.start(resultVsc);
 
                 for (int batchIndex = 0; batchIndex < batches.size(); ++batchIndex) {
+
                     final ArrowRecordBatch batch = batches.get(batchIndex);
-                    final Set<Integer> matches = batchMatches.get(batchIndex);
+                    loader.load(batch);
+                    final Map<String, FieldVector> fvMap =
+                            vsc.getFieldVectors().stream()
+                                    .collect(toMap(
+                                            fv -> fv.getField().getName(),
+                                            fv -> fv
+                                    ));
+                    final Set<Integer> replaced = batchReplacedSet.get(batchIndex);
+
+                    Set<Integer> matches = null;
+
+                    boolean first = true;
+
+                    for (QueryLogic.Filter<?> filter : queryLogic) {
+                        final String filterAttr = filter.attribute();
+                        final FieldVector fv = fvMap.get(filterAttr);
+
+                        if (first) {
+                            if (filterAttr.equals(keyName) && filter.operator() == QueryLogic.Filter.Operator.IN) {
+                                for (Object value : filter.values()) {
+                                    final RowCoordinate rowCoord = rowCoordinateMap.get(value);
+                                    if (rowCoord != null &&
+                                            rowCoord.batchIndex == batchIndex &&
+                                            !replaced.contains(rowCoord.rowIndex)
+                                    ) {
+                                        if (matches == null) {
+                                            matches = new HashSet<>();
+                                        }
+                                        matches.add(rowCoord.rowIndex);
+                                    }
+                                }
+                                matches = new HashSet<>();
+                            } else {
+                                for (int rowIndex = 0; rowIndex < vsc.getRowCount(); ++rowIndex) {
+                                    if (!replaced.contains(rowIndex) && filter.match(fv, rowIndex)) {
+                                        if (matches == null) {
+                                            matches = new HashSet<>();
+                                        }
+                                        matches.add(rowIndex);
+                                    }
+                                }
+                            }
+
+                            first = false;
+                        } else {
+                            if (matches != null && !matches.isEmpty()) {
+                                if (filterAttr.equals(keyName) && filter.operator() == QueryLogic.Filter.Operator.IN) {
+                                    for (Object value : filter.values()) {
+                                        final RowCoordinate rowCoord = rowCoordinateMap.get(value);
+                                        if (rowCoord != null &&
+                                                rowCoord.batchIndex == batchIndex &&
+                                                !replaced.contains(rowCoord.rowIndex)
+                                        ) {
+                                            matches.add(rowCoord.rowIndex);
+                                        }
+                                    }
+                                    matches = new HashSet<>();
+                                } else {
+                                    Set<Integer> matches2 = null;
+
+                                    for (int rowIndex : matches) {
+                                        if (!replaced.contains(rowIndex)) {
+                                            if (filter.match(fv, rowIndex)) {
+                                                if (matches2 == null) {
+                                                    matches2 = new HashSet<>();
+                                                }
+                                                matches2.add(rowIndex);
+                                            }
+                                        }
+                                    }
+
+                                    if (matches2 != null) {
+                                        matches = matches2;
+                                    }
+                                }
+                            }
+                        }
+                    }
+
 
                     if (matches != null && !matches.isEmpty()) {
-                        loader.load(batch);
-
                         VectorSchemaRoot[] slices = null;
+
                         try {
                             slices = matches.stream()
                                     .map(i -> vsc.slice(i, 1))
@@ -231,14 +231,4 @@ public class DataNode implements AutoCloseable {
             }
         }
     }
-
-    private static Map<String, FieldVector> getFieldVectors(VectorSchemaRoot vsc) {
-        return
-                vsc.getFieldVectors().stream()
-                        .collect(toMap(
-                                fv -> fv.getField().getName(),
-                                fv -> fv
-                        ));
-    }
-
 }

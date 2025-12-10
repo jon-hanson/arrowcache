@@ -38,13 +38,13 @@ public class DataNodeTest {
 
             final ResultListener resultListener = new ResultListener();
 
-            logger.info("Testing QUERY1");
+            logger.info("Testing QUERY1: {}", TestData.QUERY1);
             dataNode.execute(TestData.QUERY1, resultListener);
 
-            logger.info("Testing QUERY2");
+            logger.info("Testing QUERY2: {}", TestData.QUERY2);
             dataNode.execute(TestData.QUERY2, resultListener);
 
-            logger.info("Testing QUERY3");
+            logger.info("Testing QUERY3: {}", TestData.QUERY3);
             dataNode.execute(TestData.QUERY3, resultListener);
         }
     }

@@ -5,24 +5,6 @@ import java.util.function.*;
 public abstract class Exceptions {
     private Exceptions() {}
 
-    public interface SideEffect {
-        void apply();
-    }
-
-    public interface CheckedSideEffect<EX extends Exception> {
-        void apply() throws EX;
-
-        default SideEffect unchecked() {
-            return () -> {
-                try {
-                    apply();
-                } catch (Exception ex) {
-                    throw new RuntimeException(ex);
-                }
-            };
-        }
-
-    }
     public interface CheckedSupplier<T, EX extends Exception> {
         T get() throws EX;
 
