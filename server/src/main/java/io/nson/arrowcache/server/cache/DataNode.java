@@ -1,6 +1,7 @@
 package io.nson.arrowcache.server.cache;
 
 import io.nson.arrowcache.common.Api;
+import io.nson.arrowcache.server.QueryLogic;
 import io.nson.arrowcache.server.utils.TranslateStrings;
 import org.apache.arrow.flight.FlightProducer;
 import org.apache.arrow.memory.BufferAllocator;
@@ -128,58 +129,33 @@ public class DataNode implements AutoCloseable {
 
             final VectorLoader loader = new VectorLoader(vsc);
 
-            final List<Api.MVFilter<?>> filters = normaliseFilters(query2.filters());
+            final QueryLogic queryLogic = new QueryLogic(keyName, query2);
 
             final List<Set<Integer>> batchMatches =
                     batches.stream()
-                            .map(b -> new HashSet<Integer>())
+                            .map(b -> (Set<Integer>)null)
                             .collect(toList());
-
-            final Optional<Api.MVFilter<?>> keyFilter =
-                    filters.stream()
-                            .filter(f -> f.attribute().equals(keyName))
-                            .findAny();
 
             boolean first = true;
 
-            if (keyFilter.map(Api.MVFilter::operator).map(Api.MVFilter.Operator.IN::equals).orElse(false)) {
-                final Api.MVFilter<? extends Comparable<?>> filter = (Api.MVFilter)keyFilter.get();
-
-                for (Comparable<?> value : filter.values()) {
-                    final RowCoordinate matchRC = rowCoordinateMap.get(value);
-                    if (matchRC != null) {
-                        if (first) {
-                            first = false;
-                        }
-                        setMatch(batchMatches, matchRC);
-                    }
-                }
-            }
-
-            for (final Api.MVFilter<?> filter : filters) {
-                final String attrName = filter.attribute();
+            for (QueryLogic.Filter<?> filter : queryLogic) {
 
                 if (first) {
                     for (int batchIndex = 0; batchIndex < batches.size(); ++batchIndex) {
                         final ArrowRecordBatch batch = batches.get(batchIndex);
                         loader.load(batch);
 
+                        final Map<String, FieldVector> fvMap = getFieldVectors(vsc);
+
+                        final FieldVector fv = fvMap.get(filter.attribute());
+
                         final Set<Integer> replaced = batchReplacedSet.get(batchIndex);
-
-                        final Map<String, FieldVector> fvMap =
-                                vsc.getFieldVectors().stream()
-                                        .collect(toMap(
-                                                fv -> fv.getField().getName(),
-                                                fv -> fv
-                                        ));
-
-                        final FieldVector fv = fvMap.get(attrName);
 
                         Set<Integer> matches = batchMatches.get(batchIndex);
 
                         for (int rowIndex = 0; rowIndex < vsc.getRowCount(); ++rowIndex) {
                             if (!replaced.contains(rowIndex)) {
-                                if (filter.alg(FV_FILTER_ALG).test(fv, rowIndex)) {
+                                if (filter.match(fv, rowIndex)) {
                                     if (matches == null) {
                                         matches = new HashSet<>();
                                         batchMatches.set(batchIndex, matches);
@@ -198,28 +174,24 @@ public class DataNode implements AutoCloseable {
 
                         final Set<Integer> replaced = batchReplacedSet.get(batchIndex);
 
-                        final Map<String, FieldVector> fvMap =
-                                vsc.getFieldVectors().stream()
-                                        .collect(toMap(
-                                                fv -> fv.getField().getName(),
-                                                fv -> fv
-                                        ));
+                        final Map<String, FieldVector> fvMap = getFieldVectors(vsc);
 
-                        final FieldVector fv = fvMap.get(attrName);
+                        final FieldVector fv = fvMap.get(filter.attribute());
 
                         Set<Integer> matches = batchMatches.get(batchIndex);
-                        Set<Integer> matches2 = new TreeSet<>();
-                        boolean changed = false;
+                        Set<Integer> matches2 = null;
                         for (int rowIndex : matches) {
                             if (!replaced.contains(rowIndex)) {
-                                if (filter.alg(FV_FILTER_ALG).test(fv, rowIndex)) {
+                                if (filter.match(fv, rowIndex)) {
+                                    if (matches2 == null) {
+                                        matches2 = new HashSet<>();
+                                    }
                                     matches2.add(rowIndex);
-                                    changed = true;
                                 }
                             }
                         }
 
-                        if (changed) {
+                        if (matches2 != null) {
                             batchMatches.set(batchIndex, matches2);;
                         }
                     }
@@ -233,20 +205,24 @@ public class DataNode implements AutoCloseable {
                     final ArrowRecordBatch batch = batches.get(batchIndex);
                     final Set<Integer> matches = batchMatches.get(batchIndex);
 
-                    loader.load(batch);
+                    if (matches != null && !matches.isEmpty()) {
+                        loader.load(batch);
 
-                    VectorSchemaRoot[] slices = null;
-                    try {
-                        slices = matches.stream()
-                                .map(i -> vsc.slice(i, 1))
-                                .toArray(VectorSchemaRoot[]::new);
+                        VectorSchemaRoot[] slices = null;
+                        try {
+                            slices = matches.stream()
+                                    .map(i -> vsc.slice(i, 1))
+                                    .toArray(VectorSchemaRoot[]::new);
 
-                        resultVsc.allocateNew();
-                        VectorSchemaRootAppender.append(false, resultVsc, slices);
-                        listener.putNext();
-                    } finally {
-                        for (VectorSchemaRoot slice : slices) {
-                            slice.close();
+                            resultVsc.allocateNew();
+                            VectorSchemaRootAppender.append(false, resultVsc, slices);
+                            listener.putNext();
+                        } finally {
+                            if (slices != null) {
+                                for (VectorSchemaRoot slice : slices) {
+                                    slice.close();
+                                }
+                            }
                         }
                     }
                 }
@@ -256,151 +232,13 @@ public class DataNode implements AutoCloseable {
         }
     }
 
-    private static void setMatch(List<Set<Integer>> batchMatches, RowCoordinate matchRC) {
-        Set<Integer> matches = batchMatches.get(matchRC.batchIndex);
-        if (matches == null) {
-            matches = new HashSet<>();
-            batchMatches.set(matchRC.batchIndex, matches);
-        }
-        matches.add(matchRC.rowIndex);
-    }
-
-    private static final Api.Filter.Alg<BiPredicate<FieldVector, Integer>> FV_FILTER_ALG = new Api.Filter.Alg<>() {
-        @Override
-        public BiPredicate<FieldVector, Integer> svFilter(String attribute, Api.SVFilter.Operator op, Object value) {
-            return (fv, i) -> {
-                final Object fvVal = fv.getObject(i);
-                final boolean match = value.equals(fvVal);
-                switch (op) {
-                    case EQUALS:
-                        return match;
-                    case NOT_EQUALS:
-                        return !match;
-                    default:
-                        throw new IllegalStateException("Unknown filter operator: " + op);
-                }
-            };
-        }
-
-        @Override
-        public BiPredicate<FieldVector, Integer> mvFilter(String attribute, Api.MVFilter.Operator op, Set<?> values) {
-            return (fv, i) -> {
-                final Object fvVal = fv.getObject(i);
-                final boolean match = values.contains(fvVal);
-                switch (op) {
-                    case IN:
-                        return match;
-                    case NOT_IN:
-                        return !match;
-                    default:
-                        throw new IllegalStateException("Unknown filter operator: " + op);
-                }
-            };
-        }
-    };
-
-    private static final class Values<T> {
-        Set<T> inclusions = null;
-        Set<T> exclusions = null;
-
-        private Set<T> inclusions() {
-            if (inclusions == null) {
-                inclusions = new HashSet<>();
-            }
-            return inclusions;
-        }
-
-        private Set<T> exclusions() {
-            if (exclusions == null) {
-                exclusions = new HashSet<>();
-            }
-            return exclusions;
-        }
-
-        void addInclusion(Object value) {
-            inclusions().add((T)value);
-        }
-
-        void addInclusions(Collection<?> values) {
-            inclusions().addAll((Collection)values);
-        }
-
-        void addExclusion(Object value) {
-            exclusions().add((T)value);
-        }
-
-        void addExclusions(Collection<?> values) {
-            exclusions().addAll((Collection)values);
-        }
-    }
-
-    private List<Api.MVFilter<?>> normaliseFilters(Collection<Api.Filter<?>> filters) {
-        final Map<String, Values<?>> mapValues = new HashMap<>();
-        for (Api.Filter<?> filter : filters) {
-            final Values<?> values = mapValues.computeIfAbsent(filter.attribute(), k -> new Values<>());
-            if (filter instanceof Api.SVFilter) {
-                final Api.SVFilter<?> svFilter = (Api.SVFilter)filter;
-                switch (svFilter.operator()) {
-                    case EQUALS:
-                        values.addInclusion(svFilter.value());
-                        break;
-                    case NOT_EQUALS:
-                        values.addExclusion(svFilter.value());
-                        break;
-                    default:
-                        throw new IllegalStateException("Unknown filter operator: " + svFilter.operator());
-                }
-            } else if (filter instanceof Api.MVFilter) {
-                final Api.MVFilter<?> mvFilter = (Api.MVFilter)filter;
-                switch (mvFilter.operator()) {
-                    case IN:
-                        values.addInclusions(mvFilter.values());
-                        break;
-                    case NOT_IN:
-                        values.addExclusions(mvFilter.values());
-                        break;
-                    default:
-                        throw new IllegalStateException("Unknown filter operator: " + mvFilter.operator());
-                }
-            }
-        }
-
-        final List<Api.MVFilter<?>> groupFilters = new ArrayList<>(mapValues.size());
-        mapValues.forEach((name, values) -> {
-            if (values.inclusions != null) {
-                final Set<?> inclusions = values.inclusions;
-                if (values.exclusions != null) {
-                    inclusions.removeAll(values.exclusions);
-                }
-                groupFilters.add(Api.Filter.in(name, inclusions));
-            } else if (values.exclusions != null) {
-                groupFilters.add(Api.Filter.notIn(name, values.exclusions));
-            }
-        });
-
-        groupFilters.sort((lhs, rhs) -> {
-            final boolean lhsIsKey = lhs.attribute().equals(keyName);
-            final boolean rhsIsKey = rhs.attribute().equals(keyName);
-
-            if (lhsIsKey && !rhsIsKey) {
-                return -1;
-            } else if (rhsIsKey && !lhsIsKey) {
-                return 1;
-            } else {
-                final boolean lhsIsIn = lhs.operator() == Api.MVFilter.Operator.IN;
-                final boolean rhsIsIn = rhs.operator() == Api.MVFilter.Operator.IN;
-
-                if (lhsIsIn && !rhsIsIn) {
-                    return -1;
-                } else if (rhsIsIn && !lhsIsIn) {
-                    return 1;
-                } else {
-                    return lhs.attribute().compareTo(rhs.attribute());
-                }
-            }
-        });
-
-        return groupFilters;
+    private static Map<String, FieldVector> getFieldVectors(VectorSchemaRoot vsc) {
+        return
+                vsc.getFieldVectors().stream()
+                        .collect(toMap(
+                                fv -> fv.getField().getName(),
+                                fv -> fv
+                        ));
     }
 
 }

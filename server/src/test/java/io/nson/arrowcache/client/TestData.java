@@ -98,36 +98,20 @@ public class TestData {
 
     public static final Api.Query QUERY1 = new Api.Query(
             List.of(
-                    new Api.MVFilter<String>(
-                            "name",
-                            Api.MVFilter.Operator.IN,
-                            Set.of("abc", "def")
-                    )
+                    Api.Filter.eq("name","abc")
             )
     );
 
     public static final Api.Query QUERY2 = new Api.Query(
             List.of(
-                    new Api.MVFilter<String>(
-                            "name",
-                            Api.MVFilter.Operator.IN,
-                            Set.of("abc", "def")
-                    ),
-                    new Api.SVFilter<Float>(
-                            "age",
-                            Api.SVFilter.Operator.NOT_EQUALS,
-                            2.3f
-                    )
+                    Api.Filter.in("name",Set.of("abc", "def")),
+                    Api.Filter.neq("age", 2.3f)
             )
     );
 
     public static final Api.Query QUERY3 = new Api.Query(
             List.of(
-                    new Api.MVFilter<Integer>(
-                            "id",
-                            Api.MVFilter.Operator.IN,
-                            Set.of(12, 22)
-                    )
+                    Api.Filter.in("id", Set.of(12, 22))
             )
     );
 }
