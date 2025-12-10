@@ -78,6 +78,8 @@ public class TestData {
                 continue;
             }
 
+            logger.info(line);
+
             final String[] parts = line.split(",");
 
             final int id = Integer.parseInt(parts[0].trim());

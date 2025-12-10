@@ -76,7 +76,7 @@ public class DataNodeTest {
 
         @Override
         public void putNext() {
-            logger.info(ArrowUtils.toString(vsc));
+            ArrowUtils.toLines(logger::info, vsc);
         }
 
         @Override

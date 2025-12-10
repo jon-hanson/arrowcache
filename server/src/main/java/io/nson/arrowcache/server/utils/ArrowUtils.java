@@ -7,6 +7,7 @@ import org.apache.arrow.flight.Result;
 import org.apache.arrow.vector.FieldVector;
 import org.apache.arrow.vector.VectorSchemaRoot;
 import org.apache.arrow.vector.ipc.message.ArrowRecordBatch;
+import org.apache.arrow.vector.types.pojo.Field;
 import org.apache.arrow.vector.types.pojo.Schema;
 import org.apache.arrow.vector.util.Text;
 
@@ -14,6 +15,10 @@ import java.io.OutputStream;
 import java.io.PrintStream;
 import java.nio.charset.StandardCharsets;
 import java.util.List;
+import java.util.function.Consumer;
+import java.util.stream.Collectors;
+
+import static java.util.stream.Collectors.joining;
 
 public abstract class ArrowUtils {
     private ArrowUtils() {}
@@ -46,28 +51,23 @@ public abstract class ArrowUtils {
         return schemaA.equals(schemaB);
     }
 
-    public static StringBuilder toString(StringBuilder sb, Schema schema) {
-        schema.getFields().forEach(f -> {
-            sb.append(f.getName());
-            sb.append(", ");
-        });
-        return sb.append("\n");
+    public static String toString(Schema schema) {
+        return schema.getFields().stream()
+                .map(Field::getName)
+                .collect(joining(", "));
     }
 
-    public static StringBuilder toString(StringBuilder sb, VectorSchemaRoot vsc) {
-        toString(sb, vsc.getSchema());
+    public static void toLines(Consumer<String> lineCons, VectorSchemaRoot vsc) {
+        lineCons.accept(toString(vsc.getSchema()));
         final List<FieldVector> fvs = vsc.getFieldVectors();
         for (int r = 0; r < vsc.getRowCount(); ++r) {
-            for (FieldVector fv : fvs) {
-                sb.append(fv.getObject(r));
-                sb.append(", ");
-            }
-            sb.append("\n");
+            final int r2 = r;
+            lineCons.accept(
+                    fvs.stream()
+                            .map(fv -> fv.getObject(r2))
+                            .map(Object::toString)
+                            .collect(joining(", "))
+            );
         }
-        return sb;
-    }
-
-    public static String toString(VectorSchemaRoot vsc) {
-        return toString(new StringBuilder(), vsc).toString();
     }
 }

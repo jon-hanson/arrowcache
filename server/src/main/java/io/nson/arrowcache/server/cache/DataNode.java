@@ -17,9 +17,9 @@ import org.slf4j.LoggerFactory;
 import java.util.*;
 import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
+import java.util.stream.Collectors;
 
-import static java.util.stream.Collectors.toList;
-import static java.util.stream.Collectors.toMap;
+import static java.util.stream.Collectors.*;
 
 public class DataNode implements AutoCloseable {
 
@@ -142,6 +142,8 @@ public class DataNode implements AutoCloseable {
                 listener.start(resultVsc);
 
                 for (int batchIndex = 0; batchIndex < batches.size(); ++batchIndex) {
+                    final int bi = batchIndex;
+
                     final Batch batch = batches.get(batchIndex);;
                     final ArrowRecordBatch arb = batch.batch;
                     loader.load(arb);
@@ -161,18 +163,26 @@ public class DataNode implements AutoCloseable {
                         final FieldVector fv = fvMap.get(filterAttr);
 
                         if (first) {
-                            if (filterAttr.equals(keyName) && filter.operator() == QueryLogic.Filter.Operator.IN) {
-                                for (Object value : filter.values()) {
-                                    final RowCoordinate rowCoord = rowCoordinateMap.get(value);
-                                    if (rowCoord != null &&
-                                            rowCoord.batchIndex == batchIndex &&
-                                            !batch.replaced.contains(rowCoord.rowIndex)
-                                    ) {
-                                        if (matches == null) {
-                                            matches = new HashSet<>();
+                            if (filterAttr.equals(keyName)) {
+                                if (filter.operator() == QueryLogic.Filter.Operator.IN) {
+                                    for (Object value : filter.values()) {
+                                        final RowCoordinate rowCoord = rowCoordinateMap.get(value);
+                                        if (rowCoord != null &&
+                                                rowCoord.batchIndex == batchIndex &&
+                                                !batch.replaced.contains(rowCoord.rowIndex)
+                                        ) {
+                                            if (matches == null) {
+                                                matches = new HashSet<>();
+                                            }
+                                            matches.add(rowCoord.rowIndex);
                                         }
-                                        matches.add(rowCoord.rowIndex);
                                     }
+                                } else {
+                                    matches = rowCoordinateMap.entrySet().stream()
+                                            .filter(en -> en.getValue().batchIndex == bi)
+                                            .filter(en -> !filter.values().contains(en.getKey()))
+                                            .map(en -> en.getValue().rowIndex)
+                                            .collect(toSet());
                                 }
                             } else {
                                 for (int rowIndex = 0; rowIndex < vsc.getRowCount(); ++rowIndex) {
@@ -187,8 +197,8 @@ public class DataNode implements AutoCloseable {
 
                             first = false;
                         } else {
-                            if (matches != null && !matches.isEmpty()) {
-                                if (filterAttr.equals(keyName) && filter.operator() == QueryLogic.Filter.Operator.IN) {
+                            if (filterAttr.equals(keyName)) {
+                                if (filter.operator() == QueryLogic.Filter.Operator.IN) {
                                     for (Object value : filter.values()) {
                                         final RowCoordinate rowCoord = rowCoordinateMap.get(value);
                                         if (rowCoord != null &&
@@ -199,24 +209,39 @@ public class DataNode implements AutoCloseable {
                                         }
                                     }
                                 } else {
-                                    Set<Integer> matches2 = null;
-
-                                    for (int rowIndex : matches) {
-                                        if (!batch.replaced.contains(rowIndex)) {
-                                            if (filter.match(fv, rowIndex)) {
-                                                if (matches2 == null) {
-                                                    matches2 = new HashSet<>();
-                                                }
-                                                matches2.add(rowIndex);
-                                            }
-                                        }
-                                    }
-
-                                    if (matches2 != null) {
-                                        matches = matches2;
+                                    final Set<Integer> matches2 = rowCoordinateMap.entrySet().stream()
+                                            .filter(en -> en.getValue().batchIndex == bi)
+                                            .filter(en -> !filter.values().contains(en.getKey()))
+                                            .map(en -> en.getValue().rowIndex)
+                                            .collect(toSet());
+                                    if (matches2.isEmpty()) {
+                                        matches.clear();
+                                    } else {
+                                        matches.retainAll(matches2);
                                     }
                                 }
+                            } else {
+                                Set<Integer> matches2 = null;
+
+                                for (int rowIndex : matches) {
+                                    if (!batch.replaced.contains(rowIndex)) {
+                                        if (filter.match(fv, rowIndex)) {
+                                            if (matches2 == null) {
+                                                matches2 = new HashSet<>();
+                                            }
+                                            matches2.add(rowIndex);
+                                        }
+                                    }
+                                }
+
+                                if (matches2 != null) {
+                                    matches = matches2;
+                                }
                             }
+                        }
+
+                        if (matches == null || matches.isEmpty()) {
+                            break;
                         }
                     }
 
