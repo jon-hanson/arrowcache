@@ -3,18 +3,19 @@ package io.nson.arrowcache.server.utils;
 import io.nson.arrowcache.common.Api;
 import org.apache.arrow.vector.util.Text;
 
+import java.time.LocalDate;
 import java.util.Set;
 
 import static java.util.stream.Collectors.toList;
 import static java.util.stream.Collectors.toSet;
 
-public abstract class TranslateStrings {
-    private TranslateStrings() {}
+public abstract class TranslateQuery {
+    private TranslateQuery() {}
 
     public static Api.Query applyQuery(Api.Query query) {
         return new Api.Query(
                 query.filters().stream()
-                        .map(TranslateStrings::applyFilter)
+                        .map(TranslateQuery::applyFilter)
                         .collect(toList())
         );
     }
@@ -25,13 +26,15 @@ public abstract class TranslateStrings {
 
     public static Set<Object> applyValues(Set<?> values) {
         return values.stream()
-                .map(TranslateStrings::applyValue)
+                .map(TranslateQuery::applyValue)
                 .collect(toSet());
     }
 
     public static Object applyValue(Object value) {
         if (value instanceof String) {
             return new Text((String) value);
+        } else if (value instanceof LocalDate) {
+            return (int)((LocalDate) value).toEpochDay();
         } else {
             return value;
         }

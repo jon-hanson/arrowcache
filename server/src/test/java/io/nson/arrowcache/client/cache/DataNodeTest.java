@@ -46,6 +46,9 @@ public class DataNodeTest {
 
             logger.info("Testing QUERY3: {}", TestData.QUERY3);
             dataNode.execute(TestData.QUERY3, resultListener);
+
+            logger.info("Testing QUERY4: {}", TestData.QUERY4);
+            dataNode.execute(TestData.QUERY4, resultListener);
         }
     }
 

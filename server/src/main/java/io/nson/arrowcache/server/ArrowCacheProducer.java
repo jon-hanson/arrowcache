@@ -4,7 +4,7 @@ import io.nson.arrowcache.common.Api;
 import io.nson.arrowcache.common.utils.ByteUtils;
 import io.nson.arrowcache.common.QueryCodecs;
 import io.nson.arrowcache.server.utils.ArrowUtils;
-import io.nson.arrowcache.server.utils.TranslateStrings;
+import io.nson.arrowcache.server.utils.TranslateQuery;
 import org.apache.arrow.flight.*;
 import org.apache.arrow.memory.BufferAllocator;
 import org.apache.arrow.util.AutoCloseables;
@@ -210,7 +210,7 @@ public class ArrowCacheProducer extends NoOpFlightProducer implements AutoClosea
 
     private void executeQuery(ByteArrayInputStream bais, ServerStreamListener listener) {
         final Api.Query query = QueryCodecs.API_TO_STREAM.decode(bais);
-        final Api.Query query2 = TranslateStrings.applyQuery(query);
+        final Api.Query query2 = TranslateQuery.applyQuery(query);
         for (Dataset dataset : this.datasets.values()) {
             for (ArrowRecordBatch arb : dataset.getBatches()) {
                 try (

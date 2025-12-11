@@ -116,4 +116,16 @@ public class TestData {
                     Api.Filter.in("id", Set.of(12, 22))
             )
     );
+
+    public static final Api.Query QUERY4 = new Api.Query(
+            List.of(
+                    Api.Filter.in(
+                            "date",
+                            Set.of(
+                                    LocalDate.of(2023, 3, 3),
+                                    LocalDate.of(2025, 3, 3)
+                            )
+                    )
+            )
+    );
 }
