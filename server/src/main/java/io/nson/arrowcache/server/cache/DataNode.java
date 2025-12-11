@@ -24,6 +24,8 @@ public class DataNode implements AutoCloseable {
 
     private static final Logger logger = LoggerFactory.getLogger(DataNode.class);
 
+    private static final TranslateQuery TRANSLATE_QUERY = new TranslateQuery(true, true);
+
     private static class RowCoordinate {
         final int batchIndex;
         final int rowIndex;
@@ -234,7 +236,7 @@ public class DataNode implements AutoCloseable {
             Api.Query query,
             FlightProducer.ServerStreamListener listener
     ) {
-        query = TranslateQuery.applyQuery(query);
+        query = TRANSLATE_QUERY.applyQuery(query);
 
         final QueryLogic queryLogic = new QueryLogic(this.keyName, query);
 

@@ -1,25 +1,37 @@
 package io.nson.arrowcache.client.cache;
 
 import io.nson.arrowcache.client.TestData;
+import io.nson.arrowcache.common.Api;
 import io.nson.arrowcache.server.cache.DataNode;
 import io.nson.arrowcache.server.utils.ArrowUtils;
+import io.nson.arrowcache.server.utils.TranslateQuery;
 import org.apache.arrow.flight.FlightProducer;
 import org.apache.arrow.memory.ArrowBuf;
 import org.apache.arrow.memory.BufferAllocator;
 import org.apache.arrow.memory.RootAllocator;
+import org.apache.arrow.vector.FieldVector;
 import org.apache.arrow.vector.VectorSchemaRoot;
 import org.apache.arrow.vector.VectorUnloader;
 import org.apache.arrow.vector.dictionary.DictionaryProvider;
 import org.apache.arrow.vector.ipc.message.IpcOption;
+import org.apache.arrow.vector.util.Text;
+import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
+import java.util.*;
+import java.util.function.Predicate;
+
+import static java.util.stream.Collectors.toList;
+import static java.util.stream.Collectors.toSet;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 public class DataNodeTest {
     private static final Logger logger = LoggerFactory.getLogger(DataNodeTest.class);
 
-    public static void main(String[] args) throws IOException {
+    @Test
+    public void test() throws IOException {
 
         try(
                 final BufferAllocator allocator = new RootAllocator();
@@ -28,33 +40,54 @@ public class DataNodeTest {
         ) {
             final VectorUnloader unloader = new VectorUnloader(vsc);
 
+            new HashMap<>();
+
             logger.info("Loading testdata1.csv");
-            TestData.loadTestData(vsc, "testdata1.csv");
+            final Map<Integer, Map<String, Object>> testDataMap = TestData.loadTestData(vsc, "testdata1.csv");
             dataNode.add(unloader.getRecordBatch());
 
             logger.info("Loading testdata2.csv");
-            TestData.loadTestData(vsc, "testdata2.csv");
+            testDataMap.putAll(TestData.loadTestData(vsc, "testdata2.csv"));
             dataNode.add(unloader.getRecordBatch());
 
-            final ResultListener resultListener = new ResultListener();
+            final Collection<Map<String, Object>> testData = testDataMap.values();
 
-            logger.info("Testing QUERY1: {}", TestData.QUERY1);
-            dataNode.execute(TestData.QUERY1, resultListener);
 
-            logger.info("Testing QUERY2: {}", TestData.QUERY2);
-            dataNode.execute(TestData.QUERY2, resultListener);
+            testQuery(dataNode, testData, TestData.QUERY1);
 
-            logger.info("Testing QUERY3: {}", TestData.QUERY3);
-            dataNode.execute(TestData.QUERY3, resultListener);
+            testQuery(dataNode, testData, TestData.QUERY2);
 
-            logger.info("Testing QUERY4: {}", TestData.QUERY4);
-            dataNode.execute(TestData.QUERY4, resultListener);
+            testQuery(dataNode, testData, TestData.QUERY3);
+
+            testQuery(dataNode, testData, TestData.QUERY4);
         }
     }
 
+    private static void testQuery(
+            DataNode dataNode,
+            Collection<Map<String, Object>> testData,
+            Api.Query query
+    ) {
+        final Set<Map<String, Object>> results = new HashSet<>();
+        final ResultListener resultListener = new ResultListener(results);
+
+        logger.info("Testing query: {}", query);
+        dataNode.execute(query, resultListener);
+
+        final Set<Map<String, Object>> matches = matches(testData, query);
+
+        assertEquals(matches, results);
+    }
+
     private static class ResultListener implements FlightProducer.ServerStreamListener {
-        VectorSchemaRoot vsc;
-        VectorUnloader unloader;
+
+        private final Set<Map<String, Object>> results;
+
+        private VectorSchemaRoot vsc;
+
+        private ResultListener(Set<Map<String, Object>>results) {
+            this.results = results;
+        }
 
         @Override
         public boolean isCancelled() {
@@ -63,7 +96,6 @@ public class DataNodeTest {
 
         @Override
         public void setOnCancelHandler(Runnable handler) {
-
         }
 
         @Override
@@ -74,32 +106,69 @@ public class DataNodeTest {
         @Override
         public void start(VectorSchemaRoot root, DictionaryProvider dictionaries, IpcOption option) {
             this.vsc = root;
-            this.unloader = new VectorUnloader(root);
         }
 
         @Override
         public void putNext() {
             ArrowUtils.toLines(logger::info, vsc);
+
+            final Map<String, Object> row = new HashMap<>();
+            for (int r = 0; r < vsc.getRowCount(); r++) {
+                for (FieldVector fv : vsc.getFieldVectors()) {
+                    Object value = fv.getObject(r);
+                    if (value instanceof Text) {
+                        value = value.toString();
+                    }
+                    row.put(fv.getField().getName(), value);
+                }
+                results.add(row);
+            }
         }
 
         @Override
-        public void putNext(ArrowBuf metadata) {
-
-        }
+        public void putNext(ArrowBuf metadata) {}
 
         @Override
-        public void putMetadata(ArrowBuf metadata) {
-
-        }
+        public void putMetadata(ArrowBuf metadata) {}
 
         @Override
-        public void error(Throwable ex) {
-
-        }
+        public void error(Throwable ex) {}
 
         @Override
-        public void completed() {
-
-        }
+        public void completed() {}
     }
+
+    private static final TranslateQuery TRANSLATE_QUERY = new TranslateQuery(false, true);
+
+    private static Set<Map<String, Object>> matches(Collection<Map<String, Object>> testData, Api.Query query) {
+        query = TRANSLATE_QUERY.applyQuery(query);
+        Predicate<Map<String, Object>> pred = null;
+        for (Api.Filter<?> filter : query.filters()) {
+            if (pred == null) {
+                pred = filter.alg(FILTER_ALG);
+            } else {
+                pred = pred.and(filter.alg(FILTER_ALG));
+            }
+        }
+
+        return testData.stream().filter(pred).collect(toSet());
+    }
+
+    private static final Api.Filter.Alg<Predicate<Map<String, Object>>> FILTER_ALG = new Api.Filter.Alg<Predicate<Map<String, Object>>>() {
+        @Override
+        public Predicate<Map<String, Object>> svFilter(String attribute, Api.SVFilter.Operator op, Object value) {
+            return row -> {
+                final boolean match = value.equals(row.get(attribute));
+                return (op == Api.SVFilter.Operator.EQUALS) == match;
+            };
+        }
+
+        @Override
+        public Predicate<Map<String, Object>> mvFilter(String attribute, Api.MVFilter.Operator op, Set<?> values) {
+            return row -> {
+                final boolean match = values.contains(row.get(attribute));
+                return (op == Api.MVFilter.Operator.IN) == match;
+            };
+        }
+    };
 }

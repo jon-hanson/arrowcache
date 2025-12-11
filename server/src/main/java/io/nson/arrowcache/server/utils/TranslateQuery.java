@@ -9,40 +9,44 @@ import java.util.Set;
 import static java.util.stream.Collectors.toList;
 import static java.util.stream.Collectors.toSet;
 
-public abstract class TranslateQuery {
-    private TranslateQuery() {}
+public class TranslateQuery {
+    private final boolean translateString;
+    private final boolean translateDate;
 
-    public static Api.Query applyQuery(Api.Query query) {
+    public TranslateQuery(boolean translateString, boolean translateDate) {
+        this.translateString = translateString;
+        this.translateDate = translateDate;
+    }
+
+    public Api.Query applyQuery(Api.Query query) {
         return new Api.Query(
                 query.filters().stream()
-                        .map(TranslateQuery::applyFilter)
+                        .map(this::applyFilter)
                         .collect(toList())
         );
     }
 
-    public static Api.Filter<?> applyFilter(Api.Filter<?> filter) {
+    public Api.Filter<?> applyFilter(Api.Filter<?> filter) {
         return filter.alg(TRANSLATE_STR_ALG);
     }
 
-    public static Set<Object> applyValues(Set<?> values) {
+    public Set<Object> applyValues(Set<?> values) {
         return values.stream()
-                .map(TranslateQuery::applyValue)
+                .map(this::applyValue)
                 .collect(toSet());
     }
 
-    public static Object applyValue(Object value) {
-        if (value instanceof String) {
+    public Object applyValue(Object value) {
+        if (translateString && value instanceof String) {
             return new Text((String) value);
-        } else if (value instanceof LocalDate) {
+        } else if (translateDate && value instanceof LocalDate) {
             return (int)((LocalDate) value).toEpochDay();
         } else {
             return value;
         }
     }
 
-    private static final TranslateFilterAlg TRANSLATE_STR_ALG = new  TranslateFilterAlg();
-
-    private static class TranslateFilterAlg implements Api.Filter.Alg<Api.Filter<?>> {
+    private final Api.Filter.Alg<Api.Filter<?>> TRANSLATE_STR_ALG = new Api.Filter.Alg<>() {
         @Override
         public Api.Filter<?> svFilter(String attribute, Api.SVFilter.Operator op, Object value) {
             return new Api.SVFilter<>(attribute, op, applyValue(value));
@@ -52,5 +56,5 @@ public abstract class TranslateQuery {
         public Api.Filter<?> mvFilter(String attribute, Api.MVFilter.Operator op, Set<?> values) {
             return new Api.MVFilter<>(attribute, op, applyValues(values));
         }
-    }
+    };
 }

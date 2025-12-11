@@ -17,9 +17,7 @@ import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
-import java.util.Arrays;
-import java.util.List;
-import java.util.Set;
+import java.util.*;
 
 public class TestData {
     private static final Logger logger = LoggerFactory.getLogger(TestData.class);
@@ -57,7 +55,9 @@ public class TestData {
         return VectorSchemaRoot.create(schema, allocator);
     }
 
-    public static VectorSchemaRoot loadTestData(VectorSchemaRoot vsc, String fileName) throws IOException {
+    public static Map<Integer, Map<String, Object>> loadTestData(VectorSchemaRoot vsc, String fileName) throws IOException {
+
+        final Map<Integer, Map<String, Object>> results = new HashMap<>();
 
         final IntVector idVector = (IntVector) vsc.getVector("id");
         final VarCharVector nameVector = (VarCharVector) vsc.getVector("name");
@@ -90,12 +90,19 @@ public class TestData {
             idVector.set(i, id);
             nameVector.set(i, name.getBytes(StandardCharsets.UTF_8));
             ageVector.set(i, age);
-            dateVector.set(i, (int)date.toEpochDay());
+            dateVector.set(i, (int) date.toEpochDay());
+
+            final Map<String, Object> row = new HashMap<>();
+            row.put("id", id);
+            row.put("name", name);
+            row.put("age", age);
+            row.put("date", (int)date.toEpochDay());
+            results.put(id, row);
         }
 
         vsc.setRowCount(rowCount);
 
-        return vsc;
+        return results;
     }
 
     public static final Api.Query QUERY1 = new Api.Query(

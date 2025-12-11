@@ -210,114 +210,115 @@ public class ArrowCacheProducer extends NoOpFlightProducer implements AutoClosea
 
     private void executeQuery(ByteArrayInputStream bais, ServerStreamListener listener) {
         final Api.Query query = QueryCodecs.API_TO_STREAM.decode(bais);
-        final Api.Query query2 = TranslateQuery.applyQuery(query);
-        for (Dataset dataset : this.datasets.values()) {
-            for (ArrowRecordBatch arb : dataset.getBatches()) {
-                try (
-                        VectorSchemaRoot vsc = VectorSchemaRoot.create(
-                                dataset.getSchema(),
-                                allocator
-                        )
-                ) {
-                    logger.info("VectorSchemaRoot: {}", vsc.getFieldVectors());
-
-                    final VectorLoader loader = new VectorLoader(vsc);
-                    loader.load(arb);
-
-                    final Map<String, FieldVector> fvMap =
-                            vsc.getFieldVectors().stream()
-                                    .collect(toMap(
-                                            fv -> fv.getField().getName(),
-                                            fv -> fv
-                                    ));
-
-                    Set<Integer> matches = null;
-                    for (Api.Filter<?> filter : query2.filters()) {
-                        final String attrName = filter.attribute();
-                        final FieldVector fv = fvMap.get(attrName);
-                        if (matches == null) {
-                            matches = new TreeSet<>();
-                            for (int i = 0; i < dataset.getRows(); ++i) {
-                                if (filter.alg(ARROW_FILTER_ALG).test(fv, i)) {
-                                    matches.add(i);
-                                }
-                            }
-                        } else {
-                            Set<Integer> matches2 = new TreeSet<>();
-                            for (int i : matches) {
-                                if (filter.alg(ARROW_FILTER_ALG).test(fv, i)) {
-                                    matches2.add(i);
-                                }
-                            }
-
-                            matches = matches2;
-                        }
-
-                        if (matches.isEmpty()) {
-                            break;
-                        }
-                    }
-
-                    final int numRecords = matches == null ? 0 : matches.size();
-
-                    logger.info("Found {} matches", numRecords);
-
-                    try (final VectorSchemaRoot resultVsc = VectorSchemaRoot.create(vsc.getSchema(), allocator)) {
-                        VectorSchemaRoot[] slices = null;
-                        try {
-                            slices = matches.stream()
-                                    .map(i -> vsc.slice(i, 1))
-                                    .toArray(VectorSchemaRoot[]::new);
-
-                            resultVsc.allocateNew();
-                            listener.start(resultVsc);
-                            VectorSchemaRootAppender.append(false, resultVsc, slices);
-                            listener.putNext();
-                            listener.completed();
-                        } finally {
-                            for (VectorSchemaRoot slice : slices) {
-                                slice.close();
-                            }
-                        }
-                    }
-                }
-            }
-        }
+//
+//        final Api.Query query2 = TRANSLATE_QUERY.applyQuery(query);
+//        for (Dataset dataset : this.datasets.values()) {
+//            for (ArrowRecordBatch arb : dataset.getBatches()) {
+//                try (
+//                        VectorSchemaRoot vsc = VectorSchemaRoot.create(
+//                                dataset.getSchema(),
+//                                allocator
+//                        )
+//                ) {
+//                    logger.info("VectorSchemaRoot: {}", vsc.getFieldVectors());
+//
+//                    final VectorLoader loader = new VectorLoader(vsc);
+//                    loader.load(arb);
+//
+//                    final Map<String, FieldVector> fvMap =
+//                            vsc.getFieldVectors().stream()
+//                                    .collect(toMap(
+//                                            fv -> fv.getField().getName(),
+//                                            fv -> fv
+//                                    ));
+//
+//                    Set<Integer> matches = null;
+//                    for (Api.Filter<?> filter : query2.filters()) {
+//                        final String attrName = filter.attribute();
+//                        final FieldVector fv = fvMap.get(attrName);
+//                        if (matches == null) {
+//                            matches = new TreeSet<>();
+//                            for (int i = 0; i < dataset.getRows(); ++i) {
+//                                if (filter.alg(ARROW_FILTER_ALG).test(fv, i)) {
+//                                    matches.add(i);
+//                                }
+//                            }
+//                        } else {
+//                            Set<Integer> matches2 = new TreeSet<>();
+//                            for (int i : matches) {
+//                                if (filter.alg(ARROW_FILTER_ALG).test(fv, i)) {
+//                                    matches2.add(i);
+//                                }
+//                            }
+//
+//                            matches = matches2;
+//                        }
+//
+//                        if (matches.isEmpty()) {
+//                            break;
+//                        }
+//                    }
+//
+//                    final int numRecords = matches == null ? 0 : matches.size();
+//
+//                    logger.info("Found {} matches", numRecords);
+//
+//                    try (final VectorSchemaRoot resultVsc = VectorSchemaRoot.create(vsc.getSchema(), allocator)) {
+//                        VectorSchemaRoot[] slices = null;
+//                        try {
+//                            slices = matches.stream()
+//                                    .map(i -> vsc.slice(i, 1))
+//                                    .toArray(VectorSchemaRoot[]::new);
+//
+//                            resultVsc.allocateNew();
+//                            listener.start(resultVsc);
+//                            VectorSchemaRootAppender.append(false, resultVsc, slices);
+//                            listener.putNext();
+//                            listener.completed();
+//                        } finally {
+//                            for (VectorSchemaRoot slice : slices) {
+//                                slice.close();
+//                            }
+//                        }
+//                    }
+//                }
+//            }
+//        }
     }
-
-    private static final Api.Filter.Alg<BiPredicate<FieldVector, Integer>> ARROW_FILTER_ALG = new Api.Filter.Alg<>() {
-        @Override
-        public BiPredicate<FieldVector, Integer> svFilter(String attribute, Api.SVFilter.Operator op, Object value) {
-            return (fv, i) -> {
-                final Object fvVal = fv.getObject(i);
-                final boolean match = value.equals(fvVal);
-                switch (op) {
-                    case EQUALS:
-                        return match;
-                    case NOT_EQUALS:
-                        return !match;
-                    default:
-                        throw new IllegalStateException("Unknown filter operator: " + op);
-                }
-            };
-        }
-
-        @Override
-        public BiPredicate<FieldVector, Integer> mvFilter(String attribute, Api.MVFilter.Operator op, Set<?> values) {
-            return (fv, i) -> {
-                final Object fvVal = fv.getObject(i);
-                final boolean match = values.contains(fvVal);
-                switch (op) {
-                    case IN:
-                        return match;
-                    case NOT_IN:
-                        return !match;
-                    default:
-                        throw new IllegalStateException("Unknown filter operator: " + op);
-                }
-            };
-        }
-    };
+//
+//    private static final Api.Filter.Alg<BiPredicate<FieldVector, Integer>> ARROW_FILTER_ALG = new Api.Filter.Alg<>() {
+//        @Override
+//        public BiPredicate<FieldVector, Integer> svFilter(String attribute, Api.SVFilter.Operator op, Object value) {
+//            return (fv, i) -> {
+//                final Object fvVal = fv.getObject(i);
+//                final boolean match = value.equals(fvVal);
+//                switch (op) {
+//                    case EQUALS:
+//                        return match;
+//                    case NOT_EQUALS:
+//                        return !match;
+//                    default:
+//                        throw new IllegalStateException("Unknown filter operator: " + op);
+//                }
+//            };
+//        }
+//
+//        @Override
+//        public BiPredicate<FieldVector, Integer> mvFilter(String attribute, Api.MVFilter.Operator op, Set<?> values) {
+//            return (fv, i) -> {
+//                final Object fvVal = fv.getObject(i);
+//                final boolean match = values.contains(fvVal);
+//                switch (op) {
+//                    case IN:
+//                        return match;
+//                    case NOT_IN:
+//                        return !match;
+//                    default:
+//                        throw new IllegalStateException("Unknown filter operator: " + op);
+//                }
+//            };
+//        }
+//    };
 
     @Override
     public void doAction(CallContext context, Action action, StreamListener<Result> listener) {
