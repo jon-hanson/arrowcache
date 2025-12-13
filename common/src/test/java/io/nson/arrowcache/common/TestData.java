@@ -30,7 +30,7 @@ public class TestData {
                 new TreeSet<>(Set.of(VALUE_2, VALUE_3, VALUE_4))
         ));
 
-        API_QUERY = new Api.Query(filters);
+        API_QUERY = new Api.Query("/abc/d/ef", filters);
     }
 
     public static final Query AVRO_QUERY;

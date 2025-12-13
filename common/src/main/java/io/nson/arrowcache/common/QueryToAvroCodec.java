@@ -5,8 +5,8 @@ import io.nson.arrowcache.common.utils.*;
 
 import java.util.*;
 
-public final class QueryApiToAvroCodec implements Codec<Api.Query, Query> {
-    public static final QueryApiToAvroCodec INSTANCE = new QueryApiToAvroCodec();
+public final class QueryToAvroCodec implements Codec<Api.Query, Query> {
+    public static final QueryToAvroCodec INSTANCE = new QueryToAvroCodec();
 
     private static final Api.Filter.Alg<Object> ENCODE_FILTER_ALG = new Api.Filter.Alg<>() {
 
@@ -32,7 +32,8 @@ public final class QueryApiToAvroCodec implements Codec<Api.Query, Query> {
     @Override
     public Query encode(Api.Query query) {
         return new Query(
-                Functors.listMap(query.filters(), QueryApiToAvroCodec::encode)
+                query.path(),
+                Functors.listMap(query.filters(), QueryToAvroCodec::encode)
         );
     }
 
@@ -65,7 +66,8 @@ public final class QueryApiToAvroCodec implements Codec<Api.Query, Query> {
     @Override
     public Api.Query decode(Query enc) {
         return new Api.Query(
-                Functors.listMap(enc.getFilters(), QueryApiToAvroCodec::decodeFilter)
+                enc.getPath(),
+                Functors.listMap(enc.getFilters(), QueryToAvroCodec::decodeFilter)
         );
     }
 

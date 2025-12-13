@@ -19,10 +19,10 @@ public class ArrowCacheServer implements AutoCloseable {
     private final Location location;
     private final BufferAllocator allocator;
 
-    public ArrowCacheServer(BufferAllocator allocator, Location location) {
+    public ArrowCacheServer(DataStore dataStore, BufferAllocator allocator, Location location) {
         this.allocator = allocator.newChildAllocator("flight-server", 0L, 9223372036854775807L);
         this.location = location;
-        this.flightProducer = new ArrowCacheProducer(allocator, location);
+        this.flightProducer = new ArrowCacheProducer(dataStore, allocator, location);
         this.flightServer = FlightServer.builder(allocator, location, flightProducer).build();
 
         logger.info("New instance for location {}", location);
@@ -63,7 +63,9 @@ public class ArrowCacheServer implements AutoCloseable {
 
         final BufferAllocator buffAlloc = new RootAllocator();
 
+        final DataStore dataStore = new DataStore(null, buffAlloc);
         final ArrowCacheServer server = new ArrowCacheServer(
+                dataStore,
                 buffAlloc,
                 Location.forGrpcInsecure("localhost", 12233)
         );

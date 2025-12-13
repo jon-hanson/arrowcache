@@ -5,7 +5,7 @@ import org.apache.arrow.vector.FieldVector;
 
 import java.util.*;
 
-public class QueryLogic {
+public final class QueryLogic {
 
     private static final class Values<T> {
         Set<T> inclusions = null;
@@ -42,7 +42,7 @@ public class QueryLogic {
         }
     }
 
-    public static class Filter<T> {
+    public static final class Filter<T> {
         public enum Operator {
             IN, NOT_IN
         }
@@ -55,6 +55,15 @@ public class QueryLogic {
             this.attribute = attribute;
             this.operator = operator;
             this.values = values;
+        }
+
+        @Override
+        public String toString() {
+            return "Filter{" +
+                    "attribute='" + attribute + '\'' +
+                    ", operator=" + operator +
+                    ", values=" + values +
+                    '}';
         }
 
         public String attribute() {
@@ -77,11 +86,11 @@ public class QueryLogic {
     private final List<Filter<?>> inFilters = new ArrayList<>();
     private final List<Filter<?>> notInFilters = new ArrayList<>();
 
-    public QueryLogic(String keyAttrName, Api.Query query) {
+    public QueryLogic(String keyAttrName, List<Api.Filter<?>> filters) {
 
         final Map<String, Values<?>> mapValues = new HashMap<>();
 
-        for (Api.Filter<?> filter : query.filters()) {
+        for (Api.Filter<?> filter : filters ) {
             final Values<?> values = mapValues.computeIfAbsent(filter.attribute(), k -> new Values<>());
             if (filter instanceof Api.SVFilter) {
                 final Api.SVFilter<?> svFilter = (Api.SVFilter)filter;
@@ -136,6 +145,14 @@ public class QueryLogic {
                 notInFilters.add(new Filter<>(name, Filter.Operator.NOT_IN, values.exclusions));
             }
         });
+    }
+
+    @Override
+    public String toString() {
+        return "QueryLogic{" +
+                "inFilters=" + inFilters +
+                ", notInFilters=" + notInFilters +
+                '}';
     }
 
     public int filterCount() {

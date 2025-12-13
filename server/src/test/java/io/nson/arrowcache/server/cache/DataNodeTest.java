@@ -1,8 +1,7 @@
-package io.nson.arrowcache.client.cache;
+package io.nson.arrowcache.server.cache;
 
-import io.nson.arrowcache.client.TestData;
+import io.nson.arrowcache.server.TestData;
 import io.nson.arrowcache.common.Api;
-import io.nson.arrowcache.server.cache.DataNode;
 import io.nson.arrowcache.server.utils.ArrowUtils;
 import io.nson.arrowcache.server.utils.TranslateQuery;
 import org.apache.arrow.flight.FlightProducer;
@@ -23,7 +22,6 @@ import java.io.IOException;
 import java.util.*;
 import java.util.function.Predicate;
 
-import static java.util.stream.Collectors.toList;
 import static java.util.stream.Collectors.toSet;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
@@ -36,7 +34,7 @@ public class DataNodeTest {
         try(
                 final BufferAllocator allocator = new RootAllocator();
                 final VectorSchemaRoot vsc = TestData.createTestDataVSC(allocator);
-                final DataNode dataNode = new DataNode(allocator, vsc.getSchema(), "id");
+                final DataNode dataNode = new DataNode("id",    allocator, vsc.getSchema());
         ) {
             final VectorUnloader unloader = new VectorUnloader(vsc);
 
@@ -44,37 +42,36 @@ public class DataNodeTest {
 
             logger.info("Loading testdata1.csv");
             final Map<Integer, Map<String, Object>> testDataMap = TestData.loadTestData(vsc, "testdata1.csv");
-            dataNode.add(unloader.getRecordBatch());
+            dataNode.add(vsc.getSchema(), unloader.getRecordBatch());
 
             logger.info("Loading testdata2.csv");
             testDataMap.putAll(TestData.loadTestData(vsc, "testdata2.csv"));
-            dataNode.add(unloader.getRecordBatch());
+            dataNode.add(vsc.getSchema(), unloader.getRecordBatch());
 
             final Collection<Map<String, Object>> testData = testDataMap.values();
 
+            testQuery(dataNode, testData, TestData.FILTERS1);
 
-            testQuery(dataNode, testData, TestData.QUERY1);
+            testQuery(dataNode, testData, TestData.FILTERS2);
 
-            testQuery(dataNode, testData, TestData.QUERY2);
+            testQuery(dataNode, testData, TestData.FILTERS3);
 
-            testQuery(dataNode, testData, TestData.QUERY3);
-
-            testQuery(dataNode, testData, TestData.QUERY4);
+            testQuery(dataNode, testData, TestData.FILTERS4);
         }
     }
 
     private static void testQuery(
             DataNode dataNode,
             Collection<Map<String, Object>> testData,
-            Api.Query query
+            List<Api.Filter<?>>  filters
     ) {
         final Set<Map<String, Object>> results = new HashSet<>();
         final ResultListener resultListener = new ResultListener(results);
 
-        logger.info("Testing query: {}", query);
-        dataNode.execute(query, resultListener);
+        logger.info("Testing filters: {}", filters);
+        dataNode.execute(filters, resultListener);
 
-        final Set<Map<String, Object>> matches = matches(testData, query);
+        final Set<Map<String, Object>> matches = matches(testData, filters);
 
         assertEquals(matches, results);
     }
@@ -140,10 +137,10 @@ public class DataNodeTest {
 
     private static final TranslateQuery TRANSLATE_QUERY = new TranslateQuery(false, true);
 
-    private static Set<Map<String, Object>> matches(Collection<Map<String, Object>> testData, Api.Query query) {
-        query = TRANSLATE_QUERY.applyQuery(query);
+    private static Set<Map<String, Object>> matches(Collection<Map<String, Object>> testData, List<Api.Filter<?>> filters) {
+        filters = TRANSLATE_QUERY.applyFilters(filters);
         Predicate<Map<String, Object>> pred = null;
-        for (Api.Filter<?> filter : query.filters()) {
+        for (Api.Filter<?> filter : filters) {
             if (pred == null) {
                 pred = filter.alg(FILTER_ALG);
             } else {

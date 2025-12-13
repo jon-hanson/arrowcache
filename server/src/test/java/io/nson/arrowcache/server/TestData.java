@@ -1,4 +1,4 @@
-package io.nson.arrowcache.client;
+package io.nson.arrowcache.server;
 
 import io.nson.arrowcache.common.Api;
 import io.nson.arrowcache.common.utils.FileUtils;
@@ -105,26 +105,23 @@ public class TestData {
         return results;
     }
 
-    public static final Api.Query QUERY1 = new Api.Query(
+    public static final List<Api.Filter<?>> FILTERS1 =
             List.of(
                     Api.Filter.eq("name","abc")
-            )
-    );
+            );
 
-    public static final Api.Query QUERY2 = new Api.Query(
+    public static final List<Api.Filter<?>> FILTERS2 =
             List.of(
                     Api.Filter.in("name",Set.of("abc", "def")),
                     Api.Filter.neq("age", 2.3f)
-            )
-    );
+            );
 
-    public static final Api.Query QUERY3 = new Api.Query(
+    public static final List<Api.Filter<?>> FILTERS3 =
             List.of(
                     Api.Filter.in("id", Set.of(12, 22))
-            )
-    );
+            );
 
-    public static final Api.Query QUERY4 = new Api.Query(
+    public static final List<Api.Filter<?>> FILTERS4 =
             List.of(
                     Api.Filter.in(
                             "date",
@@ -133,6 +130,5 @@ public class TestData {
                                     LocalDate.of(2025, 3, 3)
                             )
                     )
-            )
-    );
+            );
 }

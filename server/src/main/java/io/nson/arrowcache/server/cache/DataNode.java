@@ -20,13 +20,13 @@ import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 import static java.util.stream.Collectors.*;
 
-public class DataNode implements AutoCloseable {
+public final class DataNode implements AutoCloseable {
 
     private static final Logger logger = LoggerFactory.getLogger(DataNode.class);
 
     private static final TranslateQuery TRANSLATE_QUERY = new TranslateQuery(true, true);
 
-    private static class RowCoordinate {
+    private static final class RowCoordinate {
         final int batchIndex;
         final int rowIndex;
 
@@ -36,7 +36,7 @@ public class DataNode implements AutoCloseable {
         }
     }
 
-    private class Batch implements AutoCloseable {
+    private final class Batch implements AutoCloseable {
         private final ArrowRecordBatch arb;
         private final Set<Integer> replaced;
 
@@ -64,6 +64,7 @@ public class DataNode implements AutoCloseable {
                 QueryLogic queryLogic,
                 int batchIndex
         ) {
+            logger.info("Looking for matches in batch {}", batchIndex);
 
             loader.load(arb);
             final Map<String, FieldVector> fvMap =
@@ -165,47 +166,97 @@ public class DataNode implements AutoCloseable {
                 }
             }
 
-            return matches == null ? Collections.emptySet() : matches;
+            if (matches == null) {
+                matches = Collections.emptySet();
+            }
+
+            logger.info("Found {} matches", matches.size());
+
+            return matches;
         }
     }
 
+    private final String keyName;
     private final BufferAllocator allocator;
     private final Schema schema;
-    private final String keyName;
     private final int keyIndex;
     private final List<Batch> batches;
     private final Map<Object, RowCoordinate> rowCoordinateMap = new HashMap<>();
     private final ReadWriteLock rwLock = new ReentrantReadWriteLock();
 
     public DataNode(
+            String keyName,
             BufferAllocator allocator,
             Schema schema,
-            String keyName,
             List<ArrowRecordBatch> arbs
     ) {
+        this.keyName = keyName;
         this.allocator = allocator;
         this.schema = schema;
-        this.keyName = keyName;
         this.keyIndex = CacheUtils.findKeyColumn(schema, keyName);
         this.batches = arbs.stream().map(Batch::new).collect(toList());
     }
 
-    public DataNode(BufferAllocator allocator, Schema schema, String keyName) {
-        this(allocator, schema, keyName, Collections.emptyList());
+    public DataNode(
+            String keyName,
+            BufferAllocator allocator,
+            Schema schema
+    ) {
+        this(keyName, allocator, schema, new ArrayList<>());
+    }
+
+    public DataNode(
+            CacheConfig.NodeConfig nodeConfig,
+            BufferAllocator allocator,
+            Schema schema,
+            List<ArrowRecordBatch> arbs
+    ) {
+        this(
+                nodeConfig.keyName(),
+                allocator,
+                schema,
+                arbs
+        );
+    }
+
+    public DataNode(
+            CacheConfig.NodeConfig nodeConfig,
+            BufferAllocator allocator,
+            Schema schema
+    ) {
+        this(nodeConfig, allocator, schema, new ArrayList<>());
     }
 
     @Override
     public void close() {
-        for (Batch batch : this.batches) {
-            batch.close();
+        synchronized (rwLock.writeLock()) {
+            for (Batch batch : this.batches) {
+                batch.close();
+            }
         }
     }
 
-    public synchronized void add(ArrowRecordBatch batch) {
-        add(Collections.singletonList(batch));
+    public Schema schema() {
+        return schema;
     }
 
-    public synchronized void add(List<ArrowRecordBatch> arbs) {
+    public synchronized void add(Schema schema, ArrowRecordBatch batch) {
+        if (!this.schema.equals(schema)) {
+            throw new IllegalArgumentException("Schema mismatch");
+        } else {
+            addImpl(Collections.singletonList(batch));
+        }
+    }
+
+    public synchronized void add(Schema schema, List<ArrowRecordBatch> arbs) {
+        if (!this.schema.equals(schema)) {
+            throw new IllegalArgumentException("Schema mismatch");
+        } else {
+            addImpl(arbs);
+        }
+    }
+
+    private void addImpl(List<ArrowRecordBatch> arbs) {
         synchronized (this.rwLock.writeLock()) {
             try (VectorSchemaRoot vsc = VectorSchemaRoot.create(this.schema, this.allocator)) {
                 final VectorLoader loader = new VectorLoader(vsc);
@@ -232,13 +283,91 @@ public class DataNode implements AutoCloseable {
         }
     }
 
+    public Map<Integer, Set<Integer>> execute(List<Api.Filter<?>> filters) {
+
+        logger.info("Executing query {}", filters);
+
+        filters = TRANSLATE_QUERY.applyFilters(filters);
+
+        logger.info("Translated query {}", filters);
+
+        final QueryLogic queryLogic = new QueryLogic(this.keyName, filters);
+
+        logger.info("QueryLogic query {}", queryLogic);
+
+        final Map<Integer, Set<Integer>> results = new HashMap<>();
+
+        synchronized (this.rwLock.readLock()) {
+            try (final VectorSchemaRoot vsc = VectorSchemaRoot.create(this.schema, this.allocator)) {
+                final VectorLoader loader = new VectorLoader(vsc);
+
+                for (int batchIndex = 0; batchIndex < this.batches.size(); ++batchIndex) {
+                    final Batch batch = this.batches.get(batchIndex);
+
+                    final Set<Integer> matches = batch.matches(loader, vsc, queryLogic, batchIndex);
+
+                    if (!matches.isEmpty()) {
+                        results.put(batchIndex, matches);
+                    }
+                }
+            }
+        }
+
+        return results;
+    }
+
     public void execute(
-            Api.Query query,
+            Map<Integer, Set<Integer>> batchMatches,
             FlightProducer.ServerStreamListener listener
     ) {
-        query = TRANSLATE_QUERY.applyQuery(query);
 
-        final QueryLogic queryLogic = new QueryLogic(this.keyName, query);
+        synchronized (this.rwLock.readLock()) {
+            try (
+                    final VectorSchemaRoot resultVsc = VectorSchemaRoot.create(this.schema, this.allocator);
+                    final VectorSchemaRoot vsc = VectorSchemaRoot.create(this.schema, this.allocator)
+            ) {
+                listener.start(resultVsc);
+
+                batchMatches.forEach((batchIndex, matches) -> {
+                    final Batch batch = this.batches.get(batchIndex);
+
+                    VectorSchemaRoot[] slices = null;
+
+                    try {
+                        slices = matches.stream()
+                                .map(i -> vsc.slice(i, 1))
+                                .toArray(VectorSchemaRoot[]::new);
+
+                        resultVsc.allocateNew();
+                        VectorSchemaRootAppender.append(false, resultVsc, slices);
+                        listener.putNext();
+                    } finally {
+                        if (slices != null) {
+                            for (VectorSchemaRoot slice : slices) {
+                                slice.close();
+                            }
+                        }
+                    }
+                });
+
+                listener.completed();
+            }
+        }
+    }
+
+    public void execute(
+            List<Api.Filter<?>> filters,
+            FlightProducer.ServerStreamListener listener
+    ) {
+        logger.info("Executing query {}", filters);
+
+        filters = TRANSLATE_QUERY.applyFilters(filters);
+
+        logger.info("Translated query {}", filters);
+
+        final QueryLogic queryLogic = new QueryLogic(this.keyName, filters);
+
+        logger.info("QueryLogic query {}", queryLogic);
 
         synchronized (this.rwLock.readLock()) {
             try (

@@ -27,8 +27,8 @@ public interface Codec<RAW, ENC> extends BiCodec<ENC, RAW, RAW, ENC> {
     static <RAW, ENC> Codec<RAW, ENC> valueOf(Function<RAW, ENC> encoder, Function<ENC, RAW> decoder) {
         return new Codec<RAW, ENC>() {
             @Override
-            public ENC encode(RAW t1) {
-                return encoder.apply(t1);
+            public ENC encode(RAW raw) {
+                return encoder.apply(raw);
             }
 
             @Override
@@ -38,7 +38,7 @@ public interface Codec<RAW, ENC> extends BiCodec<ENC, RAW, RAW, ENC> {
         };
     }
 
-    ENC encode(RAW t1);
+    ENC encode(RAW raw);
 
     RAW decode(ENC enc);
 

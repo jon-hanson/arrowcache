@@ -4,6 +4,7 @@ import io.nson.arrowcache.common.Api;
 import org.apache.arrow.vector.util.Text;
 
 import java.time.LocalDate;
+import java.util.List;
 import java.util.Set;
 
 import static java.util.stream.Collectors.toList;
@@ -18,12 +19,10 @@ public class TranslateQuery {
         this.translateDate = translateDate;
     }
 
-    public Api.Query applyQuery(Api.Query query) {
-        return new Api.Query(
-                query.filters().stream()
-                        .map(this::applyFilter)
-                        .collect(toList())
-        );
+    public List<Api.Filter<?>> applyFilters(List<Api.Filter<?>> filters) {
+        return filters.stream()
+                .map(this::applyFilter)
+                .collect(toList());
     }
 
     public Api.Filter<?> applyFilter(Api.Filter<?> filter) {

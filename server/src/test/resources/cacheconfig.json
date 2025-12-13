@@ -1,0 +1,10 @@
+{
+    "nodes": {
+        "/abc/def": {
+            "keyName": "id"
+        },
+        "/abc/ghi": {
+            "keyName": "id"
+        }
+    }
+}
