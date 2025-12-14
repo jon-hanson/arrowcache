@@ -2,7 +2,7 @@ package io.nson.arrowcache.server.cache;
 
 import io.nson.arrowcache.server.TestData;
 import io.nson.arrowcache.common.Api;
-import io.nson.arrowcache.server.utils.ArrowUtils;
+import io.nson.arrowcache.common.utils.ArrowUtils;
 import io.nson.arrowcache.server.utils.TranslateQuery;
 import org.apache.arrow.flight.FlightProducer;
 import org.apache.arrow.memory.ArrowBuf;

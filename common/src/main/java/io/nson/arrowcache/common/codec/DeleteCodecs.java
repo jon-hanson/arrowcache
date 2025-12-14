@@ -1,5 +1,6 @@
-package io.nson.arrowcache.common;
+package io.nson.arrowcache.common.codec;
 
+import io.nson.arrowcache.common.Api;
 import io.nson.arrowcache.common.avro.Delete;
 import io.nson.arrowcache.common.utils.BiCodec;
 import io.nson.arrowcache.common.utils.Codec;

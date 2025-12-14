@@ -1,5 +1,6 @@
-package io.nson.arrowcache.common;
+package io.nson.arrowcache.common.codec;
 
+import io.nson.arrowcache.common.Api;
 import io.nson.arrowcache.common.avro.Query;
 import io.nson.arrowcache.common.utils.BiCodec;
 import io.nson.arrowcache.common.utils.Codec;
@@ -10,8 +11,7 @@ import java.util.function.Consumer;
 public abstract class QueryCodecs {
     public static final Codec<Api.Query, Query> API_TO_AVRO = QueryToAvroCodec.INSTANCE;
 
-    public static final BiCodec<Consumer<OutputStream>, Query, Query, InputStream> AVRO_TO_STREAM
-                = new BiCodec<>() {
+    public static final BiCodec<Consumer<OutputStream>, Query, Query, InputStream> AVRO_TO_STREAM = new BiCodec<>() {
 
         @Override
         public Consumer<OutputStream> encode(Query raw) {

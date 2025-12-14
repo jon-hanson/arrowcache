@@ -37,9 +37,9 @@ public final class CacheConfig {
         }
     }
 
-    private final Map<CachePath, NodeConfig> nodes;
+    private final Map<io.nson.arrowcache.common.CachePath, NodeConfig> nodes;
 
-    public CacheConfig(Map<CachePath, NodeConfig> nodes) {
+    public CacheConfig(Map<io.nson.arrowcache.common.CachePath, NodeConfig> nodes) {
         this.nodes = nodes;
     }
 
@@ -65,10 +65,10 @@ public final class CacheConfig {
         return Objects.hashCode(nodes);
     }
 
-    public NodeConfig getNode(CachePath path) {
-        final CachePath match = nodes.keySet().stream()
+    public NodeConfig getNode(io.nson.arrowcache.common.CachePath path) {
+        final io.nson.arrowcache.common.CachePath match = nodes.keySet().stream()
                 .filter(path::match)
-                .min(Comparator.comparing(CachePath::wildcardCount))
+                .min(Comparator.comparing(io.nson.arrowcache.common.CachePath::wildcardCount))
                 .orElseThrow(() -> new IllegalArgumentException("No nodes found that match path '" + path + "'"));
 
         return nodes.get(match);

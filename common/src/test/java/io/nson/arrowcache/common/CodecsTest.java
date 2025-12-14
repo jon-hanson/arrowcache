@@ -1,5 +1,6 @@
 package io.nson.arrowcache.common;
 
+import io.nson.arrowcache.common.codec.QueryCodecs;
 import org.junit.jupiter.api.Test;
 import io.nson.arrowcache.common.avro.Query;
 

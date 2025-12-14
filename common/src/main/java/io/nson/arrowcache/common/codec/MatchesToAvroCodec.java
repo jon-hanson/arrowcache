@@ -1,5 +1,6 @@
-package io.nson.arrowcache.common;
+package io.nson.arrowcache.common.codec;
 
+import io.nson.arrowcache.common.Api;
 import io.nson.arrowcache.common.avro.BatchMatches;
 import io.nson.arrowcache.common.avro.Matches;
 import io.nson.arrowcache.common.utils.Codec;

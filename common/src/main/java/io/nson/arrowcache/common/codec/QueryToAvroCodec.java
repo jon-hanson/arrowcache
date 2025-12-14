@@ -1,5 +1,7 @@
-package io.nson.arrowcache.common;
+package io.nson.arrowcache.common.codec;
 
+import io.nson.arrowcache.common.Api;
+import io.nson.arrowcache.common.CachePath;
 import io.nson.arrowcache.common.avro.*;
 import io.nson.arrowcache.common.utils.*;
 
@@ -32,7 +34,7 @@ public final class QueryToAvroCodec implements Codec<Api.Query, Query> {
     @Override
     public Query encode(Api.Query query) {
         return new Query(
-                query.path(),
+                query.path().parts(),
                 Functors.listMap(query.filters(), QueryToAvroCodec::encode)
         );
     }
@@ -66,7 +68,7 @@ public final class QueryToAvroCodec implements Codec<Api.Query, Query> {
     @Override
     public Api.Query decode(Query enc) {
         return new Api.Query(
-                enc.getPath(),
+                CachePath.valueOf(enc.getPath()),
                 Functors.listMap(enc.getFilters(), QueryToAvroCodec::decodeFilter)
         );
     }

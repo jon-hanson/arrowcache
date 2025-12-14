@@ -3,7 +3,9 @@ package io.nson.arrowcache.client;
 import io.nson.arrowcache.common.Api;
 import io.nson.arrowcache.common.utils.FileUtils;
 import org.apache.arrow.memory.BufferAllocator;
+import org.apache.arrow.memory.RootAllocator;
 import org.apache.arrow.vector.*;
+import org.apache.arrow.vector.ipc.message.ArrowRecordBatch;
 import org.apache.arrow.vector.types.DateUnit;
 import org.apache.arrow.vector.types.FloatingPointPrecision;
 import org.apache.arrow.vector.types.pojo.ArrowType;
@@ -57,7 +59,7 @@ public class TestData {
         return VectorSchemaRoot.create(schema, allocator);
     }
 
-    public static VectorSchemaRoot loadTestData(VectorSchemaRoot vsc, String fileName) throws IOException {
+    public static VectorSchemaRoot loadTestDataIntoVsc(VectorSchemaRoot vsc, String fileName) throws IOException {
 
         final IntVector idVector = (IntVector) vsc.getVector("id");
         final VarCharVector nameVector = (VarCharVector) vsc.getVector("name");
@@ -96,26 +98,30 @@ public class TestData {
         return vsc;
     }
 
-    public static final Api.Query QUERY1 = new Api.Query(
-            "",
+    public static final List<Api.Filter<?>> FILTERS1 =
             List.of(
-                    new Api.MVFilter<String>(
-                            "name",
-                            Api.MVFilter.Operator.IN,
-                            Set.of("abc", "def")
-                    )
-            )
-    );
+                    Api.Filter.eq("name","abc")
+            );
 
-    public static final Api.Query QUERY2 = new Api.Query(
-            "",
+    public static final List<Api.Filter<?>> FILTERS2 =
             List.of(
-                    new Api.SVFilter<Float>(
-                            "age",
-                            Api.SVFilter.Operator.NOT_EQUALS,
-                            2.3f
-                    )
-            )
-    );
+                    Api.Filter.in("name",Set.of("abc", "def")),
+                    Api.Filter.neq("age", 2.3f)
+            );
 
+    public static final List<Api.Filter<?>> FILTERS3 =
+            List.of(
+                    Api.Filter.in("id", Set.of(12, 22))
+            );
+
+    public static final List<Api.Filter<?>> FILTERS4 =
+            List.of(
+                    Api.Filter.in(
+                            "date",
+                            Set.of(
+                                    LocalDate.of(2023, 3, 3),
+                                    LocalDate.of(2025, 3, 3)
+                            )
+                    )
+            );
 }

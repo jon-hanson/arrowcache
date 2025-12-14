@@ -1,6 +1,6 @@
 package io.nson.arrowcache.client;
 
-import io.nson.arrowcache.common.QueryCodecs;
+import io.nson.arrowcache.common.codec.QueryCodecs;
 import org.apache.arrow.flight.*;
 import org.apache.arrow.memory.*;
 import org.apache.arrow.vector.*;
@@ -47,7 +47,7 @@ public class TestClient {
                         CALL_TIMEOUT
                 );
 
-                TestData.loadTestData(vsc, "testdata1.csv");
+                TestData.loadTestDataIntoVsc(vsc, "testdata1.csv");
 
                 logger.info("VectorSchemaRoot:");
                 logger.info(vsc.contentToTSVString());

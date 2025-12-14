@@ -1,26 +1,28 @@
 package io.nson.arrowcache.client;
 
 import io.nson.arrowcache.common.Api;
-import org.apache.arrow.vector.ipc.message.ArrowRecordBatch;
-import org.apache.arrow.vector.types.pojo.Schema;
+import io.nson.arrowcache.common.CachePath;
+import org.apache.arrow.vector.VectorSchemaRoot;
 
 import java.util.List;
 
-public interface ClientAPI {
-    interface Source<T> {
+public interface ClientAPI extends AutoCloseable {
+    interface Source {
         boolean hasNext();
-        T next();
+        void loadNext();
     }
 
-    interface Listener<T> {
-        void onNext(T values);
+    interface Listener {
+        void onNext();
         void onError(Throwable ex);
         void onCompleted();
     }
 
-    void put(List<String> path, Schema schema, Source<ArrowRecordBatch> src);
+    void put(CachePath path, VectorSchemaRoot vsc, Source src);
 
-    void get(List<String> path, Api.Query query, Listener<ArrowRecordBatch> listener);
+    void put(CachePath path, VectorSchemaRoot vsc);
 
-    void remove(List<String> path, Api.Query query);
+    void get(CachePath path, List<Api.Filter<?>> filters, VectorSchemaRoot vsc, Listener listener);
+
+    void remove(CachePath path, List<Api.Filter<?>> filters);
 }

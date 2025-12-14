@@ -23,7 +23,7 @@ public class DataStore implements AutoCloseable {
 
     private final CacheConfig config;
     private final BufferAllocator allocator;
-    private final ConcurrentMap<CachePath, DataNode> nodes = new ConcurrentHashMap<>();
+    private final ConcurrentMap<io.nson.arrowcache.common.CachePath, DataNode> nodes = new ConcurrentHashMap<>();
 
     private final ReadWriteLock rwLock = new ReentrantReadWriteLock();
 
@@ -37,20 +37,20 @@ public class DataStore implements AutoCloseable {
         nodes.values().forEach(DataNode::close);
     }
 
-    public Set<CachePath> getCachePaths() {
+    public Set<io.nson.arrowcache.common.CachePath> getCachePaths() {
         return nodes.keySet();
     }
 
-    public boolean containsNode(CachePath path) {
+    public boolean containsNode(io.nson.arrowcache.common.CachePath path) {
         return nodes.containsKey(path);
     }
 
-    public DataNode getNode(CachePath path) {
+    public DataNode getNode(io.nson.arrowcache.common.CachePath path) {
         return Optional.ofNullable(nodes.get(path))
                 .orElseThrow(() -> new IllegalArgumentException("No data node found for path " + path));
     }
 
-    public void add(CachePath path, Schema schema, List<ArrowRecordBatch> arbs) {
+    public void add(io.nson.arrowcache.common.CachePath path, Schema schema, List<ArrowRecordBatch> arbs) {
         final DataNode dataNode = nodes.get(path);
         if (dataNode == null) {
             final CacheConfig.NodeConfig nodeConfig = config.getNode(path);
@@ -63,7 +63,7 @@ public class DataStore implements AutoCloseable {
         }
     }
 
-    public boolean deleteNode(CachePath path) {
+    public boolean deleteNode(io.nson.arrowcache.common.CachePath path) {
         synchronized (rwLock.writeLock()) {
             final DataNode node = nodes.remove(path);
             if (node == null) {
@@ -76,7 +76,7 @@ public class DataStore implements AutoCloseable {
     }
 
     public Map<Integer, Set<Integer>> execute(
-            CachePath path,
+            io.nson.arrowcache.common.CachePath path,
             List<Api.Filter<?>> filters
     ) {
         if (path.wildcardCount() > 0) {
@@ -90,7 +90,7 @@ public class DataStore implements AutoCloseable {
     }
 
     public void execute(
-            CachePath path,
+            io.nson.arrowcache.common.CachePath path,
             List<Api.Filter<?>> filters,
             FlightProducer.ServerStreamListener listener
     ) {

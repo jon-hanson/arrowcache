@@ -1,18 +1,15 @@
 package io.nson.arrowcache.client.impl;
 
-import io.nson.arrowcache.client.ArrowUtils;
 import io.nson.arrowcache.client.ClientAPI;
 import io.nson.arrowcache.common.Actions;
 import io.nson.arrowcache.common.Api;
-import io.nson.arrowcache.common.QueryCodecs;
+import io.nson.arrowcache.common.CachePath;
+import io.nson.arrowcache.common.codec.QueryCodecs;
+import io.nson.arrowcache.common.utils.ArrowUtils;
 import org.apache.arrow.flight.*;
 import org.apache.arrow.memory.BufferAllocator;
 import org.apache.arrow.memory.RootAllocator;
-import org.apache.arrow.vector.VectorLoader;
 import org.apache.arrow.vector.VectorSchemaRoot;
-import org.apache.arrow.vector.VectorUnloader;
-import org.apache.arrow.vector.ipc.message.ArrowRecordBatch;
-import org.apache.arrow.vector.types.pojo.Schema;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -23,64 +20,102 @@ import java.util.concurrent.TimeUnit;
 public class ArrowFlightClientImpl implements ClientAPI {
     private static final Logger logger = LoggerFactory.getLogger(ArrowFlightClientImpl.class);
 
+    private static final CallOption DEFAULT_CALL_TIMEOUT = CallOptions.timeout(1, TimeUnit.HOURS);
+
+    public static ClientAPI create(BufferAllocator allocator, Location location, FlightClient flightClient) {
+        return new ArrowFlightClientImpl(allocator, location, flightClient, DEFAULT_CALL_TIMEOUT);
+    }
+
     public static ClientAPI create(Location location, FlightClient flightClient) {
-        return new ArrowFlightClientImpl(new RootAllocator(), location, flightClient);
+        return new ArrowFlightClientImpl(new RootAllocator(), location, flightClient, DEFAULT_CALL_TIMEOUT);
     }
 
     public static ClientAPI create(Location location) {
         final BufferAllocator allocator = new RootAllocator();
-        return new ArrowFlightClientImpl(allocator, location, FlightClient.builder(allocator, location).build());
+        return new ArrowFlightClientImpl(allocator, location, FlightClient.builder(allocator, location).build(), DEFAULT_CALL_TIMEOUT);
     }
 
     private final BufferAllocator allocator;
     private final Location location;
     private final FlightClient flightClient;
-    private final CallOption callTimeout = CallOptions.timeout(1, TimeUnit.HOURS);
+    private final CallOption callTimeout;
 
-    public ArrowFlightClientImpl(BufferAllocator allocator, Location location, FlightClient flightClient) {
+    private ArrowFlightClientImpl(
+            BufferAllocator allocator,
+            Location location,
+            FlightClient flightClient,
+            CallOption callTimeout
+    ) {
         this.allocator = allocator;
         this.location = location;
         this.flightClient = flightClient;
+        this.callTimeout = callTimeout;
     }
 
     @Override
-    public void put(List<String> path, Schema schema, Source<ArrowRecordBatch> src) {
+    public void close() throws Exception {
+        flightClient.close();
+        allocator.close();
+    }
+
+    @Override
+    public void put(CachePath path, VectorSchemaRoot vsc, Source src) {
         try {
-            final FlightDescriptor flightDesc = FlightDescriptor.path("path");
+            final FlightDescriptor flightDesc = FlightDescriptor.path(path.parts());
 
-            try(final VectorSchemaRoot vsc = VectorSchemaRoot.create(schema, allocator)) {
+            final FlightClient.ClientStreamListener listener = flightClient.startPut(
+                    flightDesc,
+                    vsc,
+                    new AsyncPutListener(),
+                    callTimeout
+            );
 
-                final VectorLoader loader = new VectorLoader(vsc);
-                final FlightClient.ClientStreamListener listener = flightClient.startPut(
-                        flightDesc,
-                        vsc,
-                        new AsyncPutListener(),
-                        callTimeout
-                );
-
-                try {
-                    while (src.hasNext()) {
-                        loader.load(src.next());
-                        listener.putNext();
-                    }
-
-                    listener.completed();
-
-                    listener.getResult();
-                } catch (Exception ex) {
-                    logger.error("Error while putting into Arrow Flight Client", ex);
-                    listener.error(ex);
-                    throw ex;
+            try {
+                while (src.hasNext()) {
+                    src.loadNext();
+                    listener.putNext();
                 }
+
+                listener.completed();
+
+                listener.getResult();
+            } catch (Exception ex) {
+                logger.error("Error while putting into Arrow Flight Client", ex);
+                listener.error(ex);
+                throw ex;
             }
         } catch (Exception ex) {
             logger.error("Exception occurred", ex);
         }
     }
 
+    private static class SingleValueSource implements Source {
+
+        boolean hasNext = true;
+
+        @Override
+        public boolean hasNext() {
+            if (hasNext) {
+                hasNext = false;
+                return true;
+            } else {
+                return false;
+            }
+        }
+
+        @Override
+        public void loadNext() {}
+    }
+
     @Override
-    public void get(List<String> path, Api.Query query, Listener<ArrowRecordBatch> listener) {
+    public void put(CachePath path, VectorSchemaRoot vsc) {
+        put(path, vsc, new SingleValueSource());
+    }
+
+    @Override
+    public void get(CachePath path, List<Api.Filter<?>> filters, VectorSchemaRoot vsc, Listener listener) {
         try {
+            final Api.Query query = new Api.Query(path, filters);
             final byte[] bytes = QueryCodecs.API_TO_BYTES.encode(query);
             final FlightDescriptor flightDesc = FlightDescriptor.command(bytes);
             final FlightInfo flightInfo = flightClient.getInfo(flightDesc, callTimeout);
@@ -93,10 +128,8 @@ public class ArrowFlightClientImpl implements ClientAPI {
                                 throw new RuntimeException("Cannot handle location " + loc.getUri());
                             } else {
                                 try (final FlightStream flightStream = flightClient.getStream(endPoint.getTicket(), callTimeout)) {
-                                    final VectorSchemaRoot vsc = flightStream.getRoot();
-                                    final VectorUnloader unloader = new VectorUnloader(vsc);
                                     while (flightStream.next()) {
-                                        listener.onNext(unloader.getRecordBatch());
+                                        listener.onNext();
                                     }
                                 } catch (Exception ex) {
                                     listener.onError(ex);
@@ -120,8 +153,9 @@ public class ArrowFlightClientImpl implements ClientAPI {
     }
 
     @Override
-    public void remove(List<String> path, Api.Query query) {
+    public void remove(CachePath path, List<Api.Filter<?>> filters) {
         try {
+            final Api.Query query = new Api.Query(path, filters);
             final byte[] bytes = QueryCodecs.API_TO_BYTES.encode(query);
             final Action action = new Action(Actions.DELETE_NAME, bytes);
             final Iterator<Result> deleteActionResult = flightClient.doAction(action);

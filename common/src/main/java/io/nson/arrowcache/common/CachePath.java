@@ -1,5 +1,6 @@
-package io.nson.arrowcache.server.cache;
+package io.nson.arrowcache.common;
 
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Objects;
@@ -16,30 +17,35 @@ public final class CachePath implements Comparable<CachePath> {
         } else if (path.endsWith(SEP)) {
             throw new IllegalArgumentException("path must not end with " + SEP);
         } else {
-            return new CachePath(path);
+            final String[] parts = path.split(SEP);
+            return valueOf(Arrays.asList(parts));
         }
     }
 
-    public static CachePath valueOf(List<String> parts) {
-        return new CachePath(parts);
+    public static CachePath valueOf(Iterable<String> parts) {
+        final List<String> partsList = new ArrayList<>();
+        parts.forEach(partsList::add);
+        return new CachePath(partsList);
     }
 
-    private final String path;
+    public static CachePath valueOf(String... parts) {
+        return new CachePath(Arrays.asList(parts));
+    }
+
     private final List<String> parts;
 
-    private CachePath(String path) {
-        this.path = path;
-        this.parts = Arrays.asList(path.split(SEP));
-    }
-
     private CachePath(List<String> parts) {
-        this.path = String.join(SEP, parts);
         this.parts = parts;
+        for (String part : parts) {
+            if (part.isEmpty()) {
+                throw new IllegalArgumentException("Path must not contain empty elements");
+            }
+        }
     }
 
     @Override
     public String toString() {
-        return this.path;
+        return String.join(SEP, parts);
     }
 
     @Override
@@ -48,22 +54,30 @@ public final class CachePath implements Comparable<CachePath> {
             return false;
         } else {
             final CachePath rhsT = (CachePath) rhs;
-            return Objects.equals(this.path, rhsT.path);
+            return this.parts.equals(rhsT.parts);
         }
     }
 
     @Override
     public int hashCode() {
-        return Objects.hashCode(this.path);
+        return Objects.hashCode(this.parts);
     }
 
     @Override
     public int compareTo(CachePath rhs) {
-        return this.path.compareTo(rhs.path);
+        final int partsLength = Math.min(this.parts.size(), rhs.parts.size());
+        for (int i = 0; i < partsLength; i++) {
+            final int cmp = this.parts.get(i).compareTo(rhs.parts.get(i));
+            if (cmp != 0) {
+                return cmp;
+            }
+        }
+
+        return Integer.compare(parts.size(), rhs.parts.size());
     }
 
     public String path() {
-        return path;
+        return String.join(SEP, parts);
     }
 
     public List<String> parts() {
@@ -87,7 +101,7 @@ public final class CachePath implements Comparable<CachePath> {
     }
 
     public boolean match(CachePath rhs) {
-        if (this.path.equals(rhs.path)) {
+        if (this.parts.equals(rhs.parts)) {
             return true;
         } else if (this.parts.size() != rhs.parts.size()) {
             return false;

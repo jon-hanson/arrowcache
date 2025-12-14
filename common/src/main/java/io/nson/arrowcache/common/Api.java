@@ -182,10 +182,10 @@ public abstract class Api {
     }
 
     public static final class Query {
-        private final String path;
+        private final CachePath path;
         private final List<Filter<?>> filters;
 
-        public Query(String path, List<Filter<?>> filters) {
+        public Query(CachePath path, List<Filter<?>> filters) {
             this.path = path;
             this.filters = Objects.requireNonNull(filters);
         }
@@ -208,7 +208,7 @@ public abstract class Api {
             return filters.hashCode();
         }
 
-        public String path() {
+        public CachePath path() {
             return path;
         }
 

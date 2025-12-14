@@ -11,9 +11,9 @@ public class CacheConfigCodecTest {
     public void encodeDecodeTest() {
         final CacheConfig cacheConfig = new CacheConfig(
                 Map.of(
-                    CachePath.valueOf("/abc/def"),
+                    io.nson.arrowcache.common.CachePath.valueOf("/abc/def"),
                     new CacheConfig.NodeConfig("id"),
-                    CachePath.valueOf("/abc/ghi"),
+                    io.nson.arrowcache.common.CachePath.valueOf("/abc/ghi"),
                     new CacheConfig.NodeConfig("id")
                 )
         );

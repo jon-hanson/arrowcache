@@ -1,6 +1,5 @@
-package io.nson.arrowcache.server.utils;
+package io.nson.arrowcache.common.utils;
 
-import io.nson.arrowcache.common.utils.ByteUtils;
 import org.apache.arrow.flight.Action;
 import org.apache.arrow.flight.FlightProducer;
 import org.apache.arrow.flight.Result;

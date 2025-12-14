@@ -42,7 +42,7 @@
         "type": "record",
         "name": "Query",
         "fields": [
-            {"name": "path", "type": "string"},
+            {"name": "path", "type": {"type": "array", "items": "string"}},
             {"name": "filters", "type": {"type": "array", "items": ["SVFilter", "MVFilter"]}}
         ]
     }
