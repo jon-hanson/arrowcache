@@ -242,4 +242,28 @@ public abstract class Api {
             return matches;
         }
     }
+
+
+    public static final class Delete {
+        private final Set<String> paths;
+        private final Query query;
+
+        public Delete(Set<String> paths, Query query) {
+            this.paths = paths;
+            this.query = query;
+        }
+
+        public Delete(Set<String> paths, Optional<Query> query) {
+            this.paths = paths;
+            this.query = query.orElse(null);
+        }
+
+        public Set<String> paths() {
+            return paths;
+        }
+
+        public Optional<Query> query() {
+            return Optional.ofNullable(query);
+        }
+    }
 }

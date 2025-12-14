@@ -1,9 +1,6 @@
-package io.nson.arrowcache.server;
+package io.nson.arrowcache.server.cache;
 
 import io.nson.arrowcache.common.Api;
-import io.nson.arrowcache.server.cache.CacheConfig;
-import io.nson.arrowcache.server.cache.CachePath;
-import io.nson.arrowcache.server.cache.DataNode;
 import org.apache.arrow.flight.FlightProducer;
 import org.apache.arrow.memory.BufferAllocator;
 import org.apache.arrow.vector.ipc.message.ArrowRecordBatch;
@@ -66,9 +63,15 @@ public class DataStore implements AutoCloseable {
         }
     }
 
-    public void delete(CachePath path) {
+    public boolean deleteNode(CachePath path) {
         synchronized (rwLock.writeLock()) {
-            nodes.remove(path).close();
+            final DataNode node = nodes.remove(path);
+            if (node == null) {
+                return false;
+            } else {
+                node.close();
+                return true;
+            }
         }
     }
 

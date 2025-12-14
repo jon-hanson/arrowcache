@@ -35,10 +35,9 @@ public class MatchesToAvroCodec implements Codec<Api.BatchMatches, BatchMatches>
         return new Api.BatchMatches(
                 enc.getPath(),
                 enc.getMatches().stream()
-                        .map(Matches.class::cast)
                         .collect(toMap(
                                 matches -> matches.getBatchIndex(),
-                                matches -> (Set<Integer>)new TreeSet<Integer>((List)matches.getMatches())
+                                matches -> new TreeSet<>(matches.getMatches())
                         ))
         );
     }

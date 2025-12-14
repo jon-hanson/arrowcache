@@ -97,6 +97,7 @@ public class TestData {
     }
 
     public static final Api.Query QUERY1 = new Api.Query(
+            "",
             List.of(
                     new Api.MVFilter<String>(
                             "name",
@@ -107,6 +108,7 @@ public class TestData {
     );
 
     public static final Api.Query QUERY2 = new Api.Query(
+            "",
             List.of(
                     new Api.SVFilter<Float>(
                             "age",

@@ -1,5 +1,6 @@
 package io.nson.arrowcache.server;
 
+import io.nson.arrowcache.server.cache.DataStore;
 import org.apache.arrow.flight.*;
 import org.apache.arrow.util.AutoCloseables;
 

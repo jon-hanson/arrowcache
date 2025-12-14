@@ -1,10 +1,9 @@
 package io.nson.arrowcache.server;
 
-import io.nson.arrowcache.common.Api;
-import io.nson.arrowcache.common.utils.ByteUtils;
-import io.nson.arrowcache.common.QueryCodecs;
+import io.nson.arrowcache.common.*;
 import io.nson.arrowcache.server.cache.CachePath;
 import io.nson.arrowcache.server.cache.DataNode;
+import io.nson.arrowcache.server.cache.DataStore;
 import io.nson.arrowcache.server.utils.ArrowUtils;
 import org.apache.arrow.flight.*;
 import org.apache.arrow.memory.BufferAllocator;
@@ -16,17 +15,10 @@ import org.slf4j.*;
 import java.io.ByteArrayInputStream;
 import java.util.*;
 
-import static java.util.stream.Collectors.toMap;
-
 public class ArrowCacheProducer extends NoOpFlightProducer implements AutoCloseable {
 
     private static final Logger logger = LoggerFactory.getLogger(ArrowCacheProducer.class);
-
-    private static final String DO_GET_NAME = "DoGet";
-    private static final ActionType DO_GET = new ActionType(DO_GET_NAME, "");
-
-    private static final String DO_PUT_NAME = "DoPut";
-    private static final ActionType DO_PUT = new ActionType(DO_PUT_NAME, "");
+    private static final ActionType DELETE = new ActionType(Actions.DELETE_NAME, "");
 
     private final BufferAllocator allocator;
     private final Location location;
@@ -47,8 +39,7 @@ public class ArrowCacheProducer extends NoOpFlightProducer implements AutoClosea
     @Override
     public void listActions(CallContext context, StreamListener<ActionType> listener) {
         logger.info("listActions: {}", context.peerIdentity());
-        listener.onNext(DO_GET);
-        listener.onNext(DO_PUT);
+        listener.onNext(DELETE);
         listener.onCompleted();
     }
 
@@ -104,11 +95,11 @@ public class ArrowCacheProducer extends NoOpFlightProducer implements AutoClosea
     public FlightInfo getFlightInfo(CallContext context, FlightDescriptor descriptor) {
         try {
             if (descriptor.isCommand()) {
-                final Api.Query query = QueryCodecs.QUERY_API_TO_BYTES.decode(descriptor.getCommand());
+                final Api.Query query = QueryCodecs.API_TO_BYTES.decode(descriptor.getCommand());
                 final CachePath cachePath = CachePath.valueOf(descriptor.getPath());
                 final DataNode dataNode = dataStore.getNode(cachePath);
                 final Map<Integer, Set<Integer>> batchMatches = dataNode.execute(query.filters());
-                final byte[] response = QueryCodecs.MATCHES_API_TO_BYTES.encode(new Api.BatchMatches(cachePath.path(), batchMatches));
+                final byte[] response = MatchesCodecs.API_TO_BYTES.encode(new Api.BatchMatches(cachePath.path(), batchMatches));
                 final int numRecords = batchMatches.values().stream().mapToInt(Set::size).sum();
                 final FlightEndpoint flightEndpoint = new FlightEndpoint(
                         new Ticket(response),
@@ -123,14 +114,15 @@ public class ArrowCacheProducer extends NoOpFlightProducer implements AutoClosea
                         numRecords
                 );
             } else {
-                logger.error("FlightDescriptors with a path not supported");
-                throw CallStatus.NOT_FOUND.withDescription("FlightDescriptor with a path not supported").toRuntimeException();
+                logger.error("FlightDescriptors with a path are not supported");
+                throw CallStatus.NOT_FOUND.withDescription("FlightDescriptor with a path are not supported").toRuntimeException();
             }
         } catch (FlightRuntimeException ex) {
             throw ex;
         } catch (Exception ex) {
-            logger.error("Error servicing query", ex);
-            throw CallStatus.UNKNOWN.withDescription("Unexpected exception")
+            logger.error("Unexpected exception", ex);
+            throw CallStatus.UNKNOWN
+                    .withDescription("Unexpected exception")
                     .withCause(ex)
                     .toRuntimeException();
         }
@@ -142,15 +134,17 @@ public class ArrowCacheProducer extends NoOpFlightProducer implements AutoClosea
             logger.info("getStream: {}", context.peerIdentity());
 
             final ByteArrayInputStream bais = new ByteArrayInputStream(ticket.getBytes());
-            final Api.BatchMatches batchMatches = QueryCodecs.MATCHES_API_TO_STREAM.decode(bais);
+            final Api.BatchMatches batchMatches = MatchesCodecs.API_TO_STREAM.decode(bais);
             final CachePath cachePath = CachePath.valueOf(batchMatches.path());
             final DataNode dataNode = dataStore.getNode(cachePath);
 
             dataNode.execute(batchMatches.matches(), listener);
-
+        } catch (FlightRuntimeException ex) {
+            throw ex;
         } catch (Exception ex) {
-            logger.error("Error servicing query", ex);
-            throw CallStatus.UNKNOWN.withDescription("Unexpected exception")
+            logger.error("Unexpected exception", ex);
+            throw CallStatus.INTERNAL
+                    .withDescription("Unexpected exception")
                     .withCause(ex)
                     .toRuntimeException();
         }
@@ -165,35 +159,39 @@ public class ArrowCacheProducer extends NoOpFlightProducer implements AutoClosea
                 ArrowUtils.toString(action)
         );
 
-        final CachePath cachePath = CachePath.valueOf(ByteUtils.bytesToString(action.getBody()));
-        final DataNode dataNode = dataStore.getNode(cachePath);
-
-        switch (action.getType()) {
-            case "DELETE": {
-                logger.info("Delete: {}", 0);
-                Object removed = null;
-                logger.info("    Removed dataset: {}", removed);
-
-                if (removed != null) {
-                    try {
-                        //
-                    } catch (Exception e) {
-                        listener.onError(CallStatus.INTERNAL
-                                .withDescription(e.toString())
-                                .toRuntimeException());
-                        return;
+        try {
+            if (action.getType().equals(Actions.DELETE_NAME)) {
+                final Api.Delete delete = DeleteCodecs.API_TO_BYTES.decode(action.getBody());
+                if (!delete.paths().isEmpty()) {
+                    for (String path : delete.paths()) {
+                        final CachePath cachePath = CachePath.valueOf(path);
+                        if (dataStore.deleteNode(cachePath)) {
+                            listener.onNext(ArrowUtils.stringToResult("Path '" + path + "' successfully deleted"));
+                        } else {
+                            listener.onNext(ArrowUtils.stringToResult("WARNING: No data node found for path '" + path + "'"));
+                        }
                     }
-
-                    final Result result = ArrowUtils.stringToResult("Delete completed");
-
-                    listener.onNext(result);
-                } else {
-                    final Result result = ArrowUtils.stringToResult("Delete not completed. Reason: Key did not exist.");
-                    listener.onNext(result);
                 }
 
-                listener.onCompleted();
+                if (delete.query().isPresent()) {
+
+                }
+            } else {
+                logger.error("Action '" + action.getType() + "' not supported");
+                throw CallStatus.INVALID_ARGUMENT
+                        .withDescription("Action '" + action.getType() + "' not supported")
+                        .toRuntimeException();
             }
+
+            listener.onCompleted();
+        } catch (FlightRuntimeException ex) {
+            throw ex;
+        } catch (Exception ex) {
+            logger.error("Unexpected exception", ex);
+            throw CallStatus.INTERNAL
+                    .withDescription("Unexpected exception")
+                    .withCause(ex)
+                    .toRuntimeException();
         }
     }
 }
