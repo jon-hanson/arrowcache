@@ -1,8 +1,8 @@
 package io.nson.arrowcache.server.cache;
 
 import io.nson.arrowcache.common.Api;
+import io.nson.arrowcache.server.AllocatorManager;
 import org.apache.arrow.flight.FlightProducer;
-import org.apache.arrow.memory.BufferAllocator;
 import org.apache.arrow.vector.ipc.message.ArrowRecordBatch;
 import org.apache.arrow.vector.types.pojo.Schema;
 import org.slf4j.Logger;
@@ -22,14 +22,14 @@ public class DataStore implements AutoCloseable {
     private static final Logger logger = LoggerFactory.getLogger(DataStore.class);
 
     private final CacheConfig config;
-    private final BufferAllocator allocator;
+    private final AllocatorManager allocatorManager;
     private final ConcurrentMap<io.nson.arrowcache.common.CachePath, DataNode> nodes = new ConcurrentHashMap<>();
 
     private final ReadWriteLock rwLock = new ReentrantReadWriteLock();
 
-    public DataStore(CacheConfig config, BufferAllocator allocator) {
+    public DataStore(CacheConfig config, AllocatorManager allocatorManager) {
         this.config = config;
-        this.allocator = allocator;
+        this.allocatorManager = allocatorManager;
     }
 
     @Override
@@ -56,7 +56,7 @@ public class DataStore implements AutoCloseable {
             final CacheConfig.NodeConfig nodeConfig = config.getNode(path);
 
             synchronized (rwLock.writeLock()) {
-                nodes.put(path, new DataNode(nodeConfig, allocator, schema, arbs));
+                nodes.put(path, new DataNode(path.path(), nodeConfig, allocatorManager, schema, arbs));
             }
         } else {
             dataNode.add(schema, arbs);

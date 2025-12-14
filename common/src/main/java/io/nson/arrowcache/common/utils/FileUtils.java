@@ -1,6 +1,7 @@
 package io.nson.arrowcache.common.utils;
 
 import java.io.*;
+import java.nio.charset.Charset;
 import java.util.List;
 import java.util.stream.*;
 
@@ -15,6 +16,16 @@ public abstract class FileUtils {
             throw new IOException("Failed to open resource '" + name + "'");
         } else {
             return new BufferedReader(new InputStreamReader(is));
+        }
+    }
+
+    public static String readResource(String name) throws IOException {
+        try (final InputStream is = FileUtils.class.getClassLoader().getResourceAsStream(name)) {
+            if (is == null) {
+                throw new IOException("Failed to open resource '" + name + "'");
+            } else {
+                return new String(is.readAllBytes(), Charset.defaultCharset());
+            }
         }
     }
 

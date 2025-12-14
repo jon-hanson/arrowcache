@@ -1,5 +1,9 @@
 package io.nson.arrowcache.server.cache;
 
+import io.nson.arrowcache.common.CachePath;
+import io.nson.arrowcache.common.utils.FileUtils;
+
+import java.io.IOException;
 import java.util.*;
 
 public final class CacheConfig {
@@ -17,58 +21,70 @@ public final class CacheConfig {
                     '}';
         }
 
-        @Override
-        public boolean equals(Object rhs) {
-            if (rhs == null || getClass() != rhs.getClass()) {
-                return false;
-            } else {
-                final NodeConfig rhsT = (NodeConfig) rhs;
-                return Objects.equals(keyName, rhsT.keyName);
-            }
-        }
-
-        @Override
-        public int hashCode() {
-            return Objects.hashCode(keyName);
-        }
-
         public String keyName() {
             return keyName;
         }
     }
 
-    private final Map<io.nson.arrowcache.common.CachePath, NodeConfig> nodes;
+    public static final class AllocatorMaxSizeConfig {
+        private final long defaultSize;
+        private final Map<String, Long> allocatorSizeMap;
 
-    public CacheConfig(Map<io.nson.arrowcache.common.CachePath, NodeConfig> nodes) {
+        public AllocatorMaxSizeConfig(long defaultSize, Map<String, Long> allocatorSizeMap) {
+            this.defaultSize = defaultSize;
+            this.allocatorSizeMap = allocatorSizeMap;
+        }
+
+        public long defaultSize() {
+            return defaultSize;
+        }
+
+        public Map<String, Long> allocatorSizeMap() {
+            return allocatorSizeMap;
+        }
+
+        public long getAllocatorMaxSize(String allocatorName) {
+            final Long value = allocatorSizeMap.get(allocatorName);
+            return value == null ? defaultSize : value;
+        }
+    }
+
+    public static CacheConfig loadFromResource(String resourceName) throws IOException {
+        final String json = FileUtils.readResource(resourceName);
+        return CacheConfigCodec.INSTANCE.decode(json);
+    }
+
+    private final AllocatorMaxSizeConfig allocatorMaxSizeConfig;
+    private final Map<CachePath, NodeConfig> nodes;
+
+    public CacheConfig(
+            AllocatorMaxSizeConfig allocatorMaxSizeConfig,
+            Map<CachePath, NodeConfig> nodes
+    ) {
+        this.allocatorMaxSizeConfig = allocatorMaxSizeConfig;
         this.nodes = nodes;
     }
 
     @Override
     public String toString() {
         return "CacheConfig{" +
+                "allocatorMaxSizeConfig=" + allocatorMaxSizeConfig +
                 "nodes=" + nodes +
                 '}';
     }
 
-    @Override
-    public boolean equals(Object rhs) {
-        if (rhs == null || getClass() != rhs.getClass()) {
-            return false;
-        }  else {
-            final CacheConfig rhsT = (CacheConfig) rhs;
-            return Objects.equals(nodes, rhsT.nodes);
-        }
+    public AllocatorMaxSizeConfig allocatorMaxSizeConfig() {
+        return allocatorMaxSizeConfig;
     }
 
-    @Override
-    public int hashCode() {
-        return Objects.hashCode(nodes);
+    public Map<CachePath, NodeConfig> nodes() {
+        return nodes;
     }
 
-    public NodeConfig getNode(io.nson.arrowcache.common.CachePath path) {
-        final io.nson.arrowcache.common.CachePath match = nodes.keySet().stream()
+    public NodeConfig getNode(CachePath path) {
+        final CachePath match = nodes.keySet().stream()
                 .filter(path::match)
-                .min(Comparator.comparing(io.nson.arrowcache.common.CachePath::wildcardCount))
+                .min(Comparator.comparing(CachePath::wildcardCount))
                 .orElseThrow(() -> new IllegalArgumentException("No nodes found that match path '" + path + "'"));
 
         return nodes.get(match);

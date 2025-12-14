@@ -1,6 +1,7 @@
 package io.nson.arrowcache.server.cache;
 
 import io.nson.arrowcache.common.Api;
+import io.nson.arrowcache.server.AllocatorManager;
 import io.nson.arrowcache.server.QueryLogic;
 import io.nson.arrowcache.server.utils.TranslateQuery;
 import org.apache.arrow.flight.FlightProducer;
@@ -185,46 +186,63 @@ public final class DataNode implements AutoCloseable {
     private final ReadWriteLock rwLock = new ReentrantReadWriteLock();
 
     public DataNode(
+            String name,
             String keyName,
-            BufferAllocator allocator,
+            AllocatorManager allocatorManager,
             Schema schema,
             List<ArrowRecordBatch> arbs
     ) {
         this.keyName = keyName;
-        this.allocator = allocator;
+        this.allocator = allocatorManager.newChildAllocator(name);
         this.schema = schema;
         this.keyIndex = CacheUtils.findKeyColumn(schema, keyName);
         this.batches = arbs.stream().map(Batch::new).collect(toList());
     }
 
     public DataNode(
+            String name,
             String keyName,
-            BufferAllocator allocator,
+            AllocatorManager allocatorManager,
             Schema schema
     ) {
-        this(keyName, allocator, schema, new ArrayList<>());
+        this(
+                name,
+                keyName,
+                allocatorManager,
+                schema,
+                new ArrayList<>()
+        );
     }
 
     public DataNode(
+            String name,
             CacheConfig.NodeConfig nodeConfig,
-            BufferAllocator allocator,
+            AllocatorManager allocatorManager,
             Schema schema,
             List<ArrowRecordBatch> arbs
     ) {
         this(
+                name,
                 nodeConfig.keyName(),
-                allocator,
+                allocatorManager,
                 schema,
                 arbs
         );
     }
 
     public DataNode(
+            String name,
             CacheConfig.NodeConfig nodeConfig,
-            BufferAllocator allocator,
+            AllocatorManager allocatorManager,
             Schema schema
     ) {
-        this(nodeConfig, allocator, schema, new ArrayList<>());
+        this(
+                name,
+                nodeConfig,
+                allocatorManager,
+                schema,
+                new ArrayList<>()
+        );
     }
 
     @Override

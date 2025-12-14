@@ -1,6 +1,7 @@
 package io.nson.arrowcache.client;
 
 import io.nson.arrowcache.common.codec.QueryCodecs;
+import io.nson.arrowcache.common.utils.ArrowUtils;
 import org.apache.arrow.flight.*;
 import org.apache.arrow.memory.*;
 import org.apache.arrow.vector.*;
@@ -74,19 +75,19 @@ public class TestClient {
             doGetFlight(client, FLIGHT_DESC);
 
             {
-                logger.info("QUERY1: {}", QueryCodecs.API_TO_AVRO.encode(TestData.QUERY1));
-                final byte[] bytes = QueryCodecs.API_TO_BYTES.encode(TestData.QUERY1);
-                final FlightDescriptor FLIGHT_DESC_QUERY = FlightDescriptor.command(bytes);
-
-                doGetFlight(client, FLIGHT_DESC_QUERY);
+//                logger.info("QUERY1: {}", QueryCodecs.API_TO_AVRO.encode(TestData.QUERY1));
+//                final byte[] bytes = QueryCodecs.API_TO_BYTES.encode(TestData.QUERY1);
+//                final FlightDescriptor FLIGHT_DESC_QUERY = FlightDescriptor.command(bytes);
+//
+//                doGetFlight(client, FLIGHT_DESC_QUERY);
             }
 
             {
-                logger.info("QUERY2: {}", QueryCodecs.API_TO_AVRO.encode(TestData.QUERY2));
-                final byte[] bytes = QueryCodecs.API_TO_BYTES.encode(TestData.QUERY2);
-                final FlightDescriptor FLIGHT_DESC_QUERY = FlightDescriptor.command(bytes);
-
-                doGetFlight(client, FLIGHT_DESC_QUERY);
+//                logger.info("QUERY2: {}", QueryCodecs.API_TO_AVRO.encode(TestData.QUERY2));
+//                final byte[] bytes = QueryCodecs.API_TO_BYTES.encode(TestData.QUERY2);
+//                final FlightDescriptor FLIGHT_DESC_QUERY = FlightDescriptor.command(bytes);
+//
+//                doGetFlight(client, FLIGHT_DESC_QUERY);
             }
 
             listFlights(client);

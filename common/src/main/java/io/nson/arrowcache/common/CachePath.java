@@ -12,8 +12,8 @@ public final class CachePath implements Comparable<CachePath> {
     public static CachePath valueOf(String path) {
         if (path.isEmpty()) {
             throw new IllegalArgumentException("path is empty");
-        } else if (!path.startsWith(SEP)) {
-            throw new IllegalArgumentException("path must start with " + SEP);
+        } else if (path.startsWith(SEP)) {
+            throw new IllegalArgumentException("path must not start with " + SEP);
         } else if (path.endsWith(SEP)) {
             throw new IllegalArgumentException("path must not end with " + SEP);
         } else {

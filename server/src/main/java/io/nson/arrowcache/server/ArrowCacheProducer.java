@@ -9,7 +9,6 @@ import io.nson.arrowcache.server.cache.DataNode;
 import io.nson.arrowcache.server.cache.DataStore;
 import io.nson.arrowcache.common.utils.ArrowUtils;
 import org.apache.arrow.flight.*;
-import org.apache.arrow.memory.BufferAllocator;
 import org.apache.arrow.vector.*;
 import org.apache.arrow.vector.ipc.message.ArrowRecordBatch;
 import org.apache.arrow.vector.types.pojo.Schema;
@@ -21,16 +20,18 @@ import java.util.*;
 public class ArrowCacheProducer extends NoOpFlightProducer implements AutoCloseable {
 
     private static final Logger logger = LoggerFactory.getLogger(ArrowCacheProducer.class);
+
     private static final ActionType DELETE = new ActionType(Actions.DELETE_NAME, "");
 
-    private final BufferAllocator allocator;
     private final Location location;
 
     private final DataStore dataStore;
 
-    public ArrowCacheProducer(DataStore dataStore, BufferAllocator allocator, Location location) {
+    public ArrowCacheProducer(
+            DataStore dataStore,
+            Location location
+    ) {
         this.dataStore = dataStore;
-        this.allocator = allocator;
         this.location = location;
     }
 

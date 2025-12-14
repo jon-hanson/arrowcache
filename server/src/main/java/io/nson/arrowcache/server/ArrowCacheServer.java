@@ -1,5 +1,6 @@
 package io.nson.arrowcache.server;
 
+import io.nson.arrowcache.server.cache.CacheConfig;
 import io.nson.arrowcache.server.cache.DataStore;
 import org.apache.arrow.flight.*;
 import org.apache.arrow.util.AutoCloseables;
@@ -7,7 +8,6 @@ import org.apache.arrow.util.AutoCloseables;
 import java.io.IOException;
 
 import org.apache.arrow.memory.BufferAllocator;
-import org.apache.arrow.memory.RootAllocator;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -15,15 +15,19 @@ public class ArrowCacheServer implements AutoCloseable {
 
     private static final Logger logger = LoggerFactory.getLogger(ArrowCacheServer.class);
 
-    private final FlightServer flightServer;
-    private final ArrowCacheProducer flightProducer;
-    private final Location location;
     private final BufferAllocator allocator;
+    private final Location location;
+    private final ArrowCacheProducer flightProducer;
+    private final FlightServer flightServer;
 
-    public ArrowCacheServer(DataStore dataStore, BufferAllocator allocator, Location location) {
-        this.allocator = allocator.newChildAllocator("flight-server", 0L, 9223372036854775807L);
+    public ArrowCacheServer(
+            AllocatorManager allocatorManager,
+            Location location,
+            DataStore dataStore
+    ) {
+        this.allocator = allocatorManager.newChildAllocator("flight-server");
         this.location = location;
-        this.flightProducer = new ArrowCacheProducer(dataStore, allocator, location);
+        this.flightProducer = new ArrowCacheProducer(dataStore, location);
         this.flightServer = FlightServer.builder(allocator, location, flightProducer).build();
 
         logger.info("New instance for location {}", location);
@@ -62,13 +66,14 @@ public class ArrowCacheServer implements AutoCloseable {
     public static void main(String[] args) throws Exception {
         logger.info("Starting");
 
-        final BufferAllocator buffAlloc = new RootAllocator();
+        final CacheConfig cacheConfig = CacheConfig.loadFromResource("cacheconfig.json");
+        final AllocatorManager allocatorManager = new AllocatorManager(cacheConfig.allocatorMaxSizeConfig());
 
-        final DataStore dataStore = new DataStore(null, buffAlloc);
+        final DataStore dataStore = new DataStore(cacheConfig, allocatorManager);
         final ArrowCacheServer server = new ArrowCacheServer(
-                dataStore,
-                buffAlloc,
-                Location.forGrpcInsecure("localhost", 12233)
+                allocatorManager,
+                Location.forGrpcInsecure("localhost", 12233),
+                dataStore
         );
 
         server.start();
@@ -77,7 +82,7 @@ public class ArrowCacheServer implements AutoCloseable {
             try {
                 logger.info("Exiting...");
                 AutoCloseables.close(server);
-                AutoCloseables.close(buffAlloc);
+                AutoCloseables.close(allocatorManager);
             } catch (Exception ex) {
                 logger.error("Ignoring exception", ex);
             }

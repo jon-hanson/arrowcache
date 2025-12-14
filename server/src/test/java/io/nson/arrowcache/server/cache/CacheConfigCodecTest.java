@@ -1,5 +1,6 @@
 package io.nson.arrowcache.server.cache;
 
+import io.nson.arrowcache.common.CachePath;
 import org.junit.jupiter.api.Test;
 
 import java.util.Map;
@@ -9,11 +10,19 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 public class CacheConfigCodecTest {
     @Test
     public void encodeDecodeTest() {
-        final CacheConfig cacheConfig = new CacheConfig(
+        final CacheConfig.AllocatorMaxSizeConfig allocatorMaxSizeConfig = new CacheConfig.AllocatorMaxSizeConfig(
+                CacheUtils.megabytes(256),
                 Map.of(
-                    io.nson.arrowcache.common.CachePath.valueOf("/abc/def"),
+                        "flight-server", CacheUtils.gigabytes(8)
+                )
+        );
+
+        final CacheConfig cacheConfig = new CacheConfig(
+                allocatorMaxSizeConfig,
+                Map.of(
+                    CachePath.valueOf("abc/def"),
                     new CacheConfig.NodeConfig("id"),
-                    io.nson.arrowcache.common.CachePath.valueOf("/abc/ghi"),
+                    CachePath.valueOf("abc/ghi"),
                     new CacheConfig.NodeConfig("id")
                 )
         );

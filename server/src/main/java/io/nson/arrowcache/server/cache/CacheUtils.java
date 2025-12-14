@@ -17,4 +17,12 @@ public class CacheUtils {
 
         throw new RuntimeException("Key column name '" + name + "' not found in schema");
     }
+
+    public static long megabytes(long n) {
+        return n * 1024 * 1024;
+    }
+
+    public static long gigabytes(long n) {
+        return n * 1024 * 1024 * 1024;
+    }
 }
