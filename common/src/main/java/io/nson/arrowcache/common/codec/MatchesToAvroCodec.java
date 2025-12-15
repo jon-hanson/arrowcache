@@ -5,7 +5,9 @@ import io.nson.arrowcache.common.avro.BatchMatches;
 import io.nson.arrowcache.common.avro.Matches;
 import io.nson.arrowcache.common.utils.Codec;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Set;
+import java.util.TreeSet;
 import java.util.stream.Collectors;
 
 import static java.util.stream.Collectors.toMap;

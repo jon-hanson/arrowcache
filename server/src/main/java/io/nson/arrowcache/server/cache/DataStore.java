@@ -1,16 +1,13 @@
 package io.nson.arrowcache.server.cache;
 
-import io.nson.arrowcache.common.Api;
 import io.nson.arrowcache.common.CachePath;
 import io.nson.arrowcache.server.AllocatorManager;
-import org.apache.arrow.flight.FlightProducer;
 import org.apache.arrow.vector.ipc.message.ArrowRecordBatch;
 import org.apache.arrow.vector.types.pojo.Schema;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.util.List;
-import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
@@ -21,12 +18,6 @@ import java.util.concurrent.locks.ReentrantReadWriteLock;
 public class DataStore implements AutoCloseable {
 
     private static final Logger logger = LoggerFactory.getLogger(DataStore.class);
-
-    public static class NodeNotFoundException extends Exception {
-        public NodeNotFoundException(String msg) {
-            super(msg);
-        }
-    }
 
     private final CacheConfig config;
     private final AllocatorManager allocatorManager;
@@ -46,10 +37,6 @@ public class DataStore implements AutoCloseable {
 
     public Set<CachePath> getCachePaths() {
         return nodes.keySet();
-    }
-
-    public boolean containsNode(CachePath path) {
-        return nodes.containsKey(path);
     }
 
     public Optional<DataNode> getNode(CachePath path) {
@@ -80,33 +67,4 @@ public class DataStore implements AutoCloseable {
             }
         }
     }
-//
-//    public Map<Integer, Set<Integer>> execute(
-//            CachePath path,
-//            List<Api.Filter<?>> filters
-//    ) {
-//        if (path.wildcardCount() > 0) {
-//            throw new IllegalArgumentException("Cannot execute queries against paths with wildcards: '" + path + "'");
-//        } else {
-//            synchronized (rwLock.readLock()) {
-//                final DataNode node = getNode(path);
-//                return node.execute(filters);
-//            }
-//        }
-//    }
-//
-//    public void execute(
-//            CachePath path,
-//            List<Api.Filter<?>> filters,
-//            FlightProducer.ServerStreamListener listener
-//    ) {
-//        if (path.wildcardCount() > 0) {
-//            throw new IllegalArgumentException("Cannot execute queries against paths with wildcards: '" + path + "'");
-//        } else {
-//            synchronized (rwLock.readLock()) {
-//                final DataNode node = getNode(path);
-//                node.execute(filters, listener);
-//            }
-//        }
-//    }
 }

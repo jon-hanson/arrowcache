@@ -1,14 +1,17 @@
 package io.nson.arrowcache.client;
 
-import io.nson.arrowcache.common.codec.QueryCodecs;
 import io.nson.arrowcache.common.utils.ArrowUtils;
 import org.apache.arrow.flight.*;
-import org.apache.arrow.memory.*;
-import org.apache.arrow.vector.*;
-import org.slf4j.*;
+import org.apache.arrow.memory.BufferAllocator;
+import org.apache.arrow.memory.RootAllocator;
+import org.apache.arrow.vector.VectorSchemaRoot;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.nio.charset.StandardCharsets;
-import java.util.*;
+import java.util.HashMap;
+import java.util.Iterator;
+import java.util.Map;
 import java.util.concurrent.TimeUnit;
 
 public class TestClient {

@@ -2,7 +2,10 @@ package io.nson.arrowcache.common;
 
 import io.nson.arrowcache.common.avro.*;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Set;
+import java.util.TreeSet;
 
 public class TestData {
     public static final Api.Query API_QUERY;

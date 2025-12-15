@@ -1,12 +1,14 @@
 package io.nson.arrowcache.common;
 
+import io.nson.arrowcache.common.avro.Query;
 import io.nson.arrowcache.common.codec.QueryCodecs;
 import org.junit.jupiter.api.Test;
-import io.nson.arrowcache.common.avro.Query;
 
-import java.io.*;
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
 
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class CodecsTest {
 

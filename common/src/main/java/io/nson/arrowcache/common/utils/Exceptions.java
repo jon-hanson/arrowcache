@@ -1,6 +1,8 @@
 package io.nson.arrowcache.common.utils;
 
-import java.util.function.*;
+import java.util.function.Consumer;
+import java.util.function.Function;
+import java.util.function.Supplier;
 
 public abstract class Exceptions {
     private Exceptions() {}

@@ -1,9 +1,12 @@
 package io.nson.arrowcache.common.utils;
 
-import java.util.*;
+import java.util.Collection;
+import java.util.List;
+import java.util.Set;
 import java.util.function.Function;
 
-import static java.util.stream.Collectors.*;
+import static java.util.stream.Collectors.toList;
+import static java.util.stream.Collectors.toSet;
 
 public abstract class Functors {
     private Functors() {}

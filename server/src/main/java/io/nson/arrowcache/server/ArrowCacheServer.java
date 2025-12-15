@@ -2,14 +2,14 @@ package io.nson.arrowcache.server;
 
 import io.nson.arrowcache.server.cache.CacheConfig;
 import io.nson.arrowcache.server.cache.DataStore;
-import org.apache.arrow.flight.*;
-import org.apache.arrow.util.AutoCloseables;
-
-import java.io.IOException;
-
+import org.apache.arrow.flight.FlightServer;
+import org.apache.arrow.flight.Location;
 import org.apache.arrow.memory.BufferAllocator;
+import org.apache.arrow.util.AutoCloseables;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import java.io.IOException;
 
 public class ArrowCacheServer implements AutoCloseable {
 
