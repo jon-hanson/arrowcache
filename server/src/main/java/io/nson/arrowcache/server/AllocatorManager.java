@@ -27,7 +27,7 @@ public class AllocatorManager implements AutoCloseable {
     }
 
     @Override
-    public void close() throws Exception {
+    public void close() {
         rootAllocator.close();
     }
 }

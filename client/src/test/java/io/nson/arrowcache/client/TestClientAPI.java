@@ -12,6 +12,9 @@ import org.slf4j.LoggerFactory;
 public class TestClientAPI {
     private static final Logger logger = LoggerFactory.getLogger(TestClientAPI.class);
 
+    /*
+     * --add-opens=java.base/java.nio=org.apache.arrow.memory.core,ALL-UNNAMED
+     */
     public static void main(String[] args) {
 
         final CachePath cachePath = CachePath.valueOf("abc", "def");

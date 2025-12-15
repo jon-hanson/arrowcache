@@ -1,13 +1,12 @@
 package io.nson.arrowcache.server.cache;
 
+import io.nson.arrowcache.server.AllocatorManager;
 import io.nson.arrowcache.server.TestData;
 import io.nson.arrowcache.common.Api;
 import io.nson.arrowcache.common.utils.ArrowUtils;
 import io.nson.arrowcache.server.utils.TranslateQuery;
 import org.apache.arrow.flight.FlightProducer;
 import org.apache.arrow.memory.ArrowBuf;
-import org.apache.arrow.memory.BufferAllocator;
-import org.apache.arrow.memory.RootAllocator;
 import org.apache.arrow.vector.FieldVector;
 import org.apache.arrow.vector.VectorSchemaRoot;
 import org.apache.arrow.vector.VectorUnloader;
@@ -30,11 +29,11 @@ public class DataNodeTest {
 
     @Test
     public void test() throws IOException {
-
+        final CacheConfig cacheConfig = CacheConfig.loadFromResource("cacheconfig.json");
         try(
-                final BufferAllocator allocator = new RootAllocator();
-                final VectorSchemaRoot vsc = TestData.createTestDataVSC(allocator);
-                final DataNode dataNode = new DataNode("id",    allocator, vsc.getSchema());
+                final AllocatorManager allocatorManager = new AllocatorManager(cacheConfig.allocatorMaxSizeConfig());
+                final VectorSchemaRoot vsc = TestData.createTestDataVSC(allocatorManager.newChildAllocator("test-data"));
+                final DataNode dataNode = new DataNode("abc", "id", allocatorManager, vsc.getSchema());
         ) {
             final VectorUnloader unloader = new VectorUnloader(vsc);
 
