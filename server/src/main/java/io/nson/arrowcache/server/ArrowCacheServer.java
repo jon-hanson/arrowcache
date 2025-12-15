@@ -34,9 +34,9 @@ public class ArrowCacheServer implements AutoCloseable {
     }
 
     public void close() throws Exception {
-        logger.info("Instance closing for location {}", location);
-        AutoCloseables.close(this.flightProducer);
+        logger.info("ArrowCacheServer closing for location {}", location);
         AutoCloseables.close(this.flightServer);
+        AutoCloseables.close(this.flightProducer);
         AutoCloseables.close(this.allocator);
     }
 

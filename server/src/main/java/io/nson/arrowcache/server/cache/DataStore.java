@@ -28,10 +28,13 @@ public class DataStore implements AutoCloseable {
     public DataStore(CacheConfig config, AllocatorManager allocatorManager) {
         this.config = config;
         this.allocatorManager = allocatorManager;
+
+        logger.debug("Created DataStore with config {}", config);
     }
 
     @Override
     public void close() {
+        logger.info("Closing DataStore");
         nodes.values().forEach(DataNode::close);
     }
 
@@ -44,6 +47,7 @@ public class DataStore implements AutoCloseable {
     }
 
     public void add(CachePath path, Schema schema, List<ArrowRecordBatch> arbs) {
+        logger.info("Adding data node for path {} with {} ArrowRecordBatches", path, arbs.size());
         final DataNode dataNode = nodes.get(path);
         if (dataNode == null) {
             final CacheConfig.NodeConfig nodeConfig = config.getNode(path);
@@ -57,6 +61,7 @@ public class DataStore implements AutoCloseable {
     }
 
     public boolean deleteNode(CachePath path) {
+        logger.info("Deleting data node for path {}", path);
         synchronized (rwLock.writeLock()) {
             final DataNode node = nodes.remove(path);
             if (node == null) {

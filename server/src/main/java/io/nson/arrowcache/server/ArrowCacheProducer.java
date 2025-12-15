@@ -9,6 +9,7 @@ import io.nson.arrowcache.common.codec.QueryCodecs;
 import io.nson.arrowcache.common.utils.ArrowUtils;
 import io.nson.arrowcache.server.cache.DataNode;
 import io.nson.arrowcache.server.cache.DataStore;
+import io.nson.arrowcache.server.utils.ArrowServerUtils;
 import org.apache.arrow.flight.*;
 import org.apache.arrow.vector.VectorUnloader;
 import org.apache.arrow.vector.ipc.message.ArrowRecordBatch;
@@ -38,18 +39,14 @@ public class ArrowCacheProducer extends NoOpFlightProducer implements AutoClosea
     }
 
     @Override
-    public void close() throws Exception {
-        dataStore.close();
+    public void close() {
     }
 
     private DataNode getNode(CachePath cachePath) {
         return dataStore.getNode(cachePath)
-                .orElseThrow(() -> {
-                    logger.error("No data node found for path {}", cachePath);
-                    return CallStatus.NOT_FOUND
-                            .withDescription("No data node found for path " + cachePath)
-                            .toRuntimeException();
-                });
+                .orElseThrow(() ->
+                    ArrowServerUtils.notFound(logger, "No data node found for path " + cachePath)
+                );
     }
 
     @Override
@@ -93,8 +90,10 @@ public class ArrowCacheProducer extends NoOpFlightProducer implements AutoClosea
             logger.info("Received {} rows", rows);
             final FlightDescriptor flightDesc = flightStream.getDescriptor();
             if (flightDesc.isCommand()) {
-                logger.error("Cannot accept a put operation where the Flight Descriptor is a command - must be a path");
-                throw CallStatus.INVALID_ARGUMENT.withDescription("Cannot accept a put operation where the Flight Descriptor is a command - must be a path").toRuntimeException();
+                throw ArrowServerUtils.invalidArgument(
+                        logger,
+                        "Cannot accept a put operation where the Flight Descriptor is a command - must be a path"
+                );
             } else {
                 final List<String> flightPath = flightDesc.getPath();
                 final CachePath cachePath = CachePath.valueOf(flightPath);
@@ -130,17 +129,12 @@ public class ArrowCacheProducer extends NoOpFlightProducer implements AutoClosea
                         numRecords
                 );
             } else {
-                logger.error("FlightDescriptors with a path are not supported");
-                throw CallStatus.NOT_FOUND.withDescription("FlightDescriptor with a path are not supported").toRuntimeException();
+                throw ArrowServerUtils.invalidArgument(logger, "FlightDescriptors with a path are not supported");
             }
         } catch (FlightRuntimeException ex) {
             throw ex;
         } catch (Exception ex) {
-            logger.error("Unexpected exception", ex);
-            throw CallStatus.UNKNOWN
-                    .withDescription("Unexpected exception")
-                    .withCause(ex)
-                    .toRuntimeException();
+            throw ArrowServerUtils.internal(logger, "Unexpected exception", ex);
         }
     }
 
@@ -158,11 +152,7 @@ public class ArrowCacheProducer extends NoOpFlightProducer implements AutoClosea
         } catch (FlightRuntimeException ex) {
             throw ex;
         } catch (Exception ex) {
-            logger.error("Unexpected exception", ex);
-            throw CallStatus.INTERNAL
-                    .withDescription("Unexpected exception")
-                    .withCause(ex)
-                    .toRuntimeException();
+            throw ArrowServerUtils.internal(logger, "Unexpected exception", ex);
         }
     }
 
@@ -203,11 +193,7 @@ public class ArrowCacheProducer extends NoOpFlightProducer implements AutoClosea
         } catch (FlightRuntimeException ex) {
             throw ex;
         } catch (Exception ex) {
-            logger.error("Unexpected exception", ex);
-            throw CallStatus.INTERNAL
-                    .withDescription("Unexpected exception")
-                    .withCause(ex)
-                    .toRuntimeException();
+            throw ArrowServerUtils.internal(logger, "Unexpected exception", ex);
         }
     }
 }

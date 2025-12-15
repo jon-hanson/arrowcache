@@ -86,7 +86,7 @@ public class TestClientAPI {
 
         @Override
         public void onCompleted() {
-            logger.info("Done");
+            logger.info("Completed");
         }
     };
 }

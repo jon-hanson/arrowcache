@@ -254,6 +254,7 @@ public final class DataNode implements AutoCloseable {
             for (Batch batch : this.batches) {
                 batch.close();
             }
+            allocator.close();
         }
     }
 
