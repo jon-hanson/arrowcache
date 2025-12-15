@@ -6,6 +6,7 @@ import com.google.gson.GsonBuilder;
 import com.google.gson.TypeAdapter;
 import com.google.gson.stream.JsonReader;
 import com.google.gson.stream.JsonWriter;
+import io.nson.arrowcache.common.CachePath;
 import io.nson.arrowcache.common.utils.Codec;
 
 import java.io.IOException;
@@ -14,7 +15,7 @@ public class CacheConfigCodec implements Codec<CacheConfig, String> {
     public static final CacheConfigCodec INSTANCE = new CacheConfigCodec();
 
     private static final Gson gson = new GsonBuilder()
-            .registerTypeAdapter(io.nson.arrowcache.common.CachePath.class, new CachePathTypeAdaptor())
+            .registerTypeAdapter(CachePath.class, new CachePathTypeAdaptor())
             .setFormattingStyle(FormattingStyle.PRETTY.withIndent("    "))
             .create();
 
@@ -29,15 +30,15 @@ public class CacheConfigCodec implements Codec<CacheConfig, String> {
     }
 }
 
-class CachePathTypeAdaptor extends TypeAdapter<io.nson.arrowcache.common.CachePath> {
+class CachePathTypeAdaptor extends TypeAdapter<CachePath> {
 
     @Override
-    public void write(JsonWriter jsonWriter, io.nson.arrowcache.common.CachePath cachePath) throws IOException {
+    public void write(JsonWriter jsonWriter, CachePath cachePath) throws IOException {
         jsonWriter.value(cachePath.toString());
     }
 
     @Override
-    public io.nson.arrowcache.common.CachePath read(JsonReader jsonReader) throws IOException {
-        return io.nson.arrowcache.common.CachePath.valueOf(jsonReader.nextString());
+    public CachePath read(JsonReader jsonReader) throws IOException {
+        return CachePath.valueOf(jsonReader.nextString());
     }
 }

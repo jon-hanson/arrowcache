@@ -42,28 +42,28 @@ public class TestClientAPI {
             clientAPI.put(cachePath2, vsc);
             vsc.clear();
 
-            logger.info("Running query for path: {} and filters: {}", TestData.FILTERS1, cachePath1);
+            logger.info("Running query for path: {} and filters: {}", cachePath1, TestData.FILTERS1);
             clientAPI.get(cachePath1, TestData.FILTERS1, LISTENER);
 
-            logger.info("Running query for path: {} and filters: {}", TestData.FILTERS2, cachePath1);
+            logger.info("Running query for path: {} and filters: {}", cachePath1, TestData.FILTERS2);
             clientAPI.get(cachePath1, TestData.FILTERS2, LISTENER);
 
-            logger.info("Running query for path: {} and filters: {}", TestData.FILTERS3, cachePath1);
+            logger.info("Running query for path: {} and filters: {}", cachePath1, TestData.FILTERS3);
             clientAPI.get(cachePath1, TestData.FILTERS3, LISTENER);
 
-            logger.info("Running query for path: {} and filters: {}", TestData.FILTERS4, cachePath1);
+            logger.info("Running query for path: {} and filters: {}", cachePath1, TestData.FILTERS4);
             clientAPI.get(cachePath1, TestData.FILTERS4, LISTENER);
 
-            logger.info("Running query for path: {} and filters: {}", TestData.FILTERS1, cachePath2);
+            logger.info("Running query for path: {} and filters: {}", cachePath2, TestData.FILTERS1);
             clientAPI.get(cachePath2, TestData.FILTERS1, LISTENER);
 
-            logger.info("Running query for path: {} and filters: {}", TestData.FILTERS2, cachePath2);
+            logger.info("Running query for path: {} and filters: {}", cachePath2, TestData.FILTERS2);
             clientAPI.get(cachePath2, TestData.FILTERS2, LISTENER);
 
-            logger.info("Running query for path: {} and filters: {}", TestData.FILTERS3, cachePath2);
+            logger.info("Running query for path: {} and filters: {}", cachePath2, TestData.FILTERS3);
             clientAPI.get(cachePath2, TestData.FILTERS3, LISTENER);
 
-            logger.info("Running query for path: {} and filters: {}", TestData.FILTERS4, cachePath2);
+            logger.info("Running query for path: {} and filters: {}", cachePath2, TestData.FILTERS4);
             clientAPI.get(cachePath2, TestData.FILTERS4, LISTENER);
 
             logger.info("Done");

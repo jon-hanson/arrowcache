@@ -6,6 +6,7 @@ import org.apache.arrow.vector.types.pojo.Schema;
 import java.util.List;
 
 public class CacheUtils {
+    private CacheUtils() {}
 
     public static int findKeyColumn(Schema schema, String name) {
         final List<Field> fields = schema.getFields();
