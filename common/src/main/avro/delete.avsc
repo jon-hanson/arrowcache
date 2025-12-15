@@ -2,14 +2,6 @@
     {
         "namespace": "io.nson.arrowcache.common.avro",
         "type": "record",
-        "name": "Matches",
-        "fields": [
-            {"name": "batchIndex", "type": "int"},
-            {"name": "matches", "type": {"type": "array", "items": "int"}}
-        ]
-    },{
-        "namespace": "io.nson.arrowcache.common.avro",
-        "type": "record",
         "name": "Delete",
         "fields": [
             {"name": "paths", "type": {"type": "array", "items": "string"}},

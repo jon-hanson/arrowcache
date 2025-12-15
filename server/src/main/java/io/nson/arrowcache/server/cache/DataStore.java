@@ -1,6 +1,7 @@
 package io.nson.arrowcache.server.cache;
 
 import io.nson.arrowcache.common.Api;
+import io.nson.arrowcache.common.CachePath;
 import io.nson.arrowcache.server.AllocatorManager;
 import org.apache.arrow.flight.FlightProducer;
 import org.apache.arrow.vector.ipc.message.ArrowRecordBatch;
@@ -21,9 +22,15 @@ public class DataStore implements AutoCloseable {
 
     private static final Logger logger = LoggerFactory.getLogger(DataStore.class);
 
+    public static class NodeNotFoundException extends Exception {
+        public NodeNotFoundException(String msg) {
+            super(msg);
+        }
+    }
+
     private final CacheConfig config;
     private final AllocatorManager allocatorManager;
-    private final ConcurrentMap<io.nson.arrowcache.common.CachePath, DataNode> nodes = new ConcurrentHashMap<>();
+    private final ConcurrentMap<CachePath, DataNode> nodes = new ConcurrentHashMap<>();
 
     private final ReadWriteLock rwLock = new ReentrantReadWriteLock();
 
@@ -33,24 +40,23 @@ public class DataStore implements AutoCloseable {
     }
 
     @Override
-    public void close() throws Exception {
+    public void close() {
         nodes.values().forEach(DataNode::close);
     }
 
-    public Set<io.nson.arrowcache.common.CachePath> getCachePaths() {
+    public Set<CachePath> getCachePaths() {
         return nodes.keySet();
     }
 
-    public boolean containsNode(io.nson.arrowcache.common.CachePath path) {
+    public boolean containsNode(CachePath path) {
         return nodes.containsKey(path);
     }
 
-    public DataNode getNode(io.nson.arrowcache.common.CachePath path) {
-        return Optional.ofNullable(nodes.get(path))
-                .orElseThrow(() -> new IllegalArgumentException("No data node found for path " + path));
+    public Optional<DataNode> getNode(CachePath path) {
+        return Optional.ofNullable(nodes.get(path));
     }
 
-    public void add(io.nson.arrowcache.common.CachePath path, Schema schema, List<ArrowRecordBatch> arbs) {
+    public void add(CachePath path, Schema schema, List<ArrowRecordBatch> arbs) {
         final DataNode dataNode = nodes.get(path);
         if (dataNode == null) {
             final CacheConfig.NodeConfig nodeConfig = config.getNode(path);
@@ -63,7 +69,7 @@ public class DataStore implements AutoCloseable {
         }
     }
 
-    public boolean deleteNode(io.nson.arrowcache.common.CachePath path) {
+    public boolean deleteNode(CachePath path) {
         synchronized (rwLock.writeLock()) {
             final DataNode node = nodes.remove(path);
             if (node == null) {
@@ -74,33 +80,33 @@ public class DataStore implements AutoCloseable {
             }
         }
     }
-
-    public Map<Integer, Set<Integer>> execute(
-            io.nson.arrowcache.common.CachePath path,
-            List<Api.Filter<?>> filters
-    ) {
-        if (path.wildcardCount() > 0) {
-            throw new IllegalArgumentException("Cannot execute queries against paths with wildcards: '" + path + "'");
-        } else {
-            synchronized (rwLock.readLock()) {
-                final DataNode node = getNode(path);
-                return node.execute(filters);
-            }
-        }
-    }
-
-    public void execute(
-            io.nson.arrowcache.common.CachePath path,
-            List<Api.Filter<?>> filters,
-            FlightProducer.ServerStreamListener listener
-    ) {
-        if (path.wildcardCount() > 0) {
-            throw new IllegalArgumentException("Cannot execute queries against paths with wildcards: '" + path + "'");
-        } else {
-            synchronized (rwLock.readLock()) {
-                final DataNode node = getNode(path);
-                node.execute(filters, listener);
-            }
-        }
-    }
+//
+//    public Map<Integer, Set<Integer>> execute(
+//            CachePath path,
+//            List<Api.Filter<?>> filters
+//    ) {
+//        if (path.wildcardCount() > 0) {
+//            throw new IllegalArgumentException("Cannot execute queries against paths with wildcards: '" + path + "'");
+//        } else {
+//            synchronized (rwLock.readLock()) {
+//                final DataNode node = getNode(path);
+//                return node.execute(filters);
+//            }
+//        }
+//    }
+//
+//    public void execute(
+//            CachePath path,
+//            List<Api.Filter<?>> filters,
+//            FlightProducer.ServerStreamListener listener
+//    ) {
+//        if (path.wildcardCount() > 0) {
+//            throw new IllegalArgumentException("Cannot execute queries against paths with wildcards: '" + path + "'");
+//        } else {
+//            synchronized (rwLock.readLock()) {
+//                final DataNode node = getNode(path);
+//                node.execute(filters, listener);
+//            }
+//        }
+//    }
 }

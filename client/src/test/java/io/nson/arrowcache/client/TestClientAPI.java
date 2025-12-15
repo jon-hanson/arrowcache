@@ -17,7 +17,9 @@ public class TestClientAPI {
      */
     public static void main(String[] args) {
 
-        final CachePath cachePath = CachePath.valueOf("abc", "def");
+        final CachePath cachePath1 = CachePath.valueOf("abc", "def");
+        final CachePath cachePath2 = CachePath.valueOf("abc", "ghi");
+
         final Location location = Location.forGrpcInsecure("localhost", 12233);
 
         try (
@@ -27,30 +29,64 @@ public class TestClientAPI {
         ) {
             logger.info("Loading testdata1.csv into server");
             TestData.loadTestDataIntoVsc(vsc, "testdata1.csv");
-            clientAPI.put(cachePath, vsc);
+            clientAPI.put(cachePath1, vsc);
             vsc.clear();
 
-            logger.info("Running query for path: {} and filters: {}", TestData.FILTERS1, cachePath);
+            logger.info("Loading testdata2.csv into server");
+            TestData.loadTestDataIntoVsc(vsc, "testdata2.csv");
+            clientAPI.put(cachePath1, vsc);
+            vsc.clear();
 
-            clientAPI.get(cachePath, TestData.FILTERS1, new ClientAPI.Listener() {
-                @Override
-                public void onNext(VectorSchemaRoot vsc) {
-                    ArrowUtils.toLines(logger::info, vsc);
-                }
+            logger.info("Loading testdata3.csv into server");
+            TestData.loadTestDataIntoVsc(vsc, "testdata3.csv");
+            clientAPI.put(cachePath2, vsc);
+            vsc.clear();
 
-                @Override
-                public void onError(Throwable ex) {
-                    logger.error(ex.getMessage(), ex);
-                }
+            logger.info("Running query for path: {} and filters: {}", TestData.FILTERS1, cachePath1);
+            clientAPI.get(cachePath1, TestData.FILTERS1, LISTENER);
 
-                @Override
-                public void onCompleted() {
-                }
-            });
+            logger.info("Running query for path: {} and filters: {}", TestData.FILTERS2, cachePath1);
+            clientAPI.get(cachePath1, TestData.FILTERS2, LISTENER);
+
+            logger.info("Running query for path: {} and filters: {}", TestData.FILTERS3, cachePath1);
+            clientAPI.get(cachePath1, TestData.FILTERS3, LISTENER);
+
+            logger.info("Running query for path: {} and filters: {}", TestData.FILTERS4, cachePath1);
+            clientAPI.get(cachePath1, TestData.FILTERS4, LISTENER);
+
+            logger.info("Running query for path: {} and filters: {}", TestData.FILTERS1, cachePath2);
+            clientAPI.get(cachePath2, TestData.FILTERS1, LISTENER);
+
+            logger.info("Running query for path: {} and filters: {}", TestData.FILTERS2, cachePath2);
+            clientAPI.get(cachePath2, TestData.FILTERS2, LISTENER);
+
+            logger.info("Running query for path: {} and filters: {}", TestData.FILTERS3, cachePath2);
+            clientAPI.get(cachePath2, TestData.FILTERS3, LISTENER);
+
+            logger.info("Running query for path: {} and filters: {}", TestData.FILTERS4, cachePath2);
+            clientAPI.get(cachePath2, TestData.FILTERS4, LISTENER);
 
             logger.info("Done");
         } catch (Exception ex) {
             throw new RuntimeException(ex);
         }
     }
+
+    private static ClientAPI.Listener LISTENER = new ClientAPI.Listener() {
+
+        @Override
+        public void onNext(VectorSchemaRoot vsc) {
+            ArrowUtils.toLines(logger::info, vsc);
+        }
+
+        @Override
+        public void onError(Throwable ex) {
+            logger.error(ex.getMessage(), ex);
+        }
+
+        @Override
+        public void onCompleted() {
+            logger.info("Done");
+        }
+    };
 }

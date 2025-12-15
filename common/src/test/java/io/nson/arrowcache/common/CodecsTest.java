@@ -42,6 +42,8 @@ public class CodecsTest {
 
     @Test
     public void roundTripQueryApiToBytes() {
+        final Query dummy = QueryCodecs.API_TO_AVRO.encode(TestData.API_QUERY);
+        final byte[] dummy2 = QueryCodecs.AVRO_TO_BYTES.encode(dummy);
         final ByteArrayOutputStream baos = new ByteArrayOutputStream();
         QueryCodecs.API_TO_STREAM.encode(TestData.API_QUERY).accept(baos);
 

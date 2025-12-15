@@ -40,6 +40,16 @@ public class ArrowCacheProducer extends NoOpFlightProducer implements AutoClosea
         dataStore.close();
     }
 
+    private DataNode getNode(CachePath cachePath) {
+        return dataStore.getNode(cachePath)
+                .orElseThrow(() -> {
+                    logger.error("No data node found for path {}", cachePath);
+                    return CallStatus.NOT_FOUND
+                            .withDescription("No data node found for path " + cachePath)
+                            .toRuntimeException();
+                });
+    }
+
     @Override
     public void listActions(CallContext context, StreamListener<ActionType> listener) {
         logger.info("listActions: {}", context.peerIdentity());
@@ -101,7 +111,7 @@ public class ArrowCacheProducer extends NoOpFlightProducer implements AutoClosea
             if (descriptor.isCommand()) {
                 final Api.Query query = QueryCodecs.API_TO_BYTES.decode(descriptor.getCommand());
                 final CachePath cachePath = query.path();
-                final DataNode dataNode = dataStore.getNode(cachePath);
+                final DataNode dataNode = getNode(cachePath);
                 final Map<Integer, Set<Integer>> batchMatches = dataNode.execute(query.filters());
                 final byte[] response = MatchesCodecs.API_TO_BYTES.encode(new Api.BatchMatches(cachePath.path(), batchMatches));
                 final int numRecords = batchMatches.values().stream().mapToInt(Set::size).sum();
@@ -140,7 +150,7 @@ public class ArrowCacheProducer extends NoOpFlightProducer implements AutoClosea
             final ByteArrayInputStream bais = new ByteArrayInputStream(ticket.getBytes());
             final Api.BatchMatches batchMatches = MatchesCodecs.API_TO_STREAM.decode(bais);
             final CachePath cachePath = CachePath.valueOf(batchMatches.path());
-            final DataNode dataNode = dataStore.getNode(cachePath);
+            final DataNode dataNode = getNode(cachePath);
 
             dataNode.execute(batchMatches.matches(), listener);
         } catch (FlightRuntimeException ex) {

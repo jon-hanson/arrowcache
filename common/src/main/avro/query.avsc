@@ -16,7 +16,18 @@
                     ]
                 }
             },
-            {"name": "value", "type": ["boolean", "int", "long", "float", "double", "string"]}
+            {
+                "name": "value",
+                "type": [
+                    "boolean",
+                    "int",
+                    "long",
+                    "float",
+                    "double",
+                    "string",
+                    "AvroDate"
+                ]
+            }
         ]
     },{
         "namespace": "io.nson.arrowcache.common.avro",
@@ -35,7 +46,21 @@
                     ]
                 }
             },
-            {"name": "values", "type": {"type": "array", "items": ["boolean", "int", "long", "float", "double", "string"]}}
+            {
+                "name": "values",
+                "type": {
+                    "type": "array",
+                    "items": [
+                        "boolean",
+                        "int",
+                        "long",
+                        "float",
+                        "double",
+                        "string",
+                        "AvroDate"
+                    ]
+                }
+            }
         ]
     },{
         "namespace": "io.nson.arrowcache.common.avro",

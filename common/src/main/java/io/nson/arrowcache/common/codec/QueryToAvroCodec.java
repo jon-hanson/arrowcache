@@ -5,7 +5,10 @@ import io.nson.arrowcache.common.CachePath;
 import io.nson.arrowcache.common.avro.*;
 import io.nson.arrowcache.common.utils.*;
 
+import java.time.LocalDate;
 import java.util.*;
+
+import static java.util.stream.Collectors.toList;
 
 public final class QueryToAvroCodec implements Codec<Api.Query, Query> {
     public static final QueryToAvroCodec INSTANCE = new QueryToAvroCodec();
@@ -17,7 +20,7 @@ public final class QueryToAvroCodec implements Codec<Api.Query, Query> {
             return new SVFilter(
                     attribute,
                     encode(op),
-                    value
+                    encodeValue(value)
             );
         }
 
@@ -26,7 +29,7 @@ public final class QueryToAvroCodec implements Codec<Api.Query, Query> {
             return new MVFilter(
                     attribute,
                     encode(op),
-                    new ArrayList<>(values)
+                    values.stream().map(QueryToAvroCodec::encodeValue).collect(toList())
             );
         }
     };
@@ -62,6 +65,15 @@ public final class QueryToAvroCodec implements Codec<Api.Query, Query> {
                 return MVOperator.NOT_IN;
             default:
                 throw new Codec.Exception("Unrecognised MVFilter.Operator value - " + mvOperator);
+        }
+    }
+
+    private static Object encodeValue(Object value) {
+        if (value instanceof LocalDate) {
+            final LocalDate localDate = (LocalDate) value;
+            return new AvroDate(localDate.getYear(), localDate.getMonthValue(), localDate.getDayOfMonth());
+        } else {
+            return value;
         }
     }
 
@@ -106,7 +118,7 @@ public final class QueryToAvroCodec implements Codec<Api.Query, Query> {
         return new Api.MVFilter<T>(
                 mvFilter.getAttribute(),
                 decode(mvFilter.getOperator()),
-                Functors.setMap((List<T>)mvFilter.getValues(), o -> (T)decodeValue(o))
+                Functors.setMap((List<T>)mvFilter.getValues(), t -> (T)decodeValue(t))
         );
     }
 
@@ -124,6 +136,9 @@ public final class QueryToAvroCodec implements Codec<Api.Query, Query> {
     private static Object decodeValue(Object value) {
         if (value instanceof CharSequence) {
             return value.toString();
+        } else if (value instanceof AvroDate) {
+            final AvroDate avroDate = (AvroDate)value;
+            return LocalDate.of(avroDate.getYear(), avroDate.getMonth(), avroDate.getDay());
         } else {
             return value;
         }
