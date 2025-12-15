@@ -100,7 +100,7 @@ public class ArrowCacheProducer extends NoOpFlightProducer implements AutoClosea
         try {
             if (descriptor.isCommand()) {
                 final Api.Query query = QueryCodecs.API_TO_BYTES.decode(descriptor.getCommand());
-                final CachePath cachePath = CachePath.valueOf(descriptor.getPath());
+                final CachePath cachePath = query.path();
                 final DataNode dataNode = dataStore.getNode(cachePath);
                 final Map<Integer, Set<Integer>> batchMatches = dataNode.execute(query.filters());
                 final byte[] response = MatchesCodecs.API_TO_BYTES.encode(new Api.BatchMatches(cachePath.path(), batchMatches));

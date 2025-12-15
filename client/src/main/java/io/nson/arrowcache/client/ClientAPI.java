@@ -13,7 +13,7 @@ public interface ClientAPI extends AutoCloseable {
     }
 
     interface Listener {
-        void onNext();
+        void onNext(VectorSchemaRoot vsc);
         void onError(Throwable ex);
         void onCompleted();
     }
@@ -22,7 +22,7 @@ public interface ClientAPI extends AutoCloseable {
 
     void put(CachePath path, VectorSchemaRoot vsc);
 
-    void get(CachePath path, List<Api.Filter<?>> filters, VectorSchemaRoot vsc, Listener listener);
+    void get(CachePath path, List<Api.Filter<?>> filters, Listener listener);
 
     void remove(CachePath path, List<Api.Filter<?>> filters);
 }

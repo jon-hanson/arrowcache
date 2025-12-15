@@ -113,7 +113,7 @@ public class ArrowFlightClientImpl implements ClientAPI {
     }
 
     @Override
-    public void get(CachePath path, List<Api.Filter<?>> filters, VectorSchemaRoot vsc, Listener listener) {
+    public void get(CachePath path, List<Api.Filter<?>> filters, Listener listener) {
         try {
             final Api.Query query = new Api.Query(path, filters);
             final byte[] bytes = QueryCodecs.API_TO_BYTES.encode(query);
@@ -128,8 +128,9 @@ public class ArrowFlightClientImpl implements ClientAPI {
                                 throw new RuntimeException("Cannot handle location " + loc.getUri());
                             } else {
                                 try (final FlightStream flightStream = flightClient.getStream(endPoint.getTicket(), callTimeout)) {
+                                    final VectorSchemaRoot vsc = flightStream.getRoot();
                                     while (flightStream.next()) {
-                                        listener.onNext();
+                                        listener.onNext(vsc);
                                     }
                                 } catch (Exception ex) {
                                     listener.onError(ex);

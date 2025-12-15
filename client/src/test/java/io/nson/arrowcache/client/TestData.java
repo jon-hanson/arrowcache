@@ -54,7 +54,7 @@ public class TestData {
 
         final Schema schema = new Schema(Arrays.asList(idField, nameField, ageField, dateField), null);
 
-        logger.info("Schema: {}", schema.toJson());
+        logger.debug("Schema: {}", schema.toJson());
 
         return VectorSchemaRoot.create(schema, allocator);
     }

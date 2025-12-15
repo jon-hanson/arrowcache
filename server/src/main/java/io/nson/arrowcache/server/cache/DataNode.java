@@ -38,11 +38,11 @@ public final class DataNode implements AutoCloseable {
     }
 
     private final class Batch implements AutoCloseable {
-        private final ArrowRecordBatch arb;
+        private final ArrowRecordBatch arrowRecordBatch;
         private final Set<Integer> replaced;
 
-        private Batch(ArrowRecordBatch arb, Set<Integer> replaced) {
-            this.arb = arb;
+        private Batch(ArrowRecordBatch arrowRecordBatch, Set<Integer> replaced) {
+            this.arrowRecordBatch = arrowRecordBatch;
             this.replaced = replaced;
         }
 
@@ -52,7 +52,7 @@ public final class DataNode implements AutoCloseable {
 
         @Override
         public void close() {
-            arb.close();
+            arrowRecordBatch.close();
         }
 
         public void markAsReplaced(int rowIndex) {
@@ -67,7 +67,7 @@ public final class DataNode implements AutoCloseable {
         ) {
             logger.info("Looking for matches in batch {}", batchIndex);
 
-            loader.load(arb);
+            loader.load(arrowRecordBatch);
             final Map<String, FieldVector> fvMap =
                     vsc.getFieldVectors().stream()
                             .collect(toMap(
@@ -196,7 +196,9 @@ public final class DataNode implements AutoCloseable {
         this.allocator = allocatorManager.newChildAllocator(name);
         this.schema = schema;
         this.keyIndex = CacheUtils.findKeyColumn(schema, keyName);
-        this.batches = arbs.stream().map(Batch::new).collect(toList());
+        this.batches = new ArrayList<>();
+
+        addImpl(arbs);
     }
 
     public DataNode(
@@ -344,11 +346,13 @@ public final class DataNode implements AutoCloseable {
                     final VectorSchemaRoot resultVsc = VectorSchemaRoot.create(this.schema, this.allocator);
                     final VectorSchemaRoot vsc = VectorSchemaRoot.create(this.schema, this.allocator)
             ) {
+                final VectorLoader loader = new VectorLoader(vsc);
+
                 listener.start(resultVsc);
 
                 batchMatches.forEach((batchIndex, matches) -> {
                     final Batch batch = this.batches.get(batchIndex);
-
+                    loader.load(batch.arrowRecordBatch);
                     VectorSchemaRoot[] slices = null;
 
                     try {

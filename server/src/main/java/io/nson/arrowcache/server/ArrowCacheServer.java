@@ -82,6 +82,7 @@ public class ArrowCacheServer implements AutoCloseable {
             try {
                 logger.info("Exiting...");
                 AutoCloseables.close(server);
+                AutoCloseables.close(dataStore);
                 AutoCloseables.close(allocatorManager);
             } catch (Exception ex) {
                 logger.error("Ignoring exception", ex);
