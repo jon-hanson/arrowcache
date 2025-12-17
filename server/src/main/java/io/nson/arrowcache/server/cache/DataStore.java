@@ -34,7 +34,7 @@ public class DataStore implements AutoCloseable {
 
     @Override
     public void close() {
-        logger.info("Closing DataStore");
+        logger.info("Closing {} nodes...", nodes.size());
         nodes.values().forEach(DataNode::close);
     }
 

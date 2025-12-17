@@ -1,5 +1,11 @@
 package io.nson.arrowcache.server.cache;
 
+import com.google.gson.FormattingStyle;
+import com.google.gson.Gson;
+import com.google.gson.GsonBuilder;
+import com.google.gson.TypeAdapter;
+import com.google.gson.stream.JsonReader;
+import com.google.gson.stream.JsonWriter;
 import io.nson.arrowcache.common.CachePath;
 import io.nson.arrowcache.common.utils.FileUtils;
 
@@ -52,7 +58,7 @@ public final class CacheConfig {
 
     public static CacheConfig loadFromResource(String resourceName) throws IOException {
         final String json = FileUtils.readResource(resourceName);
-        return CacheConfigCodec.INSTANCE.decode(json);
+        return Codec.INSTANCE.decode(json);
     }
 
     private final AllocatorMaxSizeConfig allocatorMaxSizeConfig;
@@ -89,5 +95,38 @@ public final class CacheConfig {
                 .orElseThrow(() -> new IllegalArgumentException("No nodes found that match path '" + path + "'"));
 
         return nodes.get(match);
+    }
+
+    public static class Codec implements io.nson.arrowcache.common.utils.Codec<CacheConfig, String> {
+        public static final Codec INSTANCE = new Codec();
+
+        private static class CachePathTypeAdaptor extends TypeAdapter<CachePath> {
+
+            @Override
+            public void write(JsonWriter jsonWriter, CachePath cachePath) throws IOException {
+                jsonWriter.value(cachePath.toString());
+            }
+
+            @Override
+            public CachePath read(JsonReader jsonReader) throws IOException {
+                return CachePath.valueOf(jsonReader.nextString());
+            }
+        }
+
+        private static final Gson gson = new GsonBuilder()
+                .registerTypeAdapter(CachePath.class, new CachePathTypeAdaptor())
+                .setFormattingStyle(FormattingStyle.PRETTY.withIndent("    "))
+                .create();
+
+        @Override
+        public String encode(CacheConfig raw) {
+            return gson.toJson(raw);
+        }
+
+        @Override
+        public CacheConfig decode(String enc) {
+            return gson.fromJson(enc, CacheConfig.class);
+        }
+
     }
 }

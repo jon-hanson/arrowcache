@@ -55,7 +55,7 @@ public final class QueryToAvroCodec implements Codec<Api.Query, Query> {
             case NOT_EQUALS:
                 return SVOperator.NOT_EQUALS;
             default:
-                throw new Codec.Exception("Unrecognised SVFilter.Operator value - " + svOperator);
+                throw new RuntimeException("Unrecognised SVFilter.Operator value - " + svOperator);
         }
     }
 
@@ -66,7 +66,7 @@ public final class QueryToAvroCodec implements Codec<Api.Query, Query> {
             case NOT_IN:
                 return MVOperator.NOT_IN;
             default:
-                throw new Codec.Exception("Unrecognised MVFilter.Operator value - " + mvOperator);
+                throw new RuntimeException("Unrecognised MVFilter.Operator value - " + mvOperator);
         }
     }
 
@@ -93,7 +93,7 @@ public final class QueryToAvroCodec implements Codec<Api.Query, Query> {
         } else if (filter instanceof MVFilter) {
             return decode((MVFilter)filter);
         } else {
-            throw new Codec.Exception("Unrecognised Filter type - " + filter.getClass());
+            throw new RuntimeException("Unrecognised Filter type - " + filter.getClass());
         }
     }
 
@@ -112,7 +112,7 @@ public final class QueryToAvroCodec implements Codec<Api.Query, Query> {
             case NOT_EQUALS:
                 return Api.SVFilter.Operator.NOT_EQUALS;
             default:
-                throw new Codec.Exception("Unrecognised SVOperator value - " + svOperator);
+                throw new RuntimeException("Unrecognised SVOperator value - " + svOperator);
         }
     }
 
@@ -131,7 +131,7 @@ public final class QueryToAvroCodec implements Codec<Api.Query, Query> {
             case NOT_IN:
                 return Api.MVFilter.Operator.NOT_IN;
             default:
-                throw new Codec.Exception("Unrecognised MVOperator value - " + mvOperator);
+                throw new RuntimeException("Unrecognised MVOperator value - " + mvOperator);
         }
     }
 

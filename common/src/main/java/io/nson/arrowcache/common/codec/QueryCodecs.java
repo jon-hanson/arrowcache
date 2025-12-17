@@ -19,7 +19,7 @@ public abstract class QueryCodecs {
                 try {
                     Query.getEncoder().encode(raw, os);
                 } catch (IOException ex) {
-                    throw new BiCodec.Exception("Encoding error", ex);
+                    throw new RuntimeException("Encoding error", ex);
                 }
             };
         }
@@ -29,7 +29,7 @@ public abstract class QueryCodecs {
             try {
                 return Query.getDecoder().decode(enc);
             } catch (IOException ex) {
-                throw new BiCodec.Exception("Decoding error", ex);
+                throw new RuntimeException("Decoding error", ex);
             }
         }
     };

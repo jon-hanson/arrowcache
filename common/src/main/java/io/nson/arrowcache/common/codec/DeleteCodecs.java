@@ -20,7 +20,7 @@ public abstract class DeleteCodecs {
                 try {
                     Delete.getEncoder().encode(raw, os);
                 } catch (IOException ex) {
-                    throw new Exception("Encoding error", ex);
+                    throw new RuntimeException("Encoding error", ex);
                 }
             };
         }
@@ -30,7 +30,7 @@ public abstract class DeleteCodecs {
             try {
                 return Delete.getDecoder().decode(enc);
             } catch (IOException ex) {
-                throw new Exception("Decoding error", ex);
+                throw new RuntimeException("Decoding error", ex);
             }
         }
     };

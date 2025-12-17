@@ -34,7 +34,7 @@ public class ArrowCacheServer implements AutoCloseable {
     }
 
     public void close() throws Exception {
-        logger.info("ArrowCacheServer closing for location {}", location);
+        logger.info("Closing for location {}...", location);
         AutoCloseables.close(this.flightServer);
         AutoCloseables.close(this.flightProducer);
         AutoCloseables.close(this.allocator);
@@ -80,10 +80,8 @@ public class ArrowCacheServer implements AutoCloseable {
 
         Runtime.getRuntime().addShutdownHook(new Thread(() -> {
             try {
-                logger.info("Exiting...");
-                AutoCloseables.close(server);
-                AutoCloseables.close(dataStore);
-                AutoCloseables.close(allocatorManager);
+                logger.info("Shutting down...");
+                AutoCloseables.close(dataStore, server, allocatorManager);
             } catch (Exception ex) {
                 logger.error("Ignoring exception", ex);
             }
@@ -92,6 +90,6 @@ public class ArrowCacheServer implements AutoCloseable {
         logger.info("Awaiting termination");
         server.awaitTermination();
 
-        logger.info("Stopping");
+        logger.info("Exiting");
     }
 }

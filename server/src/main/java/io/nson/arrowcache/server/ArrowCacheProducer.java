@@ -40,6 +40,7 @@ public class ArrowCacheProducer extends NoOpFlightProducer implements AutoClosea
 
     @Override
     public void close() {
+        logger.info("Closing...");
     }
 
     private DataNode getNode(CachePath cachePath) {
