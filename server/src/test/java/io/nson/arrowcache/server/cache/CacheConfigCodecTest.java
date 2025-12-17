@@ -25,11 +25,11 @@ public class CacheConfigCodecTest {
                 )
         );
 
-        final String encoded = CacheConfig.Codec.INSTANCE.encode(cacheConfig);
+        final String encoded = CacheConfig.CODEC.encode(cacheConfig);
 
         System.out.println(encoded);
 
-        final CacheConfig cacheConfig2 = CacheConfig.Codec.INSTANCE.decode(encoded);
+        final CacheConfig cacheConfig2 = CacheConfig.CODEC.decode(encoded);
 
         //assertEquals(cacheConfig, cacheConfig2);
     }

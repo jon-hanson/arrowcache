@@ -43,4 +43,9 @@ public abstract class FileUtils {
         lineStr.close();
         return lines;
     }
+
+    public static <T> T loadFromResource(String resourceName, Codec<T, String> codec) throws IOException {
+        return codec.decode(FileUtils.readResource(resourceName));
+    }
+
 }

@@ -3,11 +3,14 @@ package io.nson.arrowcache.client;
 import io.nson.arrowcache.client.impl.ArrowFlightClientImpl;
 import io.nson.arrowcache.common.CachePath;
 import io.nson.arrowcache.common.utils.ArrowUtils;
+import io.nson.arrowcache.common.utils.FileUtils;
 import org.apache.arrow.flight.Location;
 import org.apache.arrow.memory.RootAllocator;
 import org.apache.arrow.vector.VectorSchemaRoot;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import java.io.IOException;
 
 public class TestClientAPI {
     private static final Logger logger = LoggerFactory.getLogger(TestClientAPI.class);
@@ -15,12 +18,13 @@ public class TestClientAPI {
     /*
      * --add-opens=java.base/java.nio=org.apache.arrow.memory.core,ALL-UNNAMED
      */
-    public static void main(String[] args) {
+    public static void main(String[] args) throws IOException {
 
+        final ClientConfig clientConfig = FileUtils.loadFromResource("clientconfig.json", ClientConfig.CODEC);
         final CachePath cachePath1 = CachePath.valueOf("abc", "def");
         final CachePath cachePath2 = CachePath.valueOf("abc", "ghi");
 
-        final Location location = Location.forGrpcInsecure("localhost", 12233);
+        final Location location = Location.forGrpcInsecure(clientConfig.serverHost(), clientConfig.serverPort());
 
         try (
                 final RootAllocator allocator = new RootAllocator();
