@@ -50,7 +50,8 @@ public class DataStore implements AutoCloseable {
         logger.info("Adding data node for path {} with {} ArrowRecordBatches", path, arbs.size());
         final DataNode dataNode = nodes.get(path);
         if (dataNode == null) {
-            final CacheConfig.NodeConfig nodeConfig = config.getNode(path);
+            final CacheConfig.NodeConfig nodeConfig = config.getNode(path)
+                    .orElseThrow(() -> new IllegalArgumentException("No node (or node config) found for path " + path));
 
             synchronized (rwLock.writeLock()) {
                 nodes.put(path, new DataNode(path.path(), nodeConfig, allocatorManager, schema, arbs));

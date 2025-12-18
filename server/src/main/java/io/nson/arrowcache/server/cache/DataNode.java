@@ -199,6 +199,7 @@ public final class DataNode implements AutoCloseable {
         this.keyIndex = CacheUtils.findKeyColumn(schema, keyName);
         this.batches = new ArrayList<>();
 
+        logger.info("Creating new DataNode for name: {} keyName: {}", name, keyName);
         addImpl(arbs);
     }
 

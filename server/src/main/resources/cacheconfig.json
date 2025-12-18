@@ -6,7 +6,7 @@
         }
     },
     "nodes": {
-        "abc/def": {
+        "abc/*": {
             "keyName": "id"
         },
         "abc/ghi": {

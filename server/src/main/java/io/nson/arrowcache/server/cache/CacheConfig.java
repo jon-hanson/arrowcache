@@ -10,6 +10,7 @@ import io.nson.arrowcache.common.utils.JsonCodec;
 import java.io.IOException;
 import java.util.Comparator;
 import java.util.Map;
+import java.util.Optional;
 
 public final class CacheConfig {
     public static final JsonCodec<CacheConfig> CODEC = new Codec();
@@ -107,12 +108,10 @@ public final class CacheConfig {
         return nodes;
     }
 
-    public NodeConfig getNode(CachePath path) {
-        final CachePath match = nodes.keySet().stream()
+    public Optional<NodeConfig> getNode(CachePath path) {
+        return nodes.keySet().stream()
                 .filter(path::match)
                 .min(Comparator.comparing(CachePath::wildcardCount))
-                .orElseThrow(() -> new IllegalArgumentException("No nodes found that match path '" + path + "'"));
-
-        return nodes.get(match);
+                .map(nodes::get);
     }
 }
