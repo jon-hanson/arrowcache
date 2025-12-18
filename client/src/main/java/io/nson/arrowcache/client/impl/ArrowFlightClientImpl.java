@@ -4,6 +4,7 @@ import io.nson.arrowcache.client.ClientAPI;
 import io.nson.arrowcache.common.Actions;
 import io.nson.arrowcache.common.Api;
 import io.nson.arrowcache.common.CachePath;
+import io.nson.arrowcache.common.codec.DeleteCodecs;
 import io.nson.arrowcache.common.codec.QueryCodecs;
 import io.nson.arrowcache.common.utils.ArrowUtils;
 import org.apache.arrow.flight.*;
@@ -156,8 +157,8 @@ public class ArrowFlightClientImpl implements ClientAPI {
     @Override
     public void remove(CachePath path, List<Api.Filter<?>> filters) {
         try {
-            final Api.Query query = new Api.Query(path, filters);
-            final byte[] bytes = QueryCodecs.API_TO_BYTES.encode(query);
+            final Api.Delete delete = new Api.Delete(path, filters);
+            final byte[] bytes = DeleteCodecs.API_TO_BYTES.encode(delete);
             final Action action = new Action(Actions.DELETE_NAME, bytes);
             final Iterator<Result> deleteActionResult = flightClient.doAction(action);
 

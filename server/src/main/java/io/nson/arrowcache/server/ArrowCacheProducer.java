@@ -4,13 +4,14 @@ import io.nson.arrowcache.common.Actions;
 import io.nson.arrowcache.common.Api;
 import io.nson.arrowcache.common.CachePath;
 import io.nson.arrowcache.common.codec.DeleteCodecs;
-import io.nson.arrowcache.common.codec.MatchesCodecs;
+import io.nson.arrowcache.common.codec.BatchRowsCodecs;
 import io.nson.arrowcache.common.codec.QueryCodecs;
 import io.nson.arrowcache.common.utils.ArrowUtils;
 import io.nson.arrowcache.server.cache.DataNode;
 import io.nson.arrowcache.server.cache.DataStore;
 import io.nson.arrowcache.server.utils.ArrowServerUtils;
 import org.apache.arrow.flight.*;
+import org.apache.arrow.util.AutoCloseables;
 import org.apache.arrow.vector.VectorUnloader;
 import org.apache.arrow.vector.ipc.message.ArrowRecordBatch;
 import org.apache.arrow.vector.types.pojo.Schema;
@@ -43,13 +44,6 @@ public class ArrowCacheProducer extends NoOpFlightProducer implements AutoClosea
         logger.info("Closing...");
     }
 
-    private DataNode getNode(CachePath cachePath) {
-        return dataStore.getNode(cachePath)
-                .orElseThrow(() ->
-                    ArrowServerUtils.notFound(logger, "No data node found for path " + cachePath)
-                );
-    }
-
     @Override
     public void listActions(CallContext context, StreamListener<ActionType> listener) {
         logger.info("listActions: {}", context.peerIdentity());
@@ -70,40 +64,50 @@ public class ArrowCacheProducer extends NoOpFlightProducer implements AutoClosea
     public Runnable acceptPut(CallContext context, FlightStream flightStream, StreamListener<PutResult> ackStream) {
         logger.info("acceptPut: {}", context.peerIdentity());
 
-        final List<ArrowRecordBatch> arbs = new ArrayList<>();
-
         return () -> {
             logger.info("acceptPut inside runnable");
 
-            long rows = 0;
-            while (flightStream.next()) {
-                logger.info("Next batch");
+            final List<ArrowRecordBatch> arbs = new ArrayList<>();
+            try {
+                long rows = 0;
+                while (flightStream.next()) {
+                    logger.info("Next batch");
 
-                final VectorUnloader unloader = new VectorUnloader(flightStream.getRoot());
-                final ArrowRecordBatch arb = unloader.getRecordBatch();
+                    final VectorUnloader unloader = new VectorUnloader(flightStream.getRoot());
+                    final ArrowRecordBatch arb = unloader.getRecordBatch();
 
-                logger.info("ArrowRecordBatch: {}", arb);
-                arbs.add(arb);
+                    logger.debug("ArrowRecordBatch: {}", arb);
+                    arbs.add(arb);
 
-                rows += flightStream.getRoot().getRowCount();
+                    rows += flightStream.getRoot().getRowCount();
+                }
+
+                logger.info("Received {} rows", rows);
+                final FlightDescriptor flightDesc = flightStream.getDescriptor();
+                if (flightDesc.isCommand()) {
+                    throw ArrowServerUtils.invalidArgument(
+                            logger,
+                            "Cannot accept a put operation where the Flight Descriptor is a command - must be a path"
+                    );
+                } else {
+                    final List<String> flightPath = flightDesc.getPath();
+                    final CachePath cachePath = CachePath.valueOf(flightPath);
+                    final Schema schema = flightStream.getSchema();
+                    dataStore.add(cachePath, schema, arbs);
+                    arbs.clear();
+                    ackStream.onCompleted();
+                }
+
+                logger.info("acceptPut exiting runnable");
+            } catch (Exception ex) {
+                ackStream.onError(ex);
+            } finally {
+                try {
+                    AutoCloseables.close(arbs);
+                } catch (Exception ex) {
+                    logger.warn("Suppressing exception while closing ArrowRecordBatch", ex);
+                }
             }
-
-            logger.info("Received {} rows", rows);
-            final FlightDescriptor flightDesc = flightStream.getDescriptor();
-            if (flightDesc.isCommand()) {
-                throw ArrowServerUtils.invalidArgument(
-                        logger,
-                        "Cannot accept a put operation where the Flight Descriptor is a command - must be a path"
-                );
-            } else {
-                final List<String> flightPath = flightDesc.getPath();
-                final CachePath cachePath = CachePath.valueOf(flightPath);
-                final Schema schema = flightStream.getSchema();
-                dataStore.add(cachePath, schema, arbs);
-                ackStream.onCompleted();
-            }
-
-            logger.info("acceptPut exiting runnable");
         };
     }
 
@@ -113,14 +117,11 @@ public class ArrowCacheProducer extends NoOpFlightProducer implements AutoClosea
             if (descriptor.isCommand()) {
                 final Api.Query query = QueryCodecs.API_TO_BYTES.decode(descriptor.getCommand());
                 final CachePath cachePath = query.path();
-                final DataNode dataNode = getNode(cachePath);
+                final DataNode dataNode = dataStore.getNode(cachePath);
                 final Map<Integer, Set<Integer>> batchMatches = dataNode.execute(query.filters());
-                final byte[] response = MatchesCodecs.API_TO_BYTES.encode(new Api.BatchMatches(cachePath.path(), batchMatches));
+                final byte[] response = BatchRowsCodecs.API_TO_BYTES.encode(new Api.NodeEntrySpec(cachePath.path(), batchMatches));
                 final int numRecords = batchMatches.values().stream().mapToInt(Set::size).sum();
-                final FlightEndpoint flightEndpoint = new FlightEndpoint(
-                        new Ticket(response),
-                        location
-                );
+                final FlightEndpoint flightEndpoint = new FlightEndpoint(new Ticket(response), location);
 
                 return new FlightInfo(
                         dataNode.schema(),
@@ -130,7 +131,7 @@ public class ArrowCacheProducer extends NoOpFlightProducer implements AutoClosea
                         numRecords
                 );
             } else {
-                throw ArrowServerUtils.invalidArgument(logger, "FlightDescriptors with a path are not supported");
+                throw ArrowServerUtils.invalidArgument(logger, "Path-based FlightDescriptors  are not supported");
             }
         } catch (FlightRuntimeException ex) {
             throw ex;
@@ -145,11 +146,11 @@ public class ArrowCacheProducer extends NoOpFlightProducer implements AutoClosea
             logger.info("getStream: {}", context.peerIdentity());
 
             final ByteArrayInputStream bais = new ByteArrayInputStream(ticket.getBytes());
-            final Api.BatchMatches batchMatches = MatchesCodecs.API_TO_STREAM.decode(bais);
-            final CachePath cachePath = CachePath.valueOf(batchMatches.path());
-            final DataNode dataNode = getNode(cachePath);
+            final Api.NodeEntrySpec nodeEntrySpec = BatchRowsCodecs.API_TO_STREAM.decode(bais);
+            final CachePath cachePath = CachePath.valueOfConcat(nodeEntrySpec.path());
+            final DataNode dataNode = dataStore.getNode(cachePath);
 
-            dataNode.execute(batchMatches.matches(), listener);
+            dataNode.execute(nodeEntrySpec.batchRows(), listener);
         } catch (FlightRuntimeException ex) {
             throw ex;
         } catch (Exception ex) {
@@ -161,33 +162,28 @@ public class ArrowCacheProducer extends NoOpFlightProducer implements AutoClosea
     public void doAction(CallContext context, Action action, StreamListener<Result> listener) {
 
         logger.info(
-                "doAction called - CallContext: {}, Action:{} ",
+                "doAction called - CallContext: {}, Action.type:{} ",
                 ArrowUtils.toString(context),
-                ArrowUtils.toString(action)
+                action.getType()
         );
 
         try {
             if (action.getType().equals(Actions.DELETE_NAME)) {
                 final Api.Delete delete = DeleteCodecs.API_TO_BYTES.decode(action.getBody());
-                if (!delete.paths().isEmpty()) {
-                    for (String path : delete.paths()) {
-                        final CachePath cachePath = CachePath.valueOf(path);
-                        if (dataStore.deleteNode(cachePath)) {
-                            listener.onNext(ArrowUtils.stringToResult("Path '" + path + "' successfully deleted"));
-                        } else {
-                            listener.onNext(ArrowUtils.stringToResult("WARNING: No data node found for path '" + path + "'"));
-                        }
+
+                final CachePath cachePath = delete.path();
+
+                if (delete.filters().isEmpty()) {
+                    if (dataStore.deleteNode(cachePath)) {
+                        listener.onNext(ArrowUtils.stringToResult("Path '" + cachePath + "' successfully deleted"));
+                    } else {
+                        listener.onNext(ArrowUtils.stringToResult("WARNING: No data node found for path '" + cachePath + "'"));
                     }
-                }
-
-                if (delete.query().isPresent()) {
-
+                } else {
+                    dataStore.deleteEntries(cachePath, delete.filters());
                 }
             } else {
-                logger.error("Action '" + action.getType() + "' not supported");
-                throw CallStatus.INVALID_ARGUMENT
-                        .withDescription("Action '" + action.getType() + "' not supported")
-                        .toRuntimeException();
+                throw ArrowServerUtils.invalidArgument(logger, "Action type '" + action.getType() + "' not supported");
             }
 
             listener.onCompleted();

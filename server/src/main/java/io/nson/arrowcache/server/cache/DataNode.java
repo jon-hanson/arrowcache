@@ -178,6 +178,7 @@ public final class DataNode implements AutoCloseable {
         }
     }
 
+    private final String name;
     private final String keyName;
     private final BufferAllocator allocator;
     private final Schema schema;
@@ -193,6 +194,7 @@ public final class DataNode implements AutoCloseable {
             Schema schema,
             List<ArrowRecordBatch> arbs
     ) {
+        this.name = name;
         this.keyName = keyName;
         this.allocator = allocatorManager.newChildAllocator(name);
         this.schema = schema;
@@ -200,6 +202,7 @@ public final class DataNode implements AutoCloseable {
         this.batches = new ArrayList<>();
 
         logger.info("Creating new DataNode for name: {} keyName: {}", name, keyName);
+
         addImpl(arbs);
     }
 
@@ -251,6 +254,7 @@ public final class DataNode implements AutoCloseable {
 
     @Override
     public void close() {
+        logger.info("Closing DataNode for name: {}", name);
         synchronized (rwLock.writeLock()) {
             for (Batch batch : this.batches) {
                 batch.close();
@@ -432,5 +436,12 @@ public final class DataNode implements AutoCloseable {
                 listener.completed();
             }
         }
+    }
+
+    public void deleteEntries(Map<Integer, Set<Integer>> batchRows) {
+        batchRows.forEach((batchIndex, rowIndexes) -> {
+            final DataNode.Batch batch = this.batches.get(batchIndex);
+            batch.replaced.addAll(rowIndexes);
+        });
     }
 }

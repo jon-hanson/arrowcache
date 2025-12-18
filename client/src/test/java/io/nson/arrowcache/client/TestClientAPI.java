@@ -70,6 +70,12 @@ public class TestClientAPI {
             logger.info("Running query for path: {} and filters: {}", cachePath2, TestData.FILTERS4);
             clientAPI.get(cachePath2, TestData.FILTERS4, LISTENER);
 
+            logger.info("Deleting entries for path: {} and filters: {}", cachePath2, TestData.FILTERS4);
+            clientAPI.remove(cachePath2, TestData.FILTERS4);
+
+            logger.info("Running query for path: {} and filters: {}", cachePath2, TestData.FILTERS4);
+            clientAPI.get(cachePath2, TestData.FILTERS4, LISTENER);
+
             logger.info("Done");
         } catch (Exception ex) {
             throw new RuntimeException(ex);

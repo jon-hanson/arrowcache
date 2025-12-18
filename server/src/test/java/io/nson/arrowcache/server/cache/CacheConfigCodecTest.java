@@ -18,16 +18,16 @@ public class CacheConfigCodecTest {
         final CacheConfig cacheConfig = new CacheConfig(
                 allocatorMaxSizeConfig,
                 Map.of(
-                    CachePath.valueOf("abc/def"),
+                    CachePath.valueOfConcat("abc/def"),
                     new CacheConfig.NodeConfig("id"),
-                    CachePath.valueOf("abc/ghi"),
+                    CachePath.valueOfConcat("abc/ghi"),
                     new CacheConfig.NodeConfig("id")
                 )
         );
 
         final String encoded = CacheConfig.CODEC.encode(cacheConfig);
 
-        System.out.println(encoded);
+        //System.out.println(encoded);
 
         final CacheConfig cacheConfig2 = CacheConfig.CODEC.decode(encoded);
 

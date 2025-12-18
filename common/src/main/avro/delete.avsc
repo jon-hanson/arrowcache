@@ -4,8 +4,8 @@
         "type": "record",
         "name": "Delete",
         "fields": [
-            {"name": "paths", "type": {"type": "array", "items": "string"}},
-            {"name": "query", "type": ["null", "Query"]}
+            {"name": "path", "type": "string"},
+            {"name": "filters", "type": {"type": "array", "items": ["SVFilter", "MVFilter"]}}
         ]
     }
 ]

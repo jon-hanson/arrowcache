@@ -225,45 +225,44 @@ public abstract class Api {
         }
     }
 
-    public static final class BatchMatches {
+    public static final class NodeEntrySpec {
         private final String path;
-        private final Map<Integer, Set<Integer>> matches;
+        private final Map<Integer, Set<Integer>> batchRows;
 
-        public BatchMatches(String path, Map<Integer, Set<Integer>> matches) {
+        public NodeEntrySpec(String path, Map<Integer, Set<Integer>> batchRows) {
             this.path = path;
-            this.matches = matches;
+            this.batchRows = batchRows;
         }
 
         public String path() {
             return path;
         }
 
-        public Map<Integer, Set<Integer>> matches() {
-            return matches;
+        public Map<Integer, Set<Integer>> batchRows() {
+            return batchRows;
         }
     }
 
-
     public static final class Delete {
-        private final Set<String> paths;
-        private final Query query;
+        private final CachePath path;
+        private final List<Filter<?>> filters;
 
-        public Delete(Set<String> paths, Query query) {
-            this.paths = paths;
-            this.query = query;
+        public Delete(CachePath path, List<Filter<?>> filters) {
+            this.path = path;
+            this.filters = filters;
         }
 
-        public Delete(Set<String> paths, Optional<Query> query) {
-            this.paths = paths;
-            this.query = query.orElse(null);
+        public Delete(CachePath path) {
+            this.path = path;
+            this.filters = Collections.emptyList();
         }
 
-        public Set<String> paths() {
-            return paths;
+        public CachePath path() {
+            return path;
         }
 
-        public Optional<Query> query() {
-            return Optional.ofNullable(query);
+        public List<Filter<?>> filters() {
+            return filters;
         }
     }
 }

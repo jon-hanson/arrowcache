@@ -1,13 +1,16 @@
 package io.nson.arrowcache.server.cache;
 
+import io.nson.arrowcache.common.Api;
 import io.nson.arrowcache.common.CachePath;
 import io.nson.arrowcache.server.AllocatorManager;
+import io.nson.arrowcache.server.utils.ArrowServerUtils;
 import org.apache.arrow.vector.ipc.message.ArrowRecordBatch;
 import org.apache.arrow.vector.types.pojo.Schema;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
@@ -42,7 +45,14 @@ public class DataStore implements AutoCloseable {
         return nodes.keySet();
     }
 
-    public Optional<DataNode> getNode(CachePath path) {
+    public DataNode getNode(CachePath cachePath) {
+        return getNodeOpt(cachePath)
+                .orElseThrow(() ->
+                        ArrowServerUtils.notFound(logger, "No data node found for path " + cachePath)
+                );
+    }
+
+    public Optional<DataNode> getNodeOpt(CachePath path) {
         return Optional.ofNullable(nodes.get(path));
     }
 
@@ -53,6 +63,8 @@ public class DataStore implements AutoCloseable {
             final CacheConfig.NodeConfig nodeConfig = config.getNode(path)
                     .orElseThrow(() -> new IllegalArgumentException("No node (or node config) found for path " + path));
 
+            CacheUtils.validateSchema(schema, nodeConfig.keyName());
+
             synchronized (rwLock.writeLock()) {
                 nodes.put(path, new DataNode(path.path(), nodeConfig, allocatorManager, schema, arbs));
             }
@@ -61,16 +73,25 @@ public class DataStore implements AutoCloseable {
         }
     }
 
-    public boolean deleteNode(CachePath path) {
-        logger.info("Deleting data node for path {}", path);
+    public boolean deleteNode(CachePath cachePath) {
+        logger.info("Deleting data node for path {}", cachePath);
         synchronized (rwLock.writeLock()) {
-            final DataNode node = nodes.remove(path);
+            final DataNode node = nodes.remove(cachePath);
             if (node == null) {
                 return false;
             } else {
                 node.close();
                 return true;
             }
+        }
+    }
+
+    public void deleteEntries(CachePath cachePath, List<Api.Filter<?>> filters) {
+        logger.info("Deleting entries for path {}", cachePath);
+        final DataNode node = getNode(cachePath);
+        synchronized (rwLock.writeLock()) {
+            final Map<Integer, Set<Integer>> batchMatches = node.execute(filters);
+            node.deleteEntries(batchMatches);
         }
     }
 }

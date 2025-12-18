@@ -1,24 +1,24 @@
 package io.nson.arrowcache.common.codec;
 
 import io.nson.arrowcache.common.Api;
-import io.nson.arrowcache.common.avro.BatchMatches;
+import io.nson.arrowcache.common.avro.NodeEntrySpec;
 import io.nson.arrowcache.common.utils.BiCodec;
 import io.nson.arrowcache.common.utils.Codec;
 
 import java.io.*;
 import java.util.function.Consumer;
 
-public abstract class MatchesCodecs {
-    public static final Codec<Api.BatchMatches, BatchMatches> API_TO_AVRO = MatchesToAvroCodec.INSTANCE;
+public abstract class BatchRowsCodecs {
+    public static final Codec<Api.NodeEntrySpec, NodeEntrySpec> API_TO_AVRO = MatchesToAvroCodec.INSTANCE;
 
-    public static final BiCodec<Consumer<OutputStream>, BatchMatches, BatchMatches, InputStream> AVRO_TO_STREAM
+    public static final BiCodec<Consumer<OutputStream>, NodeEntrySpec, NodeEntrySpec, InputStream> AVRO_TO_STREAM
             = new BiCodec<>() {
 
         @Override
-        public Consumer<OutputStream> encode(BatchMatches raw) {
+        public Consumer<OutputStream> encode(NodeEntrySpec raw) {
             return os -> {
                 try {
-                    BatchMatches.getEncoder().encode(raw, os);
+                    NodeEntrySpec.getEncoder().encode(raw, os);
                 } catch (IOException ex) {
                     throw new RuntimeException("Encoding error", ex);
                 }
@@ -26,34 +26,33 @@ public abstract class MatchesCodecs {
         }
 
         @Override
-        public BatchMatches decode(InputStream enc) {
+        public NodeEntrySpec decode(InputStream enc) {
             try {
-                return BatchMatches.getDecoder().decode(enc);
+                return NodeEntrySpec.getDecoder().decode(enc);
             } catch (IOException ex) {
                 throw new RuntimeException("Decoding error", ex);
             }
         }
     };
 
-    public static final BiCodec<Consumer<OutputStream>, Api.BatchMatches, Api.BatchMatches, InputStream> API_TO_STREAM =
+    public static final BiCodec<Consumer<OutputStream>, Api.NodeEntrySpec, Api.NodeEntrySpec, InputStream> API_TO_STREAM =
             API_TO_AVRO.andThen(AVRO_TO_STREAM);
 
-    public static final Codec<BatchMatches, byte[]> AVRO_TO_BYTES = new Codec<>() {
+    public static final Codec<NodeEntrySpec, byte[]> AVRO_TO_BYTES = new Codec<>() {
 
         @Override
-        public byte[] encode(BatchMatches raw) {
+        public byte[] encode(NodeEntrySpec raw) {
             final ByteArrayOutputStream baos = new ByteArrayOutputStream();
             AVRO_TO_STREAM.encode(raw).accept(baos);
             return baos.toByteArray();
         }
 
         @Override
-        public BatchMatches decode(byte[] enc) {
+        public NodeEntrySpec decode(byte[] enc) {
             final ByteArrayInputStream bais = new ByteArrayInputStream(enc);
             return AVRO_TO_STREAM.decode(bais);
         }
     };
 
-    public static final Codec<Api.BatchMatches, byte[]> API_TO_BYTES = API_TO_AVRO.andThen(AVRO_TO_BYTES);
-
+    public static final Codec<Api.NodeEntrySpec, byte[]> API_TO_BYTES = API_TO_AVRO.andThen(AVRO_TO_BYTES);
 }

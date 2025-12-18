@@ -1,8 +1,8 @@
 package io.nson.arrowcache.common.codec;
 
 import io.nson.arrowcache.common.Api;
-import io.nson.arrowcache.common.avro.BatchMatches;
-import io.nson.arrowcache.common.avro.Matches;
+import io.nson.arrowcache.common.avro.NodeEntrySpec;
+import io.nson.arrowcache.common.avro.Rows;
 import io.nson.arrowcache.common.utils.Codec;
 
 import java.util.ArrayList;
@@ -12,30 +12,30 @@ import java.util.stream.Collectors;
 
 import static java.util.stream.Collectors.toMap;
 
-public class MatchesToAvroCodec implements Codec<Api.BatchMatches, BatchMatches> {
+public class MatchesToAvroCodec implements Codec<Api.NodeEntrySpec, NodeEntrySpec> {
 
     public static final MatchesToAvroCodec INSTANCE = new MatchesToAvroCodec();
 
     @Override
-    public BatchMatches encode(Api.BatchMatches raw) {
-        return new BatchMatches(
+    public NodeEntrySpec encode(Api.NodeEntrySpec raw) {
+        return new NodeEntrySpec(
                 raw.path(),
-                raw.matches().entrySet().stream()
+                raw.batchRows().entrySet().stream()
                         .map(en -> encode(en.getKey(), en.getValue()))
                         .collect(Collectors.toList())
         );
     }
 
-    private static Matches encode(int batchIndex, Set<Integer> matches) {
-        return new Matches(
+    private static Rows encode(int batchIndex, Set<Integer> matches) {
+        return new Rows(
                 batchIndex,
                 new ArrayList<>(matches)
         );
     }
 
     @Override
-    public Api.BatchMatches decode(BatchMatches enc) {
-        return new Api.BatchMatches(
+    public Api.NodeEntrySpec decode(NodeEntrySpec enc) {
+        return new Api.NodeEntrySpec(
                 enc.getPath(),
                 enc.getMatches().stream()
                         .collect(toMap(

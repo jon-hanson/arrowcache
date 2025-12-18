@@ -26,7 +26,7 @@ public class ArrowCacheServer implements AutoCloseable {
             Location location,
             DataStore dataStore
     ) {
-        this.allocator = allocatorManager.newChildAllocator("flight-server");
+        this.allocator = allocatorManager.newChildAllocator("ArrowCacheServer");
         this.location = location;
         this.flightProducer = new ArrowCacheProducer(dataStore, location);
         this.flightServer = FlightServer.builder(allocator, location, flightProducer).build();
@@ -36,9 +36,11 @@ public class ArrowCacheServer implements AutoCloseable {
 
     public void close() throws Exception {
         logger.info("Closing for location {}...", location);
-        AutoCloseables.close(this.flightServer);
-        AutoCloseables.close(this.flightProducer);
-        AutoCloseables.close(this.allocator);
+        AutoCloseables.close(
+                this.flightServer,
+                this.flightProducer,
+                this.allocator
+        );
     }
 
     public Location location() {

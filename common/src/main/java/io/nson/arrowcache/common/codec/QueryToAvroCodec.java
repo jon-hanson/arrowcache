@@ -40,11 +40,11 @@ public final class QueryToAvroCodec implements Codec<Api.Query, Query> {
     public Query encode(Api.Query query) {
         return new Query(
                 query.path().parts(),
-                Functors.listMap(query.filters(), QueryToAvroCodec::encode)
+                Functors.listMap(query.filters(), QueryToAvroCodec::encodeFilter)
         );
     }
 
-    private static <T> Object encode(Api.Filter<T> filter) {
+    public static <T> Object encodeFilter(Api.Filter<T> filter) {
         return filter.alg(ENCODE_FILTER_ALG);
     }
 
@@ -87,7 +87,7 @@ public final class QueryToAvroCodec implements Codec<Api.Query, Query> {
         );
     }
 
-    private static <T> Api.Filter<T> decodeFilter(Object filter) {
+    public static <T> Api.Filter<T> decodeFilter(Object filter) {
         if (filter instanceof SVFilter) {
             return decode((SVFilter)filter);
         } else if (filter instanceof MVFilter) {

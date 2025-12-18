@@ -67,7 +67,7 @@ public final class CacheConfig {
 
             @Override
             public CachePath read(JsonReader jsonReader) throws IOException {
-                return CachePath.valueOf(jsonReader.nextString());
+                return CachePath.valueOfConcat(jsonReader.nextString());
             }
         }
 

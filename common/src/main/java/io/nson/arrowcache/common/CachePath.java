@@ -9,7 +9,7 @@ public final class CachePath implements Comparable<CachePath> {
     public static final String WILDCARD = "*";
     public static final String SEP = "/";
 
-    public static CachePath valueOf(String path) {
+    public static CachePath valueOfConcat(String path) {
         if (path.isEmpty()) {
             throw new IllegalArgumentException("path is empty");
         } else if (path.startsWith(SEP)) {
