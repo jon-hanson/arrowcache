@@ -4,7 +4,7 @@ import io.nson.arrowcache.common.Actions;
 import io.nson.arrowcache.common.Api;
 import io.nson.arrowcache.common.CachePath;
 import io.nson.arrowcache.common.codec.DeleteCodecs;
-import io.nson.arrowcache.common.codec.BatchRowsCodecs;
+import io.nson.arrowcache.common.codec.NodeEntrySpecCodecs;
 import io.nson.arrowcache.common.codec.QueryCodecs;
 import io.nson.arrowcache.common.utils.ArrowUtils;
 import io.nson.arrowcache.server.cache.DataNode;
@@ -119,7 +119,7 @@ public class ArrowCacheProducer extends NoOpFlightProducer implements AutoClosea
                 final CachePath cachePath = query.path();
                 final DataNode dataNode = dataStore.getNode(cachePath);
                 final Map<Integer, Set<Integer>> batchMatches = dataNode.execute(query.filters());
-                final byte[] response = BatchRowsCodecs.API_TO_BYTES.encode(new Api.NodeEntrySpec(cachePath.path(), batchMatches));
+                final byte[] response = NodeEntrySpecCodecs.API_TO_BYTES.encode(new Api.NodeEntrySpec(cachePath.path(), batchMatches));
                 final int numRecords = batchMatches.values().stream().mapToInt(Set::size).sum();
                 final FlightEndpoint flightEndpoint = new FlightEndpoint(new Ticket(response), location);
 
@@ -145,8 +145,7 @@ public class ArrowCacheProducer extends NoOpFlightProducer implements AutoClosea
         try {
             logger.info("getStream: {}", context.peerIdentity());
 
-            final ByteArrayInputStream bais = new ByteArrayInputStream(ticket.getBytes());
-            final Api.NodeEntrySpec nodeEntrySpec = BatchRowsCodecs.API_TO_STREAM.decode(bais);
+            final Api.NodeEntrySpec nodeEntrySpec = NodeEntrySpecCodecs.API_TO_BYTES.decode(ticket.getBytes());
             final CachePath cachePath = CachePath.valueOfConcat(nodeEntrySpec.path());
             final DataNode dataNode = dataStore.getNode(cachePath);
 

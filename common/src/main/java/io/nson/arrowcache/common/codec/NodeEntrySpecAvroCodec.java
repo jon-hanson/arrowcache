@@ -12,9 +12,9 @@ import java.util.stream.Collectors;
 
 import static java.util.stream.Collectors.toMap;
 
-public class MatchesToAvroCodec implements Codec<Api.NodeEntrySpec, NodeEntrySpec> {
+public class NodeEntrySpecAvroCodec implements Codec<Api.NodeEntrySpec, NodeEntrySpec> {
 
-    public static final MatchesToAvroCodec INSTANCE = new MatchesToAvroCodec();
+    public static final NodeEntrySpecAvroCodec INSTANCE = new NodeEntrySpecAvroCodec();
 
     @Override
     public NodeEntrySpec encode(Api.NodeEntrySpec raw) {

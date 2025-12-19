@@ -10,10 +10,8 @@ import java.time.LocalDate;
 import java.util.List;
 import java.util.Set;
 
-import static java.util.stream.Collectors.toList;
-
-public final class QueryToAvroCodec implements Codec<Api.Query, Query> {
-    public static final QueryToAvroCodec INSTANCE = new QueryToAvroCodec();
+public final class QueryAvroCodec implements Codec<Api.Query, Query> {
+    public static final QueryAvroCodec INSTANCE = new QueryAvroCodec();
 
     private static final Api.Filter.Alg<Object> ENCODE_FILTER_ALG = new Api.Filter.Alg<>() {
 
@@ -31,7 +29,7 @@ public final class QueryToAvroCodec implements Codec<Api.Query, Query> {
             return new MVFilter(
                     attribute,
                     encode(op),
-                    values.stream().map(QueryToAvroCodec::encodeValue).collect(toList())
+                    Functors.listMap(values, QueryAvroCodec::encodeValue)
             );
         }
     };
@@ -40,7 +38,7 @@ public final class QueryToAvroCodec implements Codec<Api.Query, Query> {
     public Query encode(Api.Query query) {
         return new Query(
                 query.path().parts(),
-                Functors.listMap(query.filters(), QueryToAvroCodec::encodeFilter)
+                Functors.listMap(query.filters(), QueryAvroCodec::encodeFilter)
         );
     }
 
@@ -83,7 +81,7 @@ public final class QueryToAvroCodec implements Codec<Api.Query, Query> {
     public Api.Query decode(Query enc) {
         return new Api.Query(
                 CachePath.valueOf(enc.getPath()),
-                Functors.listMap(enc.getFilters(), QueryToAvroCodec::decodeFilter)
+                Functors.listMap(enc.getFilters(), QueryAvroCodec::decodeFilter)
         );
     }
 
