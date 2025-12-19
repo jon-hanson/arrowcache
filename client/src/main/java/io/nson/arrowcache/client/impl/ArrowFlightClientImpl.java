@@ -2,7 +2,7 @@ package io.nson.arrowcache.client.impl;
 
 import io.nson.arrowcache.client.ClientAPI;
 import io.nson.arrowcache.common.Actions;
-import io.nson.arrowcache.common.Api;
+import io.nson.arrowcache.common.Model;
 import io.nson.arrowcache.common.CachePath;
 import io.nson.arrowcache.common.codec.DeleteCodecs;
 import io.nson.arrowcache.common.codec.QueryCodecs;
@@ -114,10 +114,10 @@ public class ArrowFlightClientImpl implements ClientAPI {
     }
 
     @Override
-    public void get(CachePath path, List<Api.Filter<?>> filters, Listener listener) {
+    public void get(CachePath path, List<Model.Filter<?>> filters, Listener listener) {
         try {
-            final Api.Query query = new Api.Query(path, filters);
-            final byte[] bytes = QueryCodecs.API_TO_BYTES.encode(query);
+            final Model.Query query = new Model.Query(path, filters);
+            final byte[] bytes = QueryCodecs.MODEL_TO_BYTES.encode(query);
             final FlightDescriptor flightDesc = FlightDescriptor.command(bytes);
             final FlightInfo flightInfo = flightClient.getInfo(flightDesc, callTimeout);
 
@@ -155,10 +155,10 @@ public class ArrowFlightClientImpl implements ClientAPI {
     }
 
     @Override
-    public void remove(CachePath path, List<Api.Filter<?>> filters) {
+    public void remove(CachePath path, List<Model.Filter<?>> filters) {
         try {
-            final Api.Delete delete = new Api.Delete(path, filters);
-            final byte[] bytes = DeleteCodecs.API_TO_BYTES.encode(delete);
+            final Model.Delete delete = new Model.Delete(path, filters);
+            final byte[] bytes = DeleteCodecs.MODEL_TO_BYTES.encode(delete);
             final Action action = new Action(Actions.DELETE_NAME, bytes);
             final Iterator<Result> deleteActionResult = flightClient.doAction(action);
 

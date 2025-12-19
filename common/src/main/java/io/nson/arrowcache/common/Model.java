@@ -2,8 +2,8 @@ package io.nson.arrowcache.common;
 
 import java.util.*;
 
-public abstract class Api {
-    private Api() {}
+public abstract class Model {
+    private Model() {}
 
     public static abstract class Filter<T> {
 

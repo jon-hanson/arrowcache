@@ -1,6 +1,6 @@
 package io.nson.arrowcache.server.utils;
 
-import io.nson.arrowcache.common.Api;
+import io.nson.arrowcache.common.Model;
 import org.apache.arrow.vector.util.Text;
 
 import java.time.LocalDate;
@@ -19,13 +19,13 @@ public class TranslateQuery {
         this.translateDate = translateDate;
     }
 
-    public List<Api.Filter<?>> applyFilters(List<Api.Filter<?>> filters) {
+    public List<Model.Filter<?>> applyFilters(List<Model.Filter<?>> filters) {
         return filters.stream()
                 .map(this::applyFilter)
                 .collect(toList());
     }
 
-    public Api.Filter<?> applyFilter(Api.Filter<?> filter) {
+    public Model.Filter<?> applyFilter(Model.Filter<?> filter) {
         return filter.alg(TRANSLATE_STR_ALG);
     }
 
@@ -45,15 +45,15 @@ public class TranslateQuery {
         }
     }
 
-    private final Api.Filter.Alg<Api.Filter<?>> TRANSLATE_STR_ALG = new Api.Filter.Alg<>() {
+    private final Model.Filter.Alg<Model.Filter<?>> TRANSLATE_STR_ALG = new Model.Filter.Alg<>() {
         @Override
-        public Api.Filter<?> svFilter(String attribute, Api.SVFilter.Operator op, Object value) {
-            return new Api.SVFilter<>(attribute, op, applyValue(value));
+        public Model.Filter<?> svFilter(String attribute, Model.SVFilter.Operator op, Object value) {
+            return new Model.SVFilter<>(attribute, op, applyValue(value));
         }
 
         @Override
-        public Api.Filter<?> mvFilter(String attribute, Api.MVFilter.Operator op, Set<?> values) {
-            return new Api.MVFilter<>(attribute, op, applyValues(values));
+        public Model.Filter<?> mvFilter(String attribute, Model.MVFilter.Operator op, Set<?> values) {
+            return new Model.MVFilter<>(attribute, op, applyValues(values));
         }
     };
 }

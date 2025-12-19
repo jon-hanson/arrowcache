@@ -1,6 +1,6 @@
 package io.nson.arrowcache.server.cache;
 
-import io.nson.arrowcache.common.Api;
+import io.nson.arrowcache.common.Model;
 import io.nson.arrowcache.server.AllocatorManager;
 import io.nson.arrowcache.server.QueryLogic;
 import io.nson.arrowcache.server.utils.TranslateQuery;
@@ -310,7 +310,7 @@ public final class DataNode implements AutoCloseable {
         }
     }
 
-    public Map<Integer, Set<Integer>> execute(List<Api.Filter<?>> filters) {
+    public Map<Integer, Set<Integer>> execute(List<Model.Filter<?>> filters) {
 
         logger.info("Executing query {}", filters);
 
@@ -385,7 +385,7 @@ public final class DataNode implements AutoCloseable {
     }
 
     public void execute(
-            List<Api.Filter<?>> filters,
+            List<Model.Filter<?>> filters,
             FlightProducer.ServerStreamListener listener
     ) {
         logger.info("Executing query {}", filters);

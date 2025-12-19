@@ -1,6 +1,6 @@
 package io.nson.arrowcache.server.cache;
 
-import io.nson.arrowcache.common.Api;
+import io.nson.arrowcache.common.Model;
 import io.nson.arrowcache.common.CachePath;
 import io.nson.arrowcache.server.AllocatorManager;
 import io.nson.arrowcache.server.utils.ArrowServerUtils;
@@ -86,7 +86,7 @@ public class DataStore implements AutoCloseable {
         }
     }
 
-    public void deleteEntries(CachePath cachePath, List<Api.Filter<?>> filters) {
+    public void deleteEntries(CachePath cachePath, List<Model.Filter<?>> filters) {
         logger.info("Deleting entries for path {}", cachePath);
         final DataNode node = getNode(cachePath);
         synchronized (rwLock.writeLock()) {

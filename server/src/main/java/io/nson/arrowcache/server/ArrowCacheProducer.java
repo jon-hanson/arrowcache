@@ -1,7 +1,7 @@
 package io.nson.arrowcache.server;
 
 import io.nson.arrowcache.common.Actions;
-import io.nson.arrowcache.common.Api;
+import io.nson.arrowcache.common.Model;
 import io.nson.arrowcache.common.CachePath;
 import io.nson.arrowcache.common.codec.DeleteCodecs;
 import io.nson.arrowcache.common.codec.NodeEntrySpecCodecs;
@@ -18,7 +18,6 @@ import org.apache.arrow.vector.types.pojo.Schema;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.io.ByteArrayInputStream;
 import java.util.*;
 
 public class ArrowCacheProducer extends NoOpFlightProducer implements AutoCloseable {
@@ -115,11 +114,11 @@ public class ArrowCacheProducer extends NoOpFlightProducer implements AutoClosea
     public FlightInfo getFlightInfo(CallContext context, FlightDescriptor descriptor) {
         try {
             if (descriptor.isCommand()) {
-                final Api.Query query = QueryCodecs.API_TO_BYTES.decode(descriptor.getCommand());
+                final Model.Query query = QueryCodecs.MODEL_TO_BYTES.decode(descriptor.getCommand());
                 final CachePath cachePath = query.path();
                 final DataNode dataNode = dataStore.getNode(cachePath);
                 final Map<Integer, Set<Integer>> batchMatches = dataNode.execute(query.filters());
-                final byte[] response = NodeEntrySpecCodecs.API_TO_BYTES.encode(new Api.NodeEntrySpec(cachePath.path(), batchMatches));
+                final byte[] response = NodeEntrySpecCodecs.MODEL_TO_BYTES.encode(new Model.NodeEntrySpec(cachePath.path(), batchMatches));
                 final int numRecords = batchMatches.values().stream().mapToInt(Set::size).sum();
                 final FlightEndpoint flightEndpoint = new FlightEndpoint(new Ticket(response), location);
 
@@ -145,7 +144,7 @@ public class ArrowCacheProducer extends NoOpFlightProducer implements AutoClosea
         try {
             logger.info("getStream: {}", context.peerIdentity());
 
-            final Api.NodeEntrySpec nodeEntrySpec = NodeEntrySpecCodecs.API_TO_BYTES.decode(ticket.getBytes());
+            final Model.NodeEntrySpec nodeEntrySpec = NodeEntrySpecCodecs.MODEL_TO_BYTES.decode(ticket.getBytes());
             final CachePath cachePath = CachePath.valueOfConcat(nodeEntrySpec.path());
             final DataNode dataNode = dataStore.getNode(cachePath);
 
@@ -168,7 +167,7 @@ public class ArrowCacheProducer extends NoOpFlightProducer implements AutoClosea
 
         try {
             if (action.getType().equals(Actions.DELETE_NAME)) {
-                final Api.Delete delete = DeleteCodecs.API_TO_BYTES.decode(action.getBody());
+                final Model.Delete delete = DeleteCodecs.MODEL_TO_BYTES.decode(action.getBody());
 
                 final CachePath cachePath = delete.path();
 

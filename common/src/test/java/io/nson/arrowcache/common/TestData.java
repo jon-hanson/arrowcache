@@ -8,7 +8,6 @@ import java.util.Set;
 import java.util.TreeSet;
 
 public class TestData {
-    public static final Api.Query API_QUERY;
 
     private static final String ATTR_A = "name";
     private static final String ATTR_B = "aliases";
@@ -18,23 +17,21 @@ public class TestData {
     private static final String VALUE_3 = "beta";
     private static final String VALUE_4 = "gamma";
 
-    static {
-        final List<Api.Filter<?>> filters = new ArrayList<>();
-
-        filters.add(new Api.SVFilter<>(
-                ATTR_A,
-                Api.SVFilter.Operator.NOT_EQUALS,
-                VALUE_1
-        ));
-
-        filters.add(new Api.MVFilter<>(
-                ATTR_B,
-                Api.MVFilter.Operator.IN,
-                new TreeSet<>(Set.of(VALUE_2, VALUE_3, VALUE_4))
-        ));
-
-        API_QUERY = new Api.Query(CachePath.valueOf("abc", "def"), filters);
-    }
+    public static final Model.Query MODEL_QUERY =
+            new Model.Query(
+                    CachePath.valueOf("abc", "def"),
+                    List.of(
+                            new Model.SVFilter<>(
+                                    ATTR_A,
+                                    Model.SVFilter.Operator.NOT_EQUALS,
+                                    VALUE_1
+                            ), new Model.MVFilter<>(
+                                    ATTR_B,
+                                    Model.MVFilter.Operator.IN,
+                                    new TreeSet<>(Set.of(VALUE_2, VALUE_3, VALUE_4))
+                            )
+                    )
+            );
 
     public static final Query AVRO_QUERY;
 

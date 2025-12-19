@@ -1,6 +1,6 @@
 package io.nson.arrowcache.server.cache;
 
-import io.nson.arrowcache.common.Api;
+import io.nson.arrowcache.common.Model;
 import io.nson.arrowcache.common.utils.ArrowUtils;
 import io.nson.arrowcache.common.utils.FileUtils;
 import io.nson.arrowcache.server.AllocatorManager;
@@ -63,7 +63,7 @@ public class DataNodeTest {
     private static void testQuery(
             DataNode dataNode,
             Collection<Map<String, Object>> testData,
-            List<Api.Filter<?>>  filters
+            List<Model.Filter<?>>  filters
     ) {
         final Set<Map<String, Object>> results = new HashSet<>();
         final ResultListener resultListener = new ResultListener(results);
@@ -137,10 +137,10 @@ public class DataNodeTest {
 
     private static final TranslateQuery TRANSLATE_QUERY = new TranslateQuery(false, true);
 
-    private static Set<Map<String, Object>> matches(Collection<Map<String, Object>> testData, List<Api.Filter<?>> filters) {
+    private static Set<Map<String, Object>> matches(Collection<Map<String, Object>> testData, List<Model.Filter<?>> filters) {
         filters = TRANSLATE_QUERY.applyFilters(filters);
         Predicate<Map<String, Object>> pred = null;
-        for (Api.Filter<?> filter : filters) {
+        for (Model.Filter<?> filter : filters) {
             if (pred == null) {
                 pred = filter.alg(FILTER_ALG);
             } else {
@@ -151,20 +151,20 @@ public class DataNodeTest {
         return testData.stream().filter(pred).collect(toSet());
     }
 
-    private static final Api.Filter.Alg<Predicate<Map<String, Object>>> FILTER_ALG = new Api.Filter.Alg<Predicate<Map<String, Object>>>() {
+    private static final Model.Filter.Alg<Predicate<Map<String, Object>>> FILTER_ALG = new Model.Filter.Alg<Predicate<Map<String, Object>>>() {
         @Override
-        public Predicate<Map<String, Object>> svFilter(String attribute, Api.SVFilter.Operator op, Object value) {
+        public Predicate<Map<String, Object>> svFilter(String attribute, Model.SVFilter.Operator op, Object value) {
             return row -> {
                 final boolean match = value.equals(row.get(attribute));
-                return (op == Api.SVFilter.Operator.EQUALS) == match;
+                return (op == Model.SVFilter.Operator.EQUALS) == match;
             };
         }
 
         @Override
-        public Predicate<Map<String, Object>> mvFilter(String attribute, Api.MVFilter.Operator op, Set<?> values) {
+        public Predicate<Map<String, Object>> mvFilter(String attribute, Model.MVFilter.Operator op, Set<?> values) {
             return row -> {
                 final boolean match = values.contains(row.get(attribute));
-                return (op == Api.MVFilter.Operator.IN) == match;
+                return (op == Model.MVFilter.Operator.IN) == match;
             };
         }
     };

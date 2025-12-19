@@ -1,6 +1,6 @@
 package io.nson.arrowcache.common.codec;
 
-import io.nson.arrowcache.common.Api;
+import io.nson.arrowcache.common.Model;
 import io.nson.arrowcache.common.CachePath;
 import io.nson.arrowcache.common.avro.*;
 import io.nson.arrowcache.common.utils.Codec;
@@ -10,13 +10,13 @@ import java.time.LocalDate;
 import java.util.List;
 import java.util.Set;
 
-public final class QueryAvroCodec implements Codec<Api.Query, Query> {
+public final class QueryAvroCodec implements Codec<Model.Query, Query> {
     public static final QueryAvroCodec INSTANCE = new QueryAvroCodec();
 
-    private static final Api.Filter.Alg<Object> ENCODE_FILTER_ALG = new Api.Filter.Alg<>() {
+    private static final Model.Filter.Alg<Object> ENCODE_FILTER_ALG = new Model.Filter.Alg<>() {
 
         @Override
-        public Object svFilter(String attribute, Api.SVFilter.Operator op, Object value) {
+        public Object svFilter(String attribute, Model.SVFilter.Operator op, Object value) {
             return new SVFilter(
                     attribute,
                     encode(op),
@@ -25,7 +25,7 @@ public final class QueryAvroCodec implements Codec<Api.Query, Query> {
         }
 
         @Override
-        public Object mvFilter(String attribute, Api.MVFilter.Operator op, Set<?> values) {
+        public Object mvFilter(String attribute, Model.MVFilter.Operator op, Set<?> values) {
             return new MVFilter(
                     attribute,
                     encode(op),
@@ -35,18 +35,18 @@ public final class QueryAvroCodec implements Codec<Api.Query, Query> {
     };
 
     @Override
-    public Query encode(Api.Query query) {
+    public Query encode(Model.Query query) {
         return new Query(
                 query.path().parts(),
                 Functors.listMap(query.filters(), QueryAvroCodec::encodeFilter)
         );
     }
 
-    public static <T> Object encodeFilter(Api.Filter<T> filter) {
+    public static <T> Object encodeFilter(Model.Filter<T> filter) {
         return filter.alg(ENCODE_FILTER_ALG);
     }
 
-    private static SVOperator encode(Api.SVFilter.Operator svOperator) {
+    private static SVOperator encode(Model.SVFilter.Operator svOperator) {
         switch(svOperator) {
             case EQUALS:
                 return SVOperator.EQUALS;
@@ -57,7 +57,7 @@ public final class QueryAvroCodec implements Codec<Api.Query, Query> {
         }
     }
 
-    private static MVOperator encode(Api.MVFilter.Operator mvOperator) {
+    private static MVOperator encode(Model.MVFilter.Operator mvOperator) {
         switch(mvOperator) {
             case IN:
                 return MVOperator.IN;
@@ -78,14 +78,14 @@ public final class QueryAvroCodec implements Codec<Api.Query, Query> {
     }
 
     @Override
-    public Api.Query decode(Query enc) {
-        return new Api.Query(
+    public Model.Query decode(Query enc) {
+        return new Model.Query(
                 CachePath.valueOf(enc.getPath()),
                 Functors.listMap(enc.getFilters(), QueryAvroCodec::decodeFilter)
         );
     }
 
-    public static <T> Api.Filter<T> decodeFilter(Object filter) {
+    public static <T> Model.Filter<T> decodeFilter(Object filter) {
         if (filter instanceof SVFilter) {
             return decode((SVFilter)filter);
         } else if (filter instanceof MVFilter) {
@@ -95,39 +95,39 @@ public final class QueryAvroCodec implements Codec<Api.Query, Query> {
         }
     }
 
-    private static <T> Api.SVFilter<T> decode(SVFilter svFilter) {
-        return new Api.SVFilter<T>(
+    private static <T> Model.SVFilter<T> decode(SVFilter svFilter) {
+        return new Model.SVFilter<T>(
                 svFilter.getAttribute(),
                 decode(svFilter.getOperator()),
                 (T)decodeValue(svFilter.getValue())
         );
     }
 
-    private static Api.SVFilter.Operator decode(SVOperator svOperator) {
+    private static Model.SVFilter.Operator decode(SVOperator svOperator) {
         switch(svOperator) {
             case EQUALS:
-                return Api.SVFilter.Operator.EQUALS;
+                return Model.SVFilter.Operator.EQUALS;
             case NOT_EQUALS:
-                return Api.SVFilter.Operator.NOT_EQUALS;
+                return Model.SVFilter.Operator.NOT_EQUALS;
             default:
                 throw new RuntimeException("Unrecognised SVOperator value - " + svOperator);
         }
     }
 
-    private static <T> Api.MVFilter<T> decode(MVFilter mvFilter) {
-        return new Api.MVFilter<T>(
+    private static <T> Model.MVFilter<T> decode(MVFilter mvFilter) {
+        return new Model.MVFilter<T>(
                 mvFilter.getAttribute(),
                 decode(mvFilter.getOperator()),
                 Functors.setMap((List<T>)mvFilter.getValues(), t -> (T)decodeValue(t))
         );
     }
 
-    private static Api.MVFilter.Operator decode(MVOperator mvOperator) {
+    private static Model.MVFilter.Operator decode(MVOperator mvOperator) {
         switch(mvOperator) {
             case IN:
-                return Api.MVFilter.Operator.IN;
+                return Model.MVFilter.Operator.IN;
             case NOT_IN:
-                return Api.MVFilter.Operator.NOT_IN;
+                return Model.MVFilter.Operator.NOT_IN;
             default:
                 throw new RuntimeException("Unrecognised MVOperator value - " + mvOperator);
         }

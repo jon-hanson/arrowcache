@@ -1,6 +1,6 @@
 package io.nson.arrowcache.client;
 
-import io.nson.arrowcache.common.Api;
+import io.nson.arrowcache.common.Model;
 import io.nson.arrowcache.common.CachePath;
 import org.apache.arrow.vector.VectorSchemaRoot;
 
@@ -22,7 +22,7 @@ public interface ClientAPI extends AutoCloseable {
 
     void put(CachePath path, VectorSchemaRoot vsc);
 
-    void get(CachePath path, List<Api.Filter<?>> filters, Listener listener);
+    void get(CachePath path, List<Model.Filter<?>> filters, Listener listener);
 
-    void remove(CachePath path, List<Api.Filter<?>> filters);
+    void remove(CachePath path, List<Model.Filter<?>> filters);
 }

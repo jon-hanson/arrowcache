@@ -1,6 +1,6 @@
 package io.nson.arrowcache.server;
 
-import io.nson.arrowcache.common.Api;
+import io.nson.arrowcache.common.Model;
 import org.apache.arrow.vector.FieldVector;
 
 import java.util.*;
@@ -86,14 +86,14 @@ public final class QueryLogic {
     private final List<Filter<?>> inFilters = new ArrayList<>();
     private final List<Filter<?>> notInFilters = new ArrayList<>();
 
-    public QueryLogic(String keyAttrName, List<Api.Filter<?>> filters) {
+    public QueryLogic(String keyAttrName, List<Model.Filter<?>> filters) {
 
         final Map<String, Values<?>> mapValues = new HashMap<>();
 
-        for (Api.Filter<?> filter : filters ) {
+        for (Model.Filter<?> filter : filters ) {
             final Values<?> values = mapValues.computeIfAbsent(filter.attribute(), k -> new Values<>());
-            if (filter instanceof Api.SVFilter) {
-                final Api.SVFilter<?> svFilter = (Api.SVFilter)filter;
+            if (filter instanceof Model.SVFilter) {
+                final Model.SVFilter<?> svFilter = (Model.SVFilter)filter;
                 switch (svFilter.operator()) {
                     case EQUALS:
                         values.addInclusion(svFilter.value());
@@ -104,8 +104,8 @@ public final class QueryLogic {
                     default:
                         throw new IllegalStateException("Unknown filter operator: " + svFilter.operator());
                 }
-            } else if (filter instanceof Api.MVFilter) {
-                final Api.MVFilter<?> mvFilter = (Api.MVFilter)filter;
+            } else if (filter instanceof Model.MVFilter) {
+                final Model.MVFilter<?> mvFilter = (Model.MVFilter)filter;
                 switch (mvFilter.operator()) {
                     case IN:
                         values.addInclusions(mvFilter.values());

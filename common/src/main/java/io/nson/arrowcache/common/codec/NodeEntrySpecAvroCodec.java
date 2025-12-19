@@ -1,6 +1,6 @@
 package io.nson.arrowcache.common.codec;
 
-import io.nson.arrowcache.common.Api;
+import io.nson.arrowcache.common.Model;
 import io.nson.arrowcache.common.avro.NodeEntrySpec;
 import io.nson.arrowcache.common.avro.Rows;
 import io.nson.arrowcache.common.utils.Codec;
@@ -12,12 +12,12 @@ import java.util.stream.Collectors;
 
 import static java.util.stream.Collectors.toMap;
 
-public class NodeEntrySpecAvroCodec implements Codec<Api.NodeEntrySpec, NodeEntrySpec> {
+public class NodeEntrySpecAvroCodec implements Codec<Model.NodeEntrySpec, NodeEntrySpec> {
 
     public static final NodeEntrySpecAvroCodec INSTANCE = new NodeEntrySpecAvroCodec();
 
     @Override
-    public NodeEntrySpec encode(Api.NodeEntrySpec raw) {
+    public NodeEntrySpec encode(Model.NodeEntrySpec raw) {
         return new NodeEntrySpec(
                 raw.path(),
                 raw.batchRows().entrySet().stream()
@@ -34,8 +34,8 @@ public class NodeEntrySpecAvroCodec implements Codec<Api.NodeEntrySpec, NodeEntr
     }
 
     @Override
-    public Api.NodeEntrySpec decode(NodeEntrySpec enc) {
-        return new Api.NodeEntrySpec(
+    public Model.NodeEntrySpec decode(NodeEntrySpec enc) {
+        return new Model.NodeEntrySpec(
                 enc.getPath(),
                 enc.getMatches().stream()
                         .collect(toMap(
