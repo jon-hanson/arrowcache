@@ -405,60 +405,6 @@ public final class DataNode implements AutoCloseable {
             }
         }
     }
-//
-//    public void execute(
-//            List<Model.Filter<?>> filters,
-//            FlightProducer.ServerStreamListener listener
-//    ) {
-//        logger.info("Executing query {}", filters);
-//
-//        filters = TRANSLATE_QUERY.applyFilters(filters);
-//
-//        logger.info("Translated query {}", filters);
-//
-//        final QueryLogic queryLogic = new QueryLogic(this.keyColumn, filters);
-//
-//        logger.info("QueryLogic query {}", queryLogic);
-//
-//        synchronized (this.rwLock.readLock()) {
-//            try (
-//                    final VectorSchemaRoot resultVsc = VectorSchemaRoot.create(this.schema, this.allocator);
-//                    final VectorSchemaRoot vsc = VectorSchemaRoot.create(this.schema, this.allocator)
-//            ) {
-//                final VectorLoader loader = new VectorLoader(vsc);
-//
-//                listener.start(resultVsc);
-//
-//                for (int batchIndex = 0; batchIndex < this.batches.size(); ++batchIndex) {
-//                    final Batch batch = this.batches.get(batchIndex);
-//
-//                    final Set<Integer> matches = batch.matches(loader, vsc, queryLogic.filters(), batchIndex);
-//
-//                    if (!matches.isEmpty()) {
-//                        VectorSchemaRoot[] slices = null;
-//
-//                        try {
-//                            slices = matches.stream()
-//                                    .map(i -> vsc.slice(i, 1))
-//                                    .toArray(VectorSchemaRoot[]::new);
-//
-//                            resultVsc.allocateNew();
-//                            VectorSchemaRootAppender.append(false, resultVsc, slices);
-//                            listener.putNext();
-//                        } finally {
-//                            if (slices != null) {
-//                                for (VectorSchemaRoot slice : slices) {
-//                                    slice.close();
-//                                }
-//                            }
-//                        }
-//                    }
-//                }
-//
-//                listener.completed();
-//            }
-//        }
-//    }
 
     public void deleteEntries(Map<Integer, Set<Integer>> batchRows) {
         batchRows.forEach((batchIndex, rowIndexes) -> {
