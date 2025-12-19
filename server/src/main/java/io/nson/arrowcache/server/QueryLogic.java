@@ -83,10 +83,13 @@ public final class QueryLogic {
         }
     }
 
+    private final String keyAttrName;
     private final List<Filter<?>> inFilters = new ArrayList<>();
     private final List<Filter<?>> notInFilters = new ArrayList<>();
 
     public QueryLogic(String keyAttrName, List<Model.Filter<?>> filters) {
+
+        this.keyAttrName = keyAttrName;
 
         final Map<String, Values<?>> mapValues = new HashMap<>();
 
@@ -153,18 +156,6 @@ public final class QueryLogic {
                 "inFilters=" + inFilters +
                 ", notInFilters=" + notInFilters +
                 '}';
-    }
-
-    public int filterCount() {
-        return inFilters.size() + notInFilters.size();
-    }
-
-    public Filter<?> filter(int filterIndex) {
-        if (filterIndex < inFilters.size()) {
-            return inFilters.get(filterIndex);
-        } else {
-            return notInFilters.get(filterIndex - inFilters.size());
-        }
     }
 
     public List<Filter<?>> filters() {

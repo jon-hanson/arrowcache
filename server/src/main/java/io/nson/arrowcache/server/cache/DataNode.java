@@ -63,7 +63,7 @@ public final class DataNode implements AutoCloseable {
         public Set<Integer> matches(
                 VectorLoader loader,
                 VectorSchemaRoot vsc,
-                QueryLogic queryLogic,
+                List<QueryLogic.Filter<?>> filters,
                 int batchIndex
         ) {
             logger.info("Looking for matches in batch {}", batchIndex);
@@ -80,21 +80,19 @@ public final class DataNode implements AutoCloseable {
 
             boolean first = true;
 
-            for (QueryLogic.Filter<?> filter : queryLogic.filters()) {
+            for (QueryLogic.Filter<?> filter : filters) {
                 final String filterAttr = filter.attribute();
                 final FieldVector fv = fvMap.get(filterAttr);
 
                 if (first) {
-                    if (filterAttr.equals(DataNode.this.keyName)) {
+                    if (filterAttr.equals(DataNode.this.keyColumn)) {
                         if (filter.operator() == QueryLogic.Filter.Operator.IN) {
                             for (Object value : filter.values()) {
                                 final RowCoordinate rowCoord = DataNode.this.rowCoordinateMap.get(value);
-                                if (rowCoord != null &&
-                                        rowCoord.batchIndex == batchIndex &&
-                                        !this.replaced.contains(rowCoord.rowIndex)
+                                if (rowCoord != null && rowCoord.batchIndex == batchIndex
                                 ) {
                                     if (matches == null) {
-                                        matches = new HashSet<>();
+                                        matches = new TreeSet<>();
                                     }
                                     matches.add(rowCoord.rowIndex);
                                 }
@@ -119,7 +117,7 @@ public final class DataNode implements AutoCloseable {
 
                     first = false;
                 } else {
-                    if (filterAttr.equals(DataNode.this.keyName)) {
+                    if (filterAttr.equals(DataNode.this.keyColumn)) {
                         if (filter.operator() == QueryLogic.Filter.Operator.IN) {
                             for (Object value : filter.values()) {
                                 final RowCoordinate rowCoord = DataNode.this.rowCoordinateMap.get(value);
@@ -179,42 +177,42 @@ public final class DataNode implements AutoCloseable {
     }
 
     private final String name;
-    private final String keyName;
+    private final String keyColumn;
     private final BufferAllocator allocator;
     private final Schema schema;
-    private final int keyIndex;
+    private final int keyColumnIndex;
     private final List<Batch> batches;
     private final Map<Object, RowCoordinate> rowCoordinateMap = new HashMap<>();
     private final ReadWriteLock rwLock = new ReentrantReadWriteLock();
 
     public DataNode(
             String name,
-            String keyName,
+            String keyColumn,
             AllocatorManager allocatorManager,
             Schema schema,
             List<ArrowRecordBatch> arbs
     ) {
         this.name = name;
-        this.keyName = keyName;
+        this.keyColumn = keyColumn;
         this.allocator = allocatorManager.newChildAllocator(name);
         this.schema = schema;
-        this.keyIndex = CacheUtils.findKeyColumn(schema, keyName);
+        this.keyColumnIndex = CacheUtils.findKeyColumn(schema, keyColumn);
         this.batches = new ArrayList<>();
 
-        logger.info("Creating new DataNode for name: {} keyName: {}", name, keyName);
+        logger.info("Creating new DataNode for name: {} keyName: {}", name, keyColumn);
 
         addImpl(arbs);
     }
 
     public DataNode(
             String name,
-            String keyName,
+            String keyColumn,
             AllocatorManager allocatorManager,
             Schema schema
     ) {
         this(
                 name,
-                keyName,
+                keyColumn,
                 allocatorManager,
                 schema,
                 new ArrayList<>()
@@ -299,7 +297,7 @@ public final class DataNode implements AutoCloseable {
 
     private void processBatch(int batchIndex, VectorSchemaRoot vsc) {
         final int rowCount =  vsc.getRowCount();
-        final FieldVector fv = vsc.getFieldVectors().get(this.keyIndex);
+        final FieldVector fv = vsc.getFieldVectors().get(this.keyColumnIndex);
         for (int rowIndex = 0; rowIndex < rowCount; ++rowIndex) {
             final Object key = fv.getObject(rowIndex);
             final RowCoordinate oldRowCoordinate = this.rowCoordinateMap.get(key);
@@ -310,6 +308,11 @@ public final class DataNode implements AutoCloseable {
         }
     }
 
+    private boolean isInKeyFilter(QueryLogic.Filter<?> filter) {
+        return filter.operator() == QueryLogic.Filter.Operator.IN &&
+                filter.attribute().equals(keyColumn);
+    }
+
     public Map<Integer, Set<Integer>> execute(List<Model.Filter<?>> filters) {
 
         logger.info("Executing query {}", filters);
@@ -318,29 +321,48 @@ public final class DataNode implements AutoCloseable {
 
         logger.info("Translated query {}", filters);
 
-        final QueryLogic queryLogic = new QueryLogic(this.keyName, filters);
+        final QueryLogic queryLogic = new QueryLogic(this.keyColumn, filters);
 
         logger.info("QueryLogic query {}", queryLogic);
 
-        final Map<Integer, Set<Integer>> results = new HashMap<>();
+        final Map<Integer, Set<Integer>> batchMatches = new HashMap<>();
 
         synchronized (this.rwLock.readLock()) {
+
             try (final VectorSchemaRoot vsc = VectorSchemaRoot.create(this.schema, this.allocator)) {
+                List<QueryLogic.Filter<?>> qlFilters = queryLogic.filters();
+                if (!qlFilters.isEmpty() && isInKeyFilter(qlFilters.get(0))) {
+                    logger.info("Optimising as first filter is an IN filter on the key column");
+
+                    final QueryLogic.Filter<?> inKeyFilter = qlFilters.get(0);
+
+                    inKeyFilter.values().stream()
+                            .map(rowCoordinateMap::get)
+                            .forEach(rc ->
+                                    batchMatches.computeIfAbsent(
+                                            rc.batchIndex,
+                                            u -> new TreeSet<>()
+                                    ).add(rc.rowIndex)
+                            );
+
+                    qlFilters = qlFilters.subList(1, qlFilters.size());
+                }
+
                 final VectorLoader loader = new VectorLoader(vsc);
 
                 for (int batchIndex = 0; batchIndex < this.batches.size(); ++batchIndex) {
                     final Batch batch = this.batches.get(batchIndex);
 
-                    final Set<Integer> matches = batch.matches(loader, vsc, queryLogic, batchIndex);
+                    final Set<Integer> matches = batch.matches(loader, vsc, qlFilters, batchIndex);
 
                     if (!matches.isEmpty()) {
-                        results.put(batchIndex, matches);
+                        batchMatches.put(batchIndex, matches);
                     }
                 }
             }
         }
 
-        return results;
+        return batchMatches;
     }
 
     public void execute(
@@ -383,60 +405,60 @@ public final class DataNode implements AutoCloseable {
             }
         }
     }
-
-    public void execute(
-            List<Model.Filter<?>> filters,
-            FlightProducer.ServerStreamListener listener
-    ) {
-        logger.info("Executing query {}", filters);
-
-        filters = TRANSLATE_QUERY.applyFilters(filters);
-
-        logger.info("Translated query {}", filters);
-
-        final QueryLogic queryLogic = new QueryLogic(this.keyName, filters);
-
-        logger.info("QueryLogic query {}", queryLogic);
-
-        synchronized (this.rwLock.readLock()) {
-            try (
-                    final VectorSchemaRoot resultVsc = VectorSchemaRoot.create(this.schema, this.allocator);
-                    final VectorSchemaRoot vsc = VectorSchemaRoot.create(this.schema, this.allocator)
-            ) {
-                final VectorLoader loader = new VectorLoader(vsc);
-
-                listener.start(resultVsc);
-
-                for (int batchIndex = 0; batchIndex < this.batches.size(); ++batchIndex) {
-                    final Batch batch = this.batches.get(batchIndex);
-
-                    final Set<Integer> matches = batch.matches(loader, vsc, queryLogic, batchIndex);
-
-                    if (!matches.isEmpty()) {
-                        VectorSchemaRoot[] slices = null;
-
-                        try {
-                            slices = matches.stream()
-                                    .map(i -> vsc.slice(i, 1))
-                                    .toArray(VectorSchemaRoot[]::new);
-
-                            resultVsc.allocateNew();
-                            VectorSchemaRootAppender.append(false, resultVsc, slices);
-                            listener.putNext();
-                        } finally {
-                            if (slices != null) {
-                                for (VectorSchemaRoot slice : slices) {
-                                    slice.close();
-                                }
-                            }
-                        }
-                    }
-                }
-
-                listener.completed();
-            }
-        }
-    }
+//
+//    public void execute(
+//            List<Model.Filter<?>> filters,
+//            FlightProducer.ServerStreamListener listener
+//    ) {
+//        logger.info("Executing query {}", filters);
+//
+//        filters = TRANSLATE_QUERY.applyFilters(filters);
+//
+//        logger.info("Translated query {}", filters);
+//
+//        final QueryLogic queryLogic = new QueryLogic(this.keyColumn, filters);
+//
+//        logger.info("QueryLogic query {}", queryLogic);
+//
+//        synchronized (this.rwLock.readLock()) {
+//            try (
+//                    final VectorSchemaRoot resultVsc = VectorSchemaRoot.create(this.schema, this.allocator);
+//                    final VectorSchemaRoot vsc = VectorSchemaRoot.create(this.schema, this.allocator)
+//            ) {
+//                final VectorLoader loader = new VectorLoader(vsc);
+//
+//                listener.start(resultVsc);
+//
+//                for (int batchIndex = 0; batchIndex < this.batches.size(); ++batchIndex) {
+//                    final Batch batch = this.batches.get(batchIndex);
+//
+//                    final Set<Integer> matches = batch.matches(loader, vsc, queryLogic.filters(), batchIndex);
+//
+//                    if (!matches.isEmpty()) {
+//                        VectorSchemaRoot[] slices = null;
+//
+//                        try {
+//                            slices = matches.stream()
+//                                    .map(i -> vsc.slice(i, 1))
+//                                    .toArray(VectorSchemaRoot[]::new);
+//
+//                            resultVsc.allocateNew();
+//                            VectorSchemaRootAppender.append(false, resultVsc, slices);
+//                            listener.putNext();
+//                        } finally {
+//                            if (slices != null) {
+//                                for (VectorSchemaRoot slice : slices) {
+//                                    slice.close();
+//                                }
+//                            }
+//                        }
+//                    }
+//                }
+//
+//                listener.completed();
+//            }
+//        }
+//    }
 
     public void deleteEntries(Map<Integer, Set<Integer>> batchRows) {
         batchRows.forEach((batchIndex, rowIndexes) -> {
