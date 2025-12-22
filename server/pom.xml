@@ -32,6 +32,12 @@
         </dependency>
 
         <dependency>
+            <groupId>org.apache.arrow.gandiva</groupId>
+            <artifactId>arrow-gandiva</artifactId>
+            <version>${arrow.version}</version>
+        </dependency>
+
+        <dependency>
             <groupId>org.apache.calcite</groupId>
             <artifactId>calcite-arrow</artifactId>
         </dependency>
