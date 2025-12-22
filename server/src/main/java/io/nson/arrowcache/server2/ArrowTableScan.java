@@ -42,7 +42,7 @@ class ArrowTableScan extends TableScan implements ArrowRel {
         final List<RelDataTypeField> fieldList = this.table.getRowType().getFieldList();
         final RelDataTypeFactory.Builder builder = this.getCluster().getTypeFactory().builder();
 
-        for(int field : this.fields) {
+        for (int field : this.fields) {
             builder.add(fieldList.get(field));
         }
 
@@ -52,10 +52,9 @@ class ArrowTableScan extends TableScan implements ArrowRel {
     public void register(RelOptPlanner planner) {
         planner.addRule(ArrowRules.TO_ENUMERABLE);
 
-        for(RelOptRule rule : ArrowRules.RULES) {
+        for (RelOptRule rule : ArrowRules.RULES) {
             planner.addRule(rule);
         }
-
     }
 
     public void implement(ArrowRel.Implementor implementor) {

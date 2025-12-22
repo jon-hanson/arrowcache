@@ -3,6 +3,7 @@ package io.nson.arrowcache.server2;
 import org.apache.arrow.gandiva.evaluator.*;
 import org.apache.arrow.gandiva.exceptions.GandivaException;
 import org.apache.arrow.gandiva.expression.*;
+import org.apache.arrow.vector.ipc.message.ArrowRecordBatch;
 import org.apache.arrow.vector.types.pojo.*;
 import org.apache.arrow.vector.types.pojo.Schema;
 import org.apache.calcite.DataContext;
@@ -27,14 +28,17 @@ import java.util.*;
 
 public class ArrowTable extends AbstractTable
         implements TranslatableTable, QueryableTable {
+
     private static final Logger logger = LoggerFactory.getLogger(ArrowTable.class);
 
     private final @Nullable RelProtoDataType protoRowType;
     private final Schema arrowSchema;
+    private final List<ArrowRecordBatch> arrowRecordBatches;
 
     public ArrowTable(@Nullable RelProtoDataType protoRowType, Schema arrowSchema) {
         this.protoRowType = protoRowType;
         this.arrowSchema = arrowSchema;
+        this.arrowRecordBatches = new ArrayList<>();
     }
 
     @Override
@@ -45,6 +49,7 @@ public class ArrowTable extends AbstractTable
             return deduceRowType(this.arrowSchema, (JavaTypeFactory) typeFactory);
         }
     }
+
     @SuppressWarnings("unused")
     public Enumerable<Object> query(
             DataContext root,
@@ -61,12 +66,12 @@ public class ArrowTable extends AbstractTable
 
             final List<ExpressionTree> expressionTrees = new ArrayList<>();
             for (int fieldOrdinal : fields) {
-                final Field field = arrowSchema.getFields().get(fieldOrdinal);
+                final Field field = this.arrowSchema.getFields().get(fieldOrdinal);
                 final TreeNode node = TreeBuilder.makeField(field);
                 expressionTrees.add(TreeBuilder.makeExpression(node, field));
             }
             try {
-                projector = Projector.make(arrowSchema, expressionTrees);
+                projector = Projector.make(this.arrowSchema, expressionTrees);
             } catch (GandivaException ex) {
                 throw Util.toUnchecked(ex);
             }
@@ -78,8 +83,8 @@ public class ArrowTable extends AbstractTable
                 String[] data = condition.split(" ");
                 List<TreeNode> treeNodes = new ArrayList<>(2);
                 treeNodes.add(
-                        TreeBuilder.makeField(arrowSchema.getFields()
-                                .get(arrowSchema.getFields().indexOf(arrowSchema.findField(data[0])))));
+                        TreeBuilder.makeField(this.arrowSchema.getFields()
+                                .get(this.arrowSchema.getFields().indexOf(this.arrowSchema.findField(data[0])))));
 
                 // if the split condition has more than two parts it's a binary operator
                 // with an additional literal node
@@ -87,10 +92,11 @@ public class ArrowTable extends AbstractTable
                     treeNodes.add(makeLiteralNode(data[2], data[3]));
                 }
 
-                String operator = data[1];
+                final String operator = data[1];
                 conditionNodes.add(
                         TreeBuilder.makeFunction(operator, treeNodes, new ArrowType.Bool()));
             }
+
             final Condition filterCondition;
             if (conditionNodes.size() == 1) {
                 filterCondition = TreeBuilder.makeCondition(conditionNodes.get(0));
@@ -100,21 +106,27 @@ public class ArrowTable extends AbstractTable
             }
 
             try {
-                filter = Filter.make(arrowSchema, filterCondition);
+                filter = Filter.make(this.arrowSchema, filterCondition);
             } catch (GandivaException e) {
                 throw Util.toUnchecked(e);
             }
         }
 
-        return new ArrowEnumerable(arrowFileReader, fields, projector, filter);
+        return new ArrowEnumerable(
+                this.arrowSchema,
+                this.arrowRecordBatches,
+                fields,
+                projector,
+                filter
+        );
     }
 
     private static TreeNode makeLiteralNode(String literal, String type) {
         if (type.startsWith("decimal")) {
-            String[] typeParts =
+            final String[] typeParts =
                     type.substring(type.indexOf('(') + 1, type.indexOf(')')).split(",");
-            int precision = Integer.parseInt(typeParts[0]);
-            int scale = Integer.parseInt(typeParts[1]);
+            final int precision = Integer.parseInt(typeParts[0]);
+            final int scale = Integer.parseInt(typeParts[1]);
             return TreeBuilder.makeDecimalLiteral(literal, precision, scale);
         } else if (type.equals("integer")) {
             return TreeBuilder.makeLiteral(Integer.parseInt(literal));
@@ -127,8 +139,9 @@ public class ArrowTable extends AbstractTable
         } else if (type.equals("string")) {
             return TreeBuilder.makeStringLiteral(literal.substring(1, literal.length() - 1));
         } else {
-            throw new IllegalArgumentException("Invalid literal " + literal
-                    + ", type " + type);
+            throw new IllegalArgumentException(
+                    "Invalid literal " + literal + ", type " + type
+            );
         }
     }
 
@@ -153,8 +166,13 @@ public class ArrowTable extends AbstractTable
         final ImmutableIntList fields =
                 ImmutableIntList.copyOf(Util.range(fieldCount));
         final RelOptCluster cluster = context.getCluster();
-        return new ArrowTableScan(cluster, cluster.traitSetOf(ArrowRel.CONVENTION),
-                relOptTable, this, fields);
+        return new ArrowTableScan(
+                cluster,
+                cluster.traitSetOf(ArrowRel.CONVENTION),
+                relOptTable,
+                this,
+                fields
+        );
     }
 
     private static RelDataType deduceRowType(Schema schema, JavaTypeFactory typeFactory) {

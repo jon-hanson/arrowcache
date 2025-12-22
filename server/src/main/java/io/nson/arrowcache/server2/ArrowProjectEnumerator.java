@@ -31,7 +31,7 @@ class ArrowProjectEnumerator extends AbstractArrowEnumerator {
 
     public boolean moveNext() {
         if (this.currRowIndex >= this.rowCount - 1) {
-            boolean hasNextBatch = this.hasNextBatch();
+            final boolean hasNextBatch = this.hasNextBatch();
 
             if (hasNextBatch) {
                 this.currRowIndex = 0;

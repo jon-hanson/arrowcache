@@ -34,23 +34,23 @@ abstract class AbstractArrowEnumerator implements Enumerator<Object>, AutoClosea
 
     @Override
     public void close() {
-        vectorSchemaRoot.close();
+        this.vectorSchemaRoot.close();
     }
 
     abstract void evaluateOperator(ArrowRecordBatch var1);
 
     protected boolean hasNextBatch() {
-        return currentBatchIndex < arrowRecordBatches.size();
+        return this.currentBatchIndex < this.arrowRecordBatches.size();
     }
 
     protected void loadNextArrowBatch() {
         for(int i : this.fields) {
-            this.valueVectors.add(vectorSchemaRoot.getVector(i));
+            this.valueVectors.add(this.vectorSchemaRoot.getVector(i));
         }
 
-        this.rowCount = vectorSchemaRoot.getRowCount();
+        this.rowCount = this.vectorSchemaRoot.getRowCount();
 
-        this.evaluateOperator(arrowRecordBatches.get(currentBatchIndex));
+        this.evaluateOperator(this.arrowRecordBatches.get(this.currentBatchIndex));
     }
 
     public Object current() {

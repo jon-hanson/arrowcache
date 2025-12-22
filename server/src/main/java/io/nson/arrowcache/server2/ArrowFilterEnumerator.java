@@ -6,7 +6,7 @@ import org.apache.arrow.memory.*;
 import org.apache.arrow.vector.ipc.message.ArrowRecordBatch;
 import org.apache.arrow.vector.types.pojo.Schema;
 import org.apache.calcite.util.*;
-import org.checkerframework.checker.nullness.qual.Nullable;
+import org.jspecify.annotations.Nullable;
 
 import java.util.*;
 
@@ -31,8 +31,8 @@ class ArrowFilterEnumerator extends AbstractArrowEnumerator {
             this.buf = this.allocator.buffer((long)this.rowCount * 2L);
             this.selectionVector = new SelectionVectorInt16(this.buf);
             this.filter.evaluate(arrowRecordBatch, this.selectionVector);
-        } catch (GandivaException e) {
-            throw Util.toUnchecked(e);
+        } catch (GandivaException ex) {
+            throw Util.toUnchecked(ex);
         }
     }
 
@@ -43,7 +43,7 @@ class ArrowFilterEnumerator extends AbstractArrowEnumerator {
         } else {
             boolean hasNextBatch;
             while(true) {
-                currentBatchIndex++;
+                this.currentBatchIndex++;
                 hasNextBatch = hasNextBatch();
                 if (!hasNextBatch) {
                     break;
@@ -52,7 +52,7 @@ class ArrowFilterEnumerator extends AbstractArrowEnumerator {
                 this.selectionVectorIndex = 0;
                 this.valueVectors.clear();
                 this.loadNextArrowBatch();
-                Objects.requireNonNull(this.selectionVector, "selectionVector");
+
                 if (this.selectionVectorIndex < this.selectionVector.getRecordCount()) {
                     this.currRowIndex = this.selectionVector.getIndex(this.selectionVectorIndex++);
                     break;

@@ -6,7 +6,7 @@ import org.apache.arrow.vector.ipc.message.ArrowRecordBatch;
 import org.apache.arrow.vector.types.pojo.Schema;
 import org.apache.calcite.linq4j.*;
 import org.apache.calcite.util.*;
-import org.checkerframework.checker.nullness.qual.Nullable;
+import org.jspecify.annotations.Nullable;
 
 import java.util.List;
 

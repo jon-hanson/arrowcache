@@ -4,7 +4,7 @@ import com.google.common.base.Preconditions;
 import org.apache.calcite.plan.*;
 import org.apache.calcite.rel.RelNode;
 import org.apache.calcite.util.ImmutableIntList;
-import org.checkerframework.checker.nullness.qual.Nullable;
+import org.jspecify.annotations.Nullable;
 
 import java.util.*;
 
