@@ -27,7 +27,10 @@
 
         <arrow.version>18.3.0</arrow.version>
         <avro.version>1.12.0</avro.version>
+        <calcite.version>1.41.0</calcite.version>
+        <eisop.version>3.49.3-eisop1</eisop.version>
         <gson.version>2.13.2</gson.version>
+        <jspecify.version>1.0.0</jspecify.version>
         <junit.version>6.0.1</junit.version>
         <logback.version>1.5.21</logback.version>
         <slf4j.version>2.0.17</slf4j.version>
@@ -67,6 +70,17 @@
             </dependency>
 
             <dependency>
+                <groupId>org.apache.calcite</groupId>
+                <artifactId>calcite-arrow</artifactId>
+                <version>${calcite.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.apache.calcite</groupId>
+                <artifactId>calcite-core</artifactId>
+                <version>${calcite.version}</version>
+            </dependency>
+
+            <dependency>
                 <groupId>com.google.code.gson</groupId>
                 <artifactId>gson</artifactId>
                 <version>${gson.version}</version>
@@ -76,6 +90,19 @@
                 <groupId>org.slf4j</groupId>
                 <artifactId>slf4j-api</artifactId>
                 <version>${slf4j.version}</version>
+            </dependency>
+
+            <dependency>
+                <groupId>org.jspecify</groupId>
+                <artifactId>jspecify</artifactId>
+                <version>${jspecify.version}</version>
+            </dependency>
+
+            <!-- Annotations from the EISOP Checker Framework -->
+            <dependency>
+                <groupId>io.github.eisop</groupId>
+                <artifactId>checker-qual</artifactId>
+                <version>${eisop.version}</version>
             </dependency>
 
             <dependency>
@@ -100,6 +127,36 @@
         </dependencies>
 
     </dependencyManagement>
+
+    <profiles>
+        <profile>
+            <id>checkerframework</id>
+            <activation>
+                <jdk>[9,)</jdk>
+            </activation>
+            <build>
+                <plugins>
+                    <plugin>
+                        <groupId>org.apache.maven.plugins</groupId>
+                        <artifactId>maven-compiler-plugin</artifactId>
+                        <configuration>
+                            <compilerArgs combine.children="append">
+                                <arg>-J--add-exports=jdk.compiler/com.sun.tools.javac.api=ALL-UNNAMED</arg>
+                                <arg>-J--add-exports=jdk.compiler/com.sun.tools.javac.code=ALL-UNNAMED</arg>
+                                <arg>-J--add-exports=jdk.compiler/com.sun.tools.javac.file=ALL-UNNAMED</arg>
+                                <arg>-J--add-exports=jdk.compiler/com.sun.tools.javac.main=ALL-UNNAMED</arg>
+                                <arg>-J--add-exports=jdk.compiler/com.sun.tools.javac.model=ALL-UNNAMED</arg>
+                                <arg>-J--add-exports=jdk.compiler/com.sun.tools.javac.processing=ALL-UNNAMED</arg>
+                                <arg>-J--add-exports=jdk.compiler/com.sun.tools.javac.tree=ALL-UNNAMED</arg>
+                                <arg>-J--add-exports=jdk.compiler/com.sun.tools.javac.util=ALL-UNNAMED</arg>
+                                <arg>-J--add-opens=jdk.compiler/com.sun.tools.javac.comp=ALL-UNNAMED</arg>
+                            </compilerArgs>
+                        </configuration>
+                    </plugin>
+                </plugins>
+            </build>
+        </profile>
+    </profiles>
 
     <build>
         <extensions>
