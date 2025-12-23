@@ -1,4 +1,4 @@
-package io.nson.arrowcache.server2;
+package io.nson.arrowcache.server2.calcite;
 
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;

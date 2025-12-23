@@ -8,9 +8,7 @@ import io.nson.arrowcache.common.TablePath;
 import io.nson.arrowcache.common.utils.JsonCodec;
 
 import java.io.IOException;
-import java.util.Comparator;
 import java.util.Map;
-import java.util.Optional;
 
 public final class SchemaConfig {
     public static final JsonCodec<SchemaConfig> CODEC = new Codec();

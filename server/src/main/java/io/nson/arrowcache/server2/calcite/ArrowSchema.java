@@ -1,5 +1,6 @@
-package io.nson.arrowcache.server2;
+package io.nson.arrowcache.server2.calcite;
 
+import io.nson.arrowcache.server2.SchemaConfig;
 import org.apache.arrow.vector.ipc.message.ArrowRecordBatch;
 import org.apache.arrow.vector.types.pojo.Schema;
 import org.apache.calcite.schema.Table;
@@ -8,8 +9,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.util.*;
-
-import static java.util.stream.Collectors.toMap;
 
 class ArrowSchema extends AbstractSchema {
     private static final Logger logger = LoggerFactory.getLogger(ArrowSchema.class);
@@ -27,11 +26,14 @@ class ArrowSchema extends AbstractSchema {
         return super.getTableMap();
     }
 
-    public void add(String tableName, Schema arrowSchema, List<ArrowRecordBatch> arbs) {
-        ArrowTable table = tableMap.get(tableName);
-        if (table == null) {
-            final SchemaConfig.TableConfig tableConfig = schemaConfig.tables().get(tableName);
-
-        }
+    public void addBatches(String tableName, Schema arrowSchema, List<ArrowRecordBatch> arbs) {
+        final ArrowTable table = tableMap.computeIfAbsent(
+                tableName,
+                tn -> {
+                    //final SchemaConfig.TableConfig tableConfig = schemaConfig.tables().get(tableName);
+                    return new ArrowTable(arrowSchema);
+                }
+        );
+        table.addBatches(arrowSchema, arbs);
     }
 }

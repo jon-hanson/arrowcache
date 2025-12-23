@@ -1,4 +1,4 @@
-package io.nson.arrowcache.server2;
+package io.nson.arrowcache.server2.calcite;
 
 import org.apache.arrow.gandiva.evaluator.Projector;
 import org.apache.arrow.gandiva.exceptions.GandivaException;

@@ -1,7 +1,6 @@
-package io.nson.arrowcache.server2;
+package io.nson.arrowcache.server2.calcite;
 
 import org.apache.arrow.gandiva.evaluator.*;
-import org.apache.arrow.vector.VectorSchemaRoot;
 import org.apache.arrow.vector.ipc.message.ArrowRecordBatch;
 import org.apache.arrow.vector.types.pojo.Schema;
 import org.apache.calcite.linq4j.*;

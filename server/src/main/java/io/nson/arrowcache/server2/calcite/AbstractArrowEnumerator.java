@@ -1,4 +1,4 @@
-package io.nson.arrowcache.server2;
+package io.nson.arrowcache.server2.calcite;
 
 import org.apache.arrow.memory.*;
 import org.apache.arrow.vector.*;

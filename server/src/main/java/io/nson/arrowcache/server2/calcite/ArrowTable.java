@@ -1,8 +1,13 @@
-package io.nson.arrowcache.server2;
+package io.nson.arrowcache.server2.calcite;
 
+import io.nson.arrowcache.server.AllocatorManager;
+import io.nson.arrowcache.server.cache.*;
 import org.apache.arrow.gandiva.evaluator.*;
 import org.apache.arrow.gandiva.exceptions.GandivaException;
 import org.apache.arrow.gandiva.expression.*;
+import org.apache.arrow.gandiva.expression.Condition;
+import org.apache.arrow.memory.BufferAllocator;
+import org.apache.arrow.vector.*;
 import org.apache.arrow.vector.ipc.message.ArrowRecordBatch;
 import org.apache.arrow.vector.types.pojo.*;
 import org.apache.arrow.vector.types.pojo.Schema;
@@ -15,45 +20,66 @@ import org.apache.calcite.plan.*;
 import org.apache.calcite.rel.RelNode;
 import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.rel.type.RelDataTypeFactory;
-import org.apache.calcite.rel.type.RelProtoDataType;
 import org.apache.calcite.schema.*;
 import org.apache.calcite.schema.impl.AbstractTable;
 import org.apache.calcite.util.*;
-import org.jspecify.annotations.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.lang.reflect.Type;
 import java.util.*;
+import java.util.concurrent.locks.*;
 
 public class ArrowTable extends AbstractTable
         implements TranslatableTable, QueryableTable {
 
     private static final Logger logger = LoggerFactory.getLogger(ArrowTable.class);
 
-    private final @Nullable RelProtoDataType protoRowType;
+//    private final BufferAllocator allocator;
+//    private final String keyColumn;
+//    private final int keyColumnIndex;
     private final Schema arrowSchema;
-    private final List<ArrowRecordBatch> arrowRecordBatches;
+    private final List<ArrowRecordBatch> arrowBatches;
 
-    public ArrowTable(RelProtoDataType protoRowType, Schema arrowSchema) {
-        this.protoRowType = protoRowType;
+    private final ReadWriteLock rwLock = new ReentrantReadWriteLock();
+
+    public ArrowTable(
+//            AllocatorManager allocatorManager,
+//            String name,
+//            String keyColumn,
+            Schema arrowSchema
+    ) {
+//        this.allocator = allocatorManager.newChildAllocator(name);
+//        this.keyColumn = keyColumn;
+//        this.keyColumnIndex = CacheUtils.findKeyColumn(arrowSchema, keyColumn);
         this.arrowSchema = arrowSchema;
-        this.arrowRecordBatches = new ArrayList<>();
+        this.arrowBatches = new ArrayList<>();
     }
 
-    public ArrowTable(Schema arrowSchema) {
-        this.protoRowType = null;
-        this.arrowSchema = arrowSchema;
-        this.arrowRecordBatches = new ArrayList<>();
+    public void addBatches(Schema arrowSchema, Collection<ArrowRecordBatch> arbs) {
+        if (!this.arrowSchema.equals(arrowSchema)) {
+            throw new IllegalArgumentException("Cannot add batches with a schema different to the schema for this table");
+        } else {
+            synchronized (this.rwLock.writeLock()) {
+                this.arrowBatches.addAll(arbs);
+            }
+        }
     }
 
     @Override
     public RelDataType getRowType(RelDataTypeFactory typeFactory) {
-        if (this.protoRowType != null) {
-            return this.protoRowType.apply(typeFactory);
-        } else {
-            return deduceRowType(this.arrowSchema, (JavaTypeFactory) typeFactory);
+        return deduceRowType(this.arrowSchema, (JavaTypeFactory) typeFactory);
+    }
+
+    private static RelDataType deduceRowType(Schema schema, JavaTypeFactory typeFactory) {
+        final RelDataTypeFactory.Builder builder = typeFactory.builder();
+        for (Field field : schema.getFields()) {
+            builder.add(
+                    field.getName(),
+                    ArrowFieldTypeFactory.toType(field.getType(), typeFactory)
+            );
         }
+        return builder.build();
     }
 
     @SuppressWarnings("unused")
@@ -120,7 +146,7 @@ public class ArrowTable extends AbstractTable
 
         return new ArrowEnumerable(
                 this.arrowSchema,
-                this.arrowRecordBatches,
+                this.arrowBatches,
                 fields,
                 projector,
                 filter
@@ -179,16 +205,5 @@ public class ArrowTable extends AbstractTable
                 this,
                 fields
         );
-    }
-
-    private static RelDataType deduceRowType(Schema schema, JavaTypeFactory typeFactory) {
-        final RelDataTypeFactory.Builder builder = typeFactory.builder();
-        for (Field field : schema.getFields()) {
-            builder.add(
-                    field.getName(),
-                    ArrowFieldTypeFactory.toType(field.getType(), typeFactory)
-            );
-        }
-        return builder.build();
     }
 }

@@ -1,0 +1,30 @@
+package io.nson.arrowcache.server2.calcite;
+
+import io.nson.arrowcache.common.utils.FileUtils;
+import io.nson.arrowcache.server2.SchemaConfig;
+import org.apache.calcite.schema.*;
+import org.slf4j.*;
+
+import java.io.IOException;
+import java.util.Map;
+
+public class ArrowSchemaFactory implements SchemaFactory {
+    private static final Logger logger = LoggerFactory.getLogger(ArrowSchemaFactory.class);
+
+    public ArrowSchemaFactory() {
+        logger.info("Creating ArrowSchemaFactory");
+    }
+
+    @Override
+    public Schema create(SchemaPlus parentSchema, String name, Map<String, Object> operand) {
+        logger.info("create called for name '{}'", name);
+
+        try {
+            final String schemaConfigName = (String)operand.get("schemaConfig");
+            final SchemaConfig schemaConfig = FileUtils.loadFromResource(schemaConfigName, SchemaConfig.CODEC);
+            return new ArrowSchema(schemaConfig);
+        } catch (IOException ex) {
+            throw new RuntimeException(ex);
+        }
+    }
+}
