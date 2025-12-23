@@ -35,8 +35,14 @@ public class ArrowTable extends AbstractTable
     private final Schema arrowSchema;
     private final List<ArrowRecordBatch> arrowRecordBatches;
 
-    public ArrowTable(@Nullable RelProtoDataType protoRowType, Schema arrowSchema) {
+    public ArrowTable(RelProtoDataType protoRowType, Schema arrowSchema) {
         this.protoRowType = protoRowType;
+        this.arrowSchema = arrowSchema;
+        this.arrowRecordBatches = new ArrayList<>();
+    }
+
+    public ArrowTable(Schema arrowSchema) {
+        this.protoRowType = null;
         this.arrowSchema = arrowSchema;
         this.arrowRecordBatches = new ArrayList<>();
     }

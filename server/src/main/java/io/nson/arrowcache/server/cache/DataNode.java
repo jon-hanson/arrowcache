@@ -221,14 +221,14 @@ public final class DataNode implements AutoCloseable {
 
     public DataNode(
             String name,
-            CacheConfig.NodeConfig nodeConfig,
+            SchemaConfig.TableConfig tableConfig,
             AllocatorManager allocatorManager,
             Schema schema,
             List<ArrowRecordBatch> arbs
     ) {
         this(
                 name,
-                nodeConfig.keyName(),
+                tableConfig.keyColumn(),
                 allocatorManager,
                 schema,
                 arbs
@@ -237,13 +237,13 @@ public final class DataNode implements AutoCloseable {
 
     public DataNode(
             String name,
-            CacheConfig.NodeConfig nodeConfig,
+            SchemaConfig.TableConfig tableConfig,
             AllocatorManager allocatorManager,
             Schema schema
     ) {
         this(
                 name,
-                nodeConfig,
+                tableConfig,
                 allocatorManager,
                 schema,
                 new ArrayList<>()

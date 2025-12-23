@@ -1,10 +1,10 @@
-package io.nson.arrowcache.server.cache;
+package io.nson.arrowcache.server2;
 
 import com.google.gson.GsonBuilder;
 import com.google.gson.TypeAdapter;
 import com.google.gson.stream.JsonReader;
 import com.google.gson.stream.JsonWriter;
-import io.nson.arrowcache.common.CachePath;
+import io.nson.arrowcache.common.TablePath;
 import io.nson.arrowcache.common.utils.JsonCodec;
 
 import java.io.IOException;
@@ -12,25 +12,25 @@ import java.util.Comparator;
 import java.util.Map;
 import java.util.Optional;
 
-public final class CacheConfig {
-    public static final JsonCodec<CacheConfig> CODEC = new Codec();
+public final class SchemaConfig {
+    public static final JsonCodec<SchemaConfig> CODEC = new Codec();
 
-    public static final class NodeConfig {
-        private final String keyName;
+    public static final class TableConfig {
+        private final String keyColumn;
 
-        public NodeConfig(String keyName) {
-            this.keyName = keyName;
+        public TableConfig(String keyColumn) {
+            this.keyColumn = keyColumn;
         }
 
         @Override
         public String toString() {
-            return "NodeConfig{" +
-                    "keyName='" + keyName + '\'' +
+            return "SchemaConfig{" +
+                    "keyColumn='" + keyColumn + '\'' +
                     '}';
         }
 
-        public String keyName() {
-            return keyName;
+        public String keyColumn() {
+            return keyColumn;
         }
     }
 
@@ -57,46 +57,46 @@ public final class CacheConfig {
         }
     }
 
-    private static class Codec extends JsonCodec<CacheConfig> {
-        private static class CachePathTypeAdaptor extends TypeAdapter<CachePath> {
+    private static class Codec extends JsonCodec<SchemaConfig> {
+        private static class TablePathTypeAdaptor extends TypeAdapter<TablePath> {
 
             @Override
-            public void write(JsonWriter jsonWriter, CachePath cachePath) throws IOException {
-                jsonWriter.value(cachePath.toString());
+            public void write(JsonWriter jsonWriter, TablePath tablePath) throws IOException {
+                jsonWriter.value(tablePath.toString());
             }
 
             @Override
-            public CachePath read(JsonReader jsonReader) throws IOException {
-                return CachePath.valueOfConcat(jsonReader.nextString());
+            public TablePath read(JsonReader jsonReader) throws IOException {
+                return TablePath.valueOfConcat(jsonReader.nextString());
             }
         }
 
         public Codec() {
-            super(CacheConfig.class);
+            super(SchemaConfig.class);
         }
 
         @Override
         protected GsonBuilder prepare(GsonBuilder gsonBuilder) {
-            return gsonBuilder.registerTypeAdapter(CachePath.class, new CachePathTypeAdaptor());
+            return gsonBuilder.registerTypeAdapter(TablePath.class, new TablePathTypeAdaptor());
         }
     }
 
     private final AllocatorMaxSizeConfig allocatorMaxSizeConfig;
-    private final Map<CachePath, NodeConfig> nodes;
+    private final Map<String, TableConfig> tables;
 
-    public CacheConfig(
+    public SchemaConfig(
             AllocatorMaxSizeConfig allocatorMaxSizeConfig,
-            Map<CachePath, NodeConfig> nodes
+            Map<String, TableConfig> tables
     ) {
         this.allocatorMaxSizeConfig = allocatorMaxSizeConfig;
-        this.nodes = nodes;
+        this.tables = tables;
     }
 
     @Override
     public String toString() {
         return "CacheConfig{" +
                 "allocatorMaxSizeConfig=" + allocatorMaxSizeConfig +
-                "nodes=" + nodes +
+                "tables=" + tables +
                 '}';
     }
 
@@ -104,14 +104,7 @@ public final class CacheConfig {
         return allocatorMaxSizeConfig;
     }
 
-    public Map<CachePath, NodeConfig> nodes() {
-        return nodes;
-    }
-
-    public Optional<NodeConfig> getNode(CachePath path) {
-        return nodes.keySet().stream()
-                .filter(path::match)
-                .min(Comparator.comparing(CachePath::wildcardCount))
-                .map(nodes::get);
+    public Map<String, TableConfig> tables() {
+        return tables;
     }
 }

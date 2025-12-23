@@ -1,7 +1,7 @@
 package io.nson.arrowcache.server;
 
 import io.nson.arrowcache.common.utils.FileUtils;
-import io.nson.arrowcache.server.cache.CacheConfig;
+import io.nson.arrowcache.server.cache.SchemaConfig;
 import io.nson.arrowcache.server.cache.DataStore;
 import org.apache.arrow.flight.FlightServer;
 import org.apache.arrow.flight.Location;
@@ -69,11 +69,11 @@ public class ArrowCacheServer implements AutoCloseable {
     public static void main(String[] args) throws Exception {
         logger.info("Starting");
 
-        final CacheConfig cacheConfig = FileUtils.loadFromResource("cacheconfig.json", CacheConfig.CODEC);
+        final SchemaConfig schemaConfig = FileUtils.loadFromResource("cacheconfig.json", SchemaConfig.CODEC);
         final ServerConfig serverConfig = FileUtils.loadFromResource("serverconfig.json", ServerConfig.CODEC);
-        final AllocatorManager allocatorManager = new AllocatorManager(cacheConfig.allocatorMaxSizeConfig());
+        final AllocatorManager allocatorManager = new AllocatorManager(schemaConfig.allocatorMaxSizeConfig());
 
-        final DataStore dataStore = new DataStore(cacheConfig, allocatorManager);
+        final DataStore dataStore = new DataStore(schemaConfig, allocatorManager);
         final ArrowCacheServer server = new ArrowCacheServer(
                 allocatorManager,
                 Location.forGrpcInsecure("localhost", serverConfig.port()),

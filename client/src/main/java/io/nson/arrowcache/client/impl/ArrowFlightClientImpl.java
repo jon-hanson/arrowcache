@@ -3,7 +3,7 @@ package io.nson.arrowcache.client.impl;
 import io.nson.arrowcache.client.ClientAPI;
 import io.nson.arrowcache.common.Actions;
 import io.nson.arrowcache.common.Model;
-import io.nson.arrowcache.common.CachePath;
+import io.nson.arrowcache.common.TablePath;
 import io.nson.arrowcache.common.codec.DeleteCodecs;
 import io.nson.arrowcache.common.codec.QueryCodecs;
 import io.nson.arrowcache.common.utils.ArrowUtils;
@@ -60,7 +60,7 @@ public class ArrowFlightClientImpl implements ClientAPI {
     }
 
     @Override
-    public void put(CachePath path, VectorSchemaRoot vsc, Source src) {
+    public void put(TablePath path, VectorSchemaRoot vsc, Source src) {
         try {
             final FlightDescriptor flightDesc = FlightDescriptor.path(path.parts());
 
@@ -109,12 +109,12 @@ public class ArrowFlightClientImpl implements ClientAPI {
     }
 
     @Override
-    public void put(CachePath path, VectorSchemaRoot vsc) {
+    public void put(TablePath path, VectorSchemaRoot vsc) {
         put(path, vsc, new SingleValueSource());
     }
 
     @Override
-    public void get(CachePath path, List<Model.Filter<?>> filters, Listener listener) {
+    public void get(TablePath path, List<Model.Filter<?>> filters, Listener listener) {
         try {
             final Model.Query query = new Model.Query(path, filters);
             final byte[] bytes = QueryCodecs.MODEL_TO_BYTES.encode(query);
@@ -155,7 +155,7 @@ public class ArrowFlightClientImpl implements ClientAPI {
     }
 
     @Override
-    public void remove(CachePath path, List<Model.Filter<?>> filters) {
+    public void remove(TablePath path, List<Model.Filter<?>> filters) {
         try {
             final Model.Delete delete = new Model.Delete(path, filters);
             final byte[] bytes = DeleteCodecs.MODEL_TO_BYTES.encode(delete);

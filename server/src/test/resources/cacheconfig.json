@@ -5,12 +5,12 @@
             "flight-server": 8589934592
         }
     },
-    "nodes": {
+    "tables": {
         "abc/*": {
-            "keyName": "id"
+            "keyColumn": "id"
         },
         "abc/ghi": {
-            "keyName": "id"
+            "keyColumn": "id"
         }
     }
 }

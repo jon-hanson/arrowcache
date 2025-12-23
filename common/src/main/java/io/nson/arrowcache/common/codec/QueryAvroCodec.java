@@ -1,7 +1,7 @@
 package io.nson.arrowcache.common.codec;
 
 import io.nson.arrowcache.common.Model;
-import io.nson.arrowcache.common.CachePath;
+import io.nson.arrowcache.common.TablePath;
 import io.nson.arrowcache.common.avro.*;
 import io.nson.arrowcache.common.utils.Codec;
 import io.nson.arrowcache.common.utils.Functors;
@@ -80,7 +80,7 @@ public final class QueryAvroCodec implements Codec<Model.Query, Query> {
     @Override
     public Model.Query decode(Query enc) {
         return new Model.Query(
-                CachePath.valueOf(enc.getPath()),
+                TablePath.valueOfIter(enc.getPath()),
                 Functors.listMap(enc.getFilters(), QueryAvroCodec::decodeFilter)
         );
     }

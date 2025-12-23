@@ -1,19 +1,19 @@
 package io.nson.arrowcache.server;
 
-import io.nson.arrowcache.server.cache.CacheConfig;
+import io.nson.arrowcache.server.cache.SchemaConfig;
 import org.apache.arrow.memory.BufferAllocator;
 import org.apache.arrow.memory.RootAllocator;
 
 public class AllocatorManager implements AutoCloseable {
-    private final CacheConfig.AllocatorMaxSizeConfig allocatorMaxSizeConfig;
+    private final SchemaConfig.AllocatorMaxSizeConfig allocatorMaxSizeConfig;
     private final RootAllocator rootAllocator;
 
-    public AllocatorManager(CacheConfig.AllocatorMaxSizeConfig allocatorMaxSizeConfig, RootAllocator rootAllocator) {
+    public AllocatorManager(SchemaConfig.AllocatorMaxSizeConfig allocatorMaxSizeConfig, RootAllocator rootAllocator) {
         this.allocatorMaxSizeConfig = allocatorMaxSizeConfig;
         this.rootAllocator = rootAllocator;
     }
 
-    public AllocatorManager(CacheConfig.AllocatorMaxSizeConfig allocatorMaxSizeConfig) {
+    public AllocatorManager(SchemaConfig.AllocatorMaxSizeConfig allocatorMaxSizeConfig) {
         this(allocatorMaxSizeConfig, new RootAllocator());
     }
 

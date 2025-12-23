@@ -2,7 +2,7 @@ package io.nson.arrowcache.server;
 
 import io.nson.arrowcache.common.Actions;
 import io.nson.arrowcache.common.Model;
-import io.nson.arrowcache.common.CachePath;
+import io.nson.arrowcache.common.TablePath;
 import io.nson.arrowcache.common.codec.DeleteCodecs;
 import io.nson.arrowcache.common.codec.NodeEntrySpecCodecs;
 import io.nson.arrowcache.common.codec.QueryCodecs;
@@ -90,9 +90,9 @@ public class ArrowCacheProducer extends NoOpFlightProducer implements AutoClosea
                     );
                 } else {
                     final List<String> flightPath = flightDesc.getPath();
-                    final CachePath cachePath = CachePath.valueOf(flightPath);
+                    final TablePath tablePath = TablePath.valueOfIter(flightPath);
                     final Schema schema = flightStream.getSchema();
-                    dataStore.add(cachePath, schema, arbs);
+                    dataStore.add(tablePath, schema, arbs);
                     arbs.clear();
                     ackStream.onCompleted();
                 }
@@ -115,10 +115,10 @@ public class ArrowCacheProducer extends NoOpFlightProducer implements AutoClosea
         try {
             if (descriptor.isCommand()) {
                 final Model.Query query = QueryCodecs.MODEL_TO_BYTES.decode(descriptor.getCommand());
-                final CachePath cachePath = query.path();
-                final DataNode dataNode = dataStore.getNode(cachePath);
+                final TablePath tablePath = query.path();
+                final DataNode dataNode = dataStore.getNode(tablePath);
                 final Map<Integer, Set<Integer>> batchMatches = dataNode.execute(query.filters());
-                final byte[] response = NodeEntrySpecCodecs.MODEL_TO_BYTES.encode(new Model.NodeEntrySpec(cachePath.path(), batchMatches));
+                final byte[] response = NodeEntrySpecCodecs.MODEL_TO_BYTES.encode(new Model.NodeEntrySpec(tablePath.path(), batchMatches));
                 final int numRecords = batchMatches.values().stream().mapToInt(Set::size).sum();
                 final FlightEndpoint flightEndpoint = new FlightEndpoint(new Ticket(response), location);
 
@@ -145,8 +145,8 @@ public class ArrowCacheProducer extends NoOpFlightProducer implements AutoClosea
             logger.info("getStream: {}", context.peerIdentity());
 
             final Model.NodeEntrySpec nodeEntrySpec = NodeEntrySpecCodecs.MODEL_TO_BYTES.decode(ticket.getBytes());
-            final CachePath cachePath = CachePath.valueOfConcat(nodeEntrySpec.path());
-            final DataNode dataNode = dataStore.getNode(cachePath);
+            final TablePath tablePath = TablePath.valueOfConcat(nodeEntrySpec.path());
+            final DataNode dataNode = dataStore.getNode(tablePath);
 
             dataNode.execute(nodeEntrySpec.batchRows(), listener);
         } catch (FlightRuntimeException ex) {
@@ -169,16 +169,16 @@ public class ArrowCacheProducer extends NoOpFlightProducer implements AutoClosea
             if (action.getType().equals(Actions.DELETE_NAME)) {
                 final Model.Delete delete = DeleteCodecs.MODEL_TO_BYTES.decode(action.getBody());
 
-                final CachePath cachePath = delete.path();
+                final TablePath tablePath = delete.path();
 
                 if (delete.filters().isEmpty()) {
-                    if (dataStore.deleteNode(cachePath)) {
-                        listener.onNext(ArrowUtils.stringToResult("Path '" + cachePath + "' successfully deleted"));
+                    if (dataStore.deleteNode(tablePath)) {
+                        listener.onNext(ArrowUtils.stringToResult("Path '" + tablePath + "' successfully deleted"));
                     } else {
-                        listener.onNext(ArrowUtils.stringToResult("WARNING: No data node found for path '" + cachePath + "'"));
+                        listener.onNext(ArrowUtils.stringToResult("WARNING: No data node found for path '" + tablePath + "'"));
                     }
                 } else {
-                    dataStore.deleteEntries(cachePath, delete.filters());
+                    dataStore.deleteEntries(tablePath, delete.filters());
                 }
             } else {
                 throw ArrowServerUtils.invalidArgument(logger, "Action type '" + action.getType() + "' not supported");

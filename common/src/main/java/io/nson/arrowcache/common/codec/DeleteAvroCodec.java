@@ -1,7 +1,7 @@
 package io.nson.arrowcache.common.codec;
 
 import io.nson.arrowcache.common.Model;
-import io.nson.arrowcache.common.CachePath;
+import io.nson.arrowcache.common.TablePath;
 import io.nson.arrowcache.common.avro.Delete;
 import io.nson.arrowcache.common.utils.Codec;
 
@@ -22,7 +22,7 @@ public class DeleteAvroCodec implements Codec<Model.Delete, Delete> {
     @Override
     public Model.Delete decode(Delete enc) {
         return new Model.Delete(
-                CachePath.valueOfConcat(enc.getPath()),
+                TablePath.valueOfConcat(enc.getPath()),
                 enc.getFilters().stream().map(QueryAvroCodec::decodeFilter).collect(toUnmodifiableList())
         );
     }

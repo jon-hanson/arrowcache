@@ -1,7 +1,7 @@
 package io.nson.arrowcache.client;
 
 import io.nson.arrowcache.client.impl.ArrowFlightClientImpl;
-import io.nson.arrowcache.common.CachePath;
+import io.nson.arrowcache.common.TablePath;
 import io.nson.arrowcache.common.utils.ArrowUtils;
 import io.nson.arrowcache.common.utils.FileUtils;
 import org.apache.arrow.flight.Location;
@@ -21,8 +21,8 @@ public class TestClientAPI {
     public static void main(String[] args) throws IOException {
 
         final ClientConfig clientConfig = FileUtils.loadFromResource("clientconfig.json", ClientConfig.CODEC);
-        final CachePath cachePath1 = CachePath.valueOf("abc", "def");
-        final CachePath cachePath2 = CachePath.valueOf("abc", "ghi");
+        final TablePath tablePath1 = TablePath.valueOf("abc", "def");
+        final TablePath tablePath2 = TablePath.valueOf("abc", "ghi");
 
         final Location location = Location.forGrpcInsecure(clientConfig.serverHost(), clientConfig.serverPort());
 
@@ -33,48 +33,48 @@ public class TestClientAPI {
         ) {
             logger.info("Loading testdata1.csv into server");
             TestData.loadTestDataIntoVsc(vsc, "testdata1.csv");
-            clientAPI.put(cachePath1, vsc);
+            clientAPI.put(tablePath1, vsc);
             vsc.clear();
 
             logger.info("Loading testdata2.csv into server");
             TestData.loadTestDataIntoVsc(vsc, "testdata2.csv");
-            clientAPI.put(cachePath1, vsc);
+            clientAPI.put(tablePath1, vsc);
             vsc.clear();
 
             logger.info("Loading testdata3.csv into server");
             TestData.loadTestDataIntoVsc(vsc, "testdata3.csv");
-            clientAPI.put(cachePath2, vsc);
+            clientAPI.put(tablePath2, vsc);
             vsc.clear();
 
-            logger.info("Running query for path: {} and filters: {}", cachePath1, TestData.FILTERS1);
-            clientAPI.get(cachePath1, TestData.FILTERS1, LISTENER);
+            logger.info("Running query for path: {} and filters: {}", tablePath1, TestData.FILTERS1);
+            clientAPI.get(tablePath1, TestData.FILTERS1, LISTENER);
 
-            logger.info("Running query for path: {} and filters: {}", cachePath1, TestData.FILTERS2);
-            clientAPI.get(cachePath1, TestData.FILTERS2, LISTENER);
+            logger.info("Running query for path: {} and filters: {}", tablePath1, TestData.FILTERS2);
+            clientAPI.get(tablePath1, TestData.FILTERS2, LISTENER);
 
-            logger.info("Running query for path: {} and filters: {}", cachePath1, TestData.FILTERS3);
-            clientAPI.get(cachePath1, TestData.FILTERS3, LISTENER);
+            logger.info("Running query for path: {} and filters: {}", tablePath1, TestData.FILTERS3);
+            clientAPI.get(tablePath1, TestData.FILTERS3, LISTENER);
 
-            logger.info("Running query for path: {} and filters: {}", cachePath1, TestData.FILTERS4);
-            clientAPI.get(cachePath1, TestData.FILTERS4, LISTENER);
+            logger.info("Running query for path: {} and filters: {}", tablePath1, TestData.FILTERS4);
+            clientAPI.get(tablePath1, TestData.FILTERS4, LISTENER);
 
-            logger.info("Running query for path: {} and filters: {}", cachePath2, TestData.FILTERS1);
-            clientAPI.get(cachePath2, TestData.FILTERS1, LISTENER);
+            logger.info("Running query for path: {} and filters: {}", tablePath2, TestData.FILTERS1);
+            clientAPI.get(tablePath2, TestData.FILTERS1, LISTENER);
 
-            logger.info("Running query for path: {} and filters: {}", cachePath2, TestData.FILTERS2);
-            clientAPI.get(cachePath2, TestData.FILTERS2, LISTENER);
+            logger.info("Running query for path: {} and filters: {}", tablePath2, TestData.FILTERS2);
+            clientAPI.get(tablePath2, TestData.FILTERS2, LISTENER);
 
-            logger.info("Running query for path: {} and filters: {}", cachePath2, TestData.FILTERS3);
-            clientAPI.get(cachePath2, TestData.FILTERS3, LISTENER);
+            logger.info("Running query for path: {} and filters: {}", tablePath2, TestData.FILTERS3);
+            clientAPI.get(tablePath2, TestData.FILTERS3, LISTENER);
 
-            logger.info("Running query for path: {} and filters: {}", cachePath2, TestData.FILTERS4);
-            clientAPI.get(cachePath2, TestData.FILTERS4, LISTENER);
+            logger.info("Running query for path: {} and filters: {}", tablePath2, TestData.FILTERS4);
+            clientAPI.get(tablePath2, TestData.FILTERS4, LISTENER);
 
-            logger.info("Deleting entries for path: {} and filters: {}", cachePath2, TestData.FILTERS4);
-            clientAPI.remove(cachePath2, TestData.FILTERS4);
+            logger.info("Deleting entries for path: {} and filters: {}", tablePath2, TestData.FILTERS4);
+            clientAPI.remove(tablePath2, TestData.FILTERS4);
 
-            logger.info("Running query for path: {} and filters: {}", cachePath2, TestData.FILTERS4);
-            clientAPI.get(cachePath2, TestData.FILTERS4, LISTENER);
+            logger.info("Running query for path: {} and filters: {}", tablePath2, TestData.FILTERS4);
+            clientAPI.get(tablePath2, TestData.FILTERS4, LISTENER);
 
             logger.info("Done");
         } catch (Exception ex) {

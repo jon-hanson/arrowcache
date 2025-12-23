@@ -1,7 +1,7 @@
 package io.nson.arrowcache.server.cache;
 
 import io.nson.arrowcache.common.Model;
-import io.nson.arrowcache.common.CachePath;
+import io.nson.arrowcache.common.TablePath;
 import io.nson.arrowcache.server.AllocatorManager;
 import io.nson.arrowcache.server.utils.ArrowServerUtils;
 import org.apache.arrow.vector.ipc.message.ArrowRecordBatch;
@@ -22,13 +22,13 @@ public class DataStore implements AutoCloseable {
 
     private static final Logger logger = LoggerFactory.getLogger(DataStore.class);
 
-    private final CacheConfig config;
+    private final SchemaConfig config;
     private final AllocatorManager allocatorManager;
-    private final ConcurrentMap<CachePath, DataNode> nodes = new ConcurrentHashMap<>();
+    private final ConcurrentMap<TablePath, DataNode> nodes = new ConcurrentHashMap<>();
 
     private final ReadWriteLock rwLock = new ReentrantReadWriteLock();
 
-    public DataStore(CacheConfig config, AllocatorManager allocatorManager) {
+    public DataStore(SchemaConfig config, AllocatorManager allocatorManager) {
         this.config = config;
         this.allocatorManager = allocatorManager;
 
@@ -41,42 +41,42 @@ public class DataStore implements AutoCloseable {
         nodes.values().forEach(DataNode::close);
     }
 
-    public Set<CachePath> getCachePaths() {
+    public Set<TablePath> getCachePaths() {
         return nodes.keySet();
     }
 
-    public DataNode getNode(CachePath cachePath) {
-        return getNodeOpt(cachePath)
+    public DataNode getNode(TablePath tablePath) {
+        return getNodeOpt(tablePath)
                 .orElseThrow(() ->
-                        ArrowServerUtils.notFound(logger, "No data node found for path " + cachePath)
+                        ArrowServerUtils.notFound(logger, "No data node found for path " + tablePath)
                 );
     }
 
-    public Optional<DataNode> getNodeOpt(CachePath path) {
+    public Optional<DataNode> getNodeOpt(TablePath path) {
         return Optional.ofNullable(nodes.get(path));
     }
 
-    public void add(CachePath path, Schema schema, List<ArrowRecordBatch> arbs) {
+    public void add(TablePath path, Schema schema, List<ArrowRecordBatch> arbs) {
         logger.info("Adding data node for path {} with {} ArrowRecordBatches", path, arbs.size());
         final DataNode dataNode = nodes.get(path);
         if (dataNode == null) {
-            final CacheConfig.NodeConfig nodeConfig = config.getNode(path)
+            final SchemaConfig.TableConfig tableConfig = config.getNode(path)
                     .orElseThrow(() -> new IllegalArgumentException("No node (or node config) found for path " + path));
 
-            CacheUtils.validateSchema(schema, nodeConfig.keyName());
+            CacheUtils.validateSchema(schema, tableConfig.keyColumn());
 
             synchronized (rwLock.writeLock()) {
-                nodes.put(path, new DataNode(path.path(), nodeConfig, allocatorManager, schema, arbs));
+                nodes.put(path, new DataNode(path.path(), tableConfig, allocatorManager, schema, arbs));
             }
         } else {
             dataNode.add(schema, arbs);
         }
     }
 
-    public boolean deleteNode(CachePath cachePath) {
-        logger.info("Deleting data node for path {}", cachePath);
+    public boolean deleteNode(TablePath tablePath) {
+        logger.info("Deleting data node for path {}", tablePath);
         synchronized (rwLock.writeLock()) {
-            final DataNode node = nodes.remove(cachePath);
+            final DataNode node = nodes.remove(tablePath);
             if (node == null) {
                 return false;
             } else {
@@ -86,9 +86,9 @@ public class DataStore implements AutoCloseable {
         }
     }
 
-    public void deleteEntries(CachePath cachePath, List<Model.Filter<?>> filters) {
-        logger.info("Deleting entries for path {}", cachePath);
-        final DataNode node = getNode(cachePath);
+    public void deleteEntries(TablePath tablePath, List<Model.Filter<?>> filters) {
+        logger.info("Deleting entries for path {}", tablePath);
+        final DataNode node = getNode(tablePath);
         synchronized (rwLock.writeLock()) {
             final Map<Integer, Set<Integer>> batchMatches = node.execute(filters);
             node.deleteEntries(batchMatches);

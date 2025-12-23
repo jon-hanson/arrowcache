@@ -182,10 +182,10 @@ public abstract class Model {
     }
 
     public static final class Query {
-        private final CachePath path;
+        private final TablePath path;
         private final List<Filter<?>> filters;
 
-        public Query(CachePath path, List<Filter<?>> filters) {
+        public Query(TablePath path, List<Filter<?>> filters) {
             this.path = path;
             this.filters = Objects.requireNonNull(filters);
         }
@@ -208,7 +208,7 @@ public abstract class Model {
             return filters.hashCode();
         }
 
-        public CachePath path() {
+        public TablePath path() {
             return path;
         }
 
@@ -244,20 +244,20 @@ public abstract class Model {
     }
 
     public static final class Delete {
-        private final CachePath path;
+        private final TablePath path;
         private final List<Filter<?>> filters;
 
-        public Delete(CachePath path, List<Filter<?>> filters) {
+        public Delete(TablePath path, List<Filter<?>> filters) {
             this.path = path;
             this.filters = filters;
         }
 
-        public Delete(CachePath path) {
+        public Delete(TablePath path) {
             this.path = path;
             this.filters = Collections.emptyList();
         }
 
-        public CachePath path() {
+        public TablePath path() {
             return path;
         }
 

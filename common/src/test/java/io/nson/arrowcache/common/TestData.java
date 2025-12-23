@@ -2,7 +2,6 @@ package io.nson.arrowcache.common;
 
 import io.nson.arrowcache.common.avro.*;
 
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
 import java.util.TreeSet;
@@ -19,7 +18,7 @@ public class TestData {
 
     public static final Model.Query MODEL_QUERY =
             new Model.Query(
-                    CachePath.valueOf("abc", "def"),
+                    TablePath.valueOf("abc", "def"),
                     List.of(
                             new Model.SVFilter<>(
                                     ATTR_A,

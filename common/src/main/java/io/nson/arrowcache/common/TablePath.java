@@ -5,11 +5,11 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.Objects;
 
-public final class CachePath implements Comparable<CachePath> {
+public final class TablePath implements Comparable<TablePath> {
     public static final String WILDCARD = "*";
     public static final String SEP = "/";
 
-    public static CachePath valueOfConcat(String path) {
+    public static TablePath valueOfConcat(String path) {
         if (path.isEmpty()) {
             throw new IllegalArgumentException("path is empty");
         } else if (path.startsWith(SEP)) {
@@ -18,23 +18,23 @@ public final class CachePath implements Comparable<CachePath> {
             throw new IllegalArgumentException("path must not end with " + SEP);
         } else {
             final String[] parts = path.split(SEP);
-            return valueOf(Arrays.asList(parts));
+            return valueOfIter(Arrays.asList(parts));
         }
     }
 
-    public static CachePath valueOf(Iterable<String> parts) {
+    public static TablePath valueOfIter(Iterable<String> parts) {
         final List<String> partsList = new ArrayList<>();
         parts.forEach(partsList::add);
-        return new CachePath(partsList);
+        return new TablePath(partsList);
     }
 
-    public static CachePath valueOf(String... parts) {
-        return new CachePath(Arrays.asList(parts));
+    public static TablePath valueOf(String... parts) {
+        return new TablePath(Arrays.asList(parts));
     }
 
     private final List<String> parts;
 
-    private CachePath(List<String> parts) {
+    private TablePath(List<String> parts) {
         this.parts = parts;
         for (String part : parts) {
             if (part.isEmpty()) {
@@ -45,7 +45,7 @@ public final class CachePath implements Comparable<CachePath> {
 
     @Override
     public String toString() {
-        return String.join(SEP, parts);
+        return String.join(SEP, this.parts);
     }
 
     @Override
@@ -53,7 +53,7 @@ public final class CachePath implements Comparable<CachePath> {
         if (rhs == null || getClass() != rhs.getClass()) {
             return false;
         } else {
-            final CachePath rhsT = (CachePath) rhs;
+            final TablePath rhsT = (TablePath) rhs;
             return this.parts.equals(rhsT.parts);
         }
     }
@@ -64,7 +64,7 @@ public final class CachePath implements Comparable<CachePath> {
     }
 
     @Override
-    public int compareTo(CachePath rhs) {
+    public int compareTo(TablePath rhs) {
         final int partsLength = Math.min(this.parts.size(), rhs.parts.size());
         for (int i = 0; i < partsLength; i++) {
             final int cmp = this.parts.get(i).compareTo(rhs.parts.get(i));
@@ -73,11 +73,11 @@ public final class CachePath implements Comparable<CachePath> {
             }
         }
 
-        return Integer.compare(parts.size(), rhs.parts.size());
+        return Integer.compare(this.parts.size(), rhs.parts.size());
     }
 
     public String path() {
-        return String.join(SEP, parts);
+        return String.join(SEP, this.parts);
     }
 
     public List<String> parts() {
@@ -100,18 +100,18 @@ public final class CachePath implements Comparable<CachePath> {
         return count;
     }
 
-    public boolean match(CachePath rhs) {
-        if (this.parts.equals(rhs.parts)) {
-            return true;
-        } else if (this.parts.size() != rhs.parts.size()) {
+    public boolean match(TablePath rhs) {
+        if (this.parts.size() != rhs.parts.size()) {
             return false;
+        } else if (this.parts.equals(rhs.parts)) {
+            return true;
         } else {
             for (int i = 0; i < this.parts.size(); i++) {
                 final String lhsPart = this.parts.get(i);
                 final String rhsPart = rhs.parts.get(i);
                 final boolean match = lhsPart.equals(WILDCARD) ||
                         rhsPart.equals(WILDCARD) ||
-                        parts.get(i).equals(rhs.parts.get(i));
+                        this.parts.get(i).equals(rhs.parts.get(i));
                 if (!match) {
                     return false;
                 }
