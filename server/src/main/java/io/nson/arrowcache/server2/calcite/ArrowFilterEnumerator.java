@@ -10,7 +10,7 @@ import org.jspecify.annotations.Nullable;
 
 import java.util.*;
 
-class ArrowFilterEnumerator extends AbstractArrowEnumerator {
+public class ArrowFilterEnumerator extends AbstractArrowEnumerator {
     private final Filter filter;
     private @Nullable ArrowBuf buf;
     private @Nullable SelectionVector selectionVector;

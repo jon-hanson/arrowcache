@@ -11,7 +11,7 @@ import org.apache.calcite.util.ImmutableIntList;
 
 import java.util.List;
 
-class ArrowTableScan extends TableScan implements ArrowRel {
+public class ArrowTableScan extends TableScan implements ArrowRel {
     private final ArrowTable arrowTable;
     private final ImmutableIntList fields;
 

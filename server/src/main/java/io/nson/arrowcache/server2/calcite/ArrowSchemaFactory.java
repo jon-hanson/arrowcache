@@ -9,13 +9,34 @@ import org.slf4j.*;
 import java.io.IOException;
 import java.util.Map;
 
-public class ArrowSchemaFactory implements SchemaFactory {
+public class ArrowSchemaFactory implements SchemaFactory, AutoCloseable {
     private static final Logger logger = LoggerFactory.getLogger(ArrowSchemaFactory.class);
 
-    private @Nullable ArrowSchema rootSchema;
+    private static @Nullable ArrowSchema rootSchema;
 
     public ArrowSchemaFactory() {
         logger.info("Creating ArrowSchemaFactory");
+    }
+
+    @Override
+    public void close() {
+        if (rootSchema != null) {
+            rootSchema.close();
+            rootSchema = null;
+        }
+    }
+
+    public static ArrowSchema rootSchema() {
+        if (rootSchema == null) {
+            try {
+                final SchemaConfig schemaConfig = FileUtils.loadFromResource("schemaconfig.json", SchemaConfig.CODEC);
+                rootSchema = new ArrowSchema(schemaConfig);
+            } catch (IOException ex) {
+                throw new RuntimeException(ex);
+            }
+        }
+
+        return rootSchema;
     }
 
     @Override

@@ -38,8 +38,6 @@ public class DataNodeTest {
         ) {
             final VectorUnloader unloader = new VectorUnloader(vsc);
 
-            new HashMap<>();
-
             logger.info("Loading testdata1.csv");
             final Map<Integer, Map<String, Object>> testDataMap = TestData.loadTestData(vsc, "testdata1.csv");
             dataNode.add(vsc.getSchema(), unloader.getRecordBatch());
@@ -50,13 +48,13 @@ public class DataNodeTest {
 
             final Collection<Map<String, Object>> testData = testDataMap.values();
 
-//            testQuery(dataNode, testData, TestData.FILTERS1);
-//
-//            testQuery(dataNode, testData, TestData.FILTERS2);
+            testQuery(dataNode, testData, TestData.FILTERS1);
+
+            testQuery(dataNode, testData, TestData.FILTERS2);
 
             testQuery(dataNode, testData, TestData.FILTERS3);
 
-//            testQuery(dataNode, testData, TestData.FILTERS4);
+            testQuery(dataNode, testData, TestData.FILTERS4);
         }
     }
 

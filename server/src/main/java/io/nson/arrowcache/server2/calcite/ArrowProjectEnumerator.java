@@ -8,7 +8,7 @@ import org.apache.calcite.util.*;
 
 import java.util.List;
 
-class ArrowProjectEnumerator extends AbstractArrowEnumerator {
+public class ArrowProjectEnumerator extends AbstractArrowEnumerator {
     private final Projector projector;
 
     ArrowProjectEnumerator(

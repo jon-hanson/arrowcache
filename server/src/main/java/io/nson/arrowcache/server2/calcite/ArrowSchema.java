@@ -10,11 +10,11 @@ import org.slf4j.LoggerFactory;
 
 import java.util.*;
 
-class ArrowSchema extends AbstractSchema {
+public class ArrowSchema extends AbstractSchema implements AutoCloseable {
     private static final Logger logger = LoggerFactory.getLogger(ArrowSchema.class);
 
     private final SchemaConfig schemaConfig;
-    private final Map<String, ArrowTable> tableMap;
+    private final Map<String, Table> tableMap;
 
     ArrowSchema(SchemaConfig schemaConfig) {
         this.schemaConfig = schemaConfig;
@@ -22,12 +22,21 @@ class ArrowSchema extends AbstractSchema {
     }
 
     @Override
+    public void close() {
+        tableMap.values().forEach(table -> ((ArrowTable)table).close());
+    }
+
+    @Override
     protected Map<String, Table> getTableMap() {
-        return super.getTableMap();
+        return tableMap;
+    }
+
+    public void addBatches(String tableName, Schema arrowSchema, ArrowRecordBatch arb) {
+        this.addBatches(tableName, arrowSchema, List.of(arb));
     }
 
     public void addBatches(String tableName, Schema arrowSchema, List<ArrowRecordBatch> arbs) {
-        final ArrowTable table = tableMap.computeIfAbsent(
+        final ArrowTable table = (ArrowTable)tableMap.computeIfAbsent(
                 tableName,
                 tn -> {
                     //final SchemaConfig.TableConfig tableConfig = schemaConfig.tables().get(tableName);

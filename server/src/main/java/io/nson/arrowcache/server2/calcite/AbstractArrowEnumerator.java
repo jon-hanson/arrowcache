@@ -9,7 +9,7 @@ import org.apache.calcite.util.*;
 
 import java.util.*;
 
-abstract class AbstractArrowEnumerator implements Enumerator<Object>, AutoCloseable {
+public abstract class AbstractArrowEnumerator implements Enumerator<Object>, AutoCloseable {
     protected final BufferAllocator allocator = new RootAllocator(Long.MAX_VALUE);
     protected final List<ArrowRecordBatch> arrowRecordBatches;
     protected final VectorSchemaRoot vectorSchemaRoot;

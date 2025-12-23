@@ -9,7 +9,7 @@ import org.jspecify.annotations.Nullable;
 
 import java.util.List;
 
-class ArrowEnumerable extends AbstractEnumerable<Object> {
+public class ArrowEnumerable extends AbstractEnumerable<Object> {
     private final Schema arrowSchema;
     private final List<ArrowRecordBatch> arrowRecordBatches;
     private final ImmutableIntList fields;

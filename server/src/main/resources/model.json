@@ -1,12 +1,11 @@
 {
     "version": "1.0",
-    "defaultSchema": "ROOT",
+    "defaultSchema": "test",
     "schemas": [
         {
-            "name": "ROOT",
+            "name": "test",
             "type": "custom",
             "factory": "io.nson.arrowcache.server2.calcite.ArrowSchemaFactory",
-            "mutable": true,
             "operand": {
                 "schemaConfig": "/schemaconfig.json"
             },

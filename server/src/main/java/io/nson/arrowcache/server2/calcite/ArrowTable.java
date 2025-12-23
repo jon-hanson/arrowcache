@@ -31,7 +31,7 @@ import java.util.*;
 import java.util.concurrent.locks.*;
 
 public class ArrowTable extends AbstractTable
-        implements TranslatableTable, QueryableTable {
+        implements TranslatableTable, QueryableTable, AutoCloseable {
 
     private static final Logger logger = LoggerFactory.getLogger(ArrowTable.class);
 
@@ -54,6 +54,11 @@ public class ArrowTable extends AbstractTable
 //        this.keyColumnIndex = CacheUtils.findKeyColumn(arrowSchema, keyColumn);
         this.arrowSchema = arrowSchema;
         this.arrowBatches = new ArrayList<>();
+    }
+
+    @Override
+    public void close() {
+        arrowBatches.forEach(ArrowRecordBatch::close);
     }
 
     public void addBatches(Schema arrowSchema, Collection<ArrowRecordBatch> arbs) {

@@ -6,10 +6,10 @@
         }
     },
     "tables": {
-        "abc/*": {
+        "abc": {
             "keyColumn": "id"
         },
-        "abc/ghi": {
+        "ghi": {
             "keyColumn": "id"
         }
     }
