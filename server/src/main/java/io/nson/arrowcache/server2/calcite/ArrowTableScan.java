@@ -2,7 +2,6 @@ package io.nson.arrowcache.server2.calcite;
 
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
-import org.apache.calcite.adapter.arrow.*;
 import org.apache.calcite.plan.*;
 import org.apache.calcite.rel.*;
 import org.apache.calcite.rel.core.TableScan;

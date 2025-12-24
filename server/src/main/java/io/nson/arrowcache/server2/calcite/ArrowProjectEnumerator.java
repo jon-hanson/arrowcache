@@ -2,6 +2,7 @@ package io.nson.arrowcache.server2.calcite;
 
 import org.apache.arrow.gandiva.evaluator.Projector;
 import org.apache.arrow.gandiva.exceptions.GandivaException;
+import org.apache.arrow.memory.BufferAllocator;
 import org.apache.arrow.vector.ipc.message.ArrowRecordBatch;
 import org.apache.arrow.vector.types.pojo.Schema;
 import org.apache.calcite.util.*;
@@ -12,12 +13,13 @@ public class ArrowProjectEnumerator extends AbstractArrowEnumerator {
     private final Projector projector;
 
     ArrowProjectEnumerator(
+            BufferAllocator allocator,
             Schema arrowSchema,
             List<ArrowRecordBatch> arrowRecordBatches,
             ImmutableIntList fields,
             Projector projector
     ) {
-        super(arrowSchema, arrowRecordBatches, fields);
+        super(allocator, arrowSchema, arrowRecordBatches, fields);
         this.projector = projector;
     }
 

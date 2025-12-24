@@ -6,13 +6,18 @@ import org.apache.arrow.vector.ipc.message.ArrowRecordBatch;
 import org.apache.arrow.vector.types.pojo.Schema;
 import org.apache.calcite.linq4j.Enumerator;
 import org.apache.calcite.util.*;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.*;
 
 public abstract class AbstractArrowEnumerator implements Enumerator<Object>, AutoCloseable {
-    protected final BufferAllocator allocator = new RootAllocator(Long.MAX_VALUE);
+    private static final Logger logger = LoggerFactory.getLogger(AbstractArrowEnumerator.class);
+
+    protected final BufferAllocator allocator;
     protected final List<ArrowRecordBatch> arrowRecordBatches;
     protected final VectorSchemaRoot vectorSchemaRoot;
+    protected final VectorLoader loader;
     protected final List<Integer> fields;
     protected final List<ValueVector> valueVectors;
     protected int currentBatchIndex;
@@ -20,20 +25,24 @@ public abstract class AbstractArrowEnumerator implements Enumerator<Object>, Aut
     protected int rowCount;
 
     AbstractArrowEnumerator(
+            BufferAllocator allocator,
             Schema arrowSchema,
             List<ArrowRecordBatch> arrowRecordBatches,
             ImmutableIntList fields
     ) {
+        this.allocator = allocator;
         this.vectorSchemaRoot = VectorSchemaRoot.create(arrowSchema, allocator);
+        this.loader = new VectorLoader(vectorSchemaRoot);
         this.arrowRecordBatches = arrowRecordBatches;
         this.fields = fields;
         this.valueVectors = new ArrayList<>(fields.size());
-        this.currentBatchIndex = -1;
+        this.currentBatchIndex = 0;
         this.currRowIndex = -1;
     }
 
     @Override
     public void close() {
+        logger.info("Closing");
         this.vectorSchemaRoot.close();
     }
 
@@ -44,13 +53,19 @@ public abstract class AbstractArrowEnumerator implements Enumerator<Object>, Aut
     }
 
     protected void loadNextArrowBatch() {
+        final ArrowRecordBatch arrowRecordBatch = this.arrowRecordBatches.get(this.currentBatchIndex);
+
+        this.loader.load(arrowRecordBatch);
+
         for(int i : this.fields) {
             this.valueVectors.add(this.vectorSchemaRoot.getVector(i));
         }
 
         this.rowCount = this.vectorSchemaRoot.getRowCount();
 
-        this.evaluateOperator(this.arrowRecordBatches.get(this.currentBatchIndex));
+        this.evaluateOperator(arrowRecordBatch);
+
+        currentBatchIndex++;
     }
 
     public Object current() {

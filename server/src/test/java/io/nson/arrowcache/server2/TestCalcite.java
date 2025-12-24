@@ -24,41 +24,48 @@ public class TestCalcite {
         final SchemaConfig schemaConfig = FileUtils.loadFromResource("cacheconfig.json", SchemaConfig.CODEC);
         try(
                 final AllocatorManager allocatorManager = new AllocatorManager(schemaConfig.allocatorMaxSizeConfig());
-                final BufferAllocator bufferAlloc = allocatorManager.newChildAllocator("test-data");
-                final VectorSchemaRoot vsc = TestData.createTestDataVSC(bufferAlloc);
-                final ArrowSchema schema = ArrowSchemaFactory.rootSchema();
+                final BufferAllocator bufferAlloc = allocatorManager.newChildAllocator("TestCalcite");
         ) {
-            final VectorUnloader unloader = new VectorUnloader(vsc);
+            ArrowSchemaFactory.initialise(bufferAlloc);
 
-            logger.info("Loading testdata1.csv");
-            final Map<Integer, Map<String, Object>> testDataMap = TestData.loadTestData(vsc, "testdata1.csv");
-            schema.addBatches("abc", vsc.getSchema(), unloader.getRecordBatch());
+            try (
+                    final VectorSchemaRoot vsc = TestData.createTestDataVSC(bufferAlloc);
+                    final ArrowSchema schema = ArrowSchemaFactory.rootSchema();
+            ) {
+                final VectorUnloader unloader = new VectorUnloader(vsc);
 
-//            logger.info("Loading testdata2.csv");
-//            testDataMap.putAll(TestData.loadTestData(vsc, "testdata2.csv"));
-//            schema.addBatches("ghi", vsc.getSchema(), unloader.getRecordBatch());
+                logger.info("Loading testdata1.csv");
+                final Map<Integer, Map<String, Object>> testDataMap = TestData.loadTestData(vsc, "testdata1.csv");
+                schema.addBatches("abc", vsc.getSchema(), unloader.getRecordBatch());
 
-            Class.forName("org.apache.calcite.jdbc.Driver");
-            final Properties props = new Properties();
-            props.put(CalciteConnectionProperty.CASE_SENSITIVE.camelName(), "false");
-            try (final Connection connection = DriverManager.getConnection("jdbc:calcite:model=src/main/resources/model.json", props)) {
-                final CalciteConnection calciteConnection = connection.unwrap(CalciteConnection.class);
-                try (final Statement statement = calciteConnection.createStatement()) {
-                    if (statement.execute("SELECT * FROM test.abc")) {
-                        final ResultSet rs = statement.getResultSet();
-                        final ResultSetMetaData rsMetadata = rs.getMetaData();
+                //            logger.info("Loading testdata2.csv");
+                //            testDataMap.putAll(TestData.loadTestData(vsc, "testdata2.csv"));
+                //            schema.addBatches("ghi", vsc.getSchema(), unloader.getRecordBatch());
 
-                        final StringBuilder sb = new StringBuilder();
-                        for (int i = 1; i <= rsMetadata.getColumnCount(); i++) {
-                            sb.append(rsMetadata.getColumnName(i)).append(", ");
-                        }
-                        sb.append("\n");
+                Class.forName("org.apache.calcite.jdbc.Driver");
+                final Properties props = new Properties();
+                props.put(CalciteConnectionProperty.CASE_SENSITIVE.camelName(), "false");
+                try (final Connection connection = DriverManager.getConnection("jdbc:calcite:model=src/main/resources/model.json", props)) {
+                    final CalciteConnection calciteConnection = connection.unwrap(CalciteConnection.class);
+                    try (final Statement statement = calciteConnection.createStatement()) {
+                        if (statement.execute("SELECT * FROM test.abc")) {
+                            final ResultSet rs = statement.getResultSet();
+                            final ResultSetMetaData rsMetadata = rs.getMetaData();
 
-                        while (rs.next()) {
+                            final StringBuilder sb = new StringBuilder();
                             for (int i = 1; i <= rsMetadata.getColumnCount(); i++) {
-                                sb.append(rs.getObject(i)).append(", ");
+                                sb.append(rsMetadata.getColumnName(i)).append(", ");
                             }
                             sb.append("\n");
+
+                            while (rs.next()) {
+                                for (int i = 1; i <= rsMetadata.getColumnCount(); i++) {
+                                    sb.append(rs.getObject(i)).append(", ");
+                                }
+                                sb.append("\n");
+                            }
+
+                            logger.info("********: {}", sb);
                         }
                     }
                 }

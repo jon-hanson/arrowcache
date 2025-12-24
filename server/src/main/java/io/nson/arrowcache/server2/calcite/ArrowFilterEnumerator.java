@@ -1,5 +1,6 @@
 package io.nson.arrowcache.server2.calcite;
 
+import io.nson.arrowcache.server.AllocatorManager;
 import org.apache.arrow.gandiva.evaluator.*;
 import org.apache.arrow.gandiva.exceptions.GandivaException;
 import org.apache.arrow.memory.*;
@@ -17,12 +18,13 @@ public class ArrowFilterEnumerator extends AbstractArrowEnumerator {
     private int selectionVectorIndex;
 
     ArrowFilterEnumerator(
+            BufferAllocator allocator,
             Schema arrowSchema,
             List<ArrowRecordBatch> arrowRecordBatches,
             ImmutableIntList fields,
             Filter filter
     ) {
-        super(arrowSchema, arrowRecordBatches, fields);
+        super(allocator, arrowSchema, arrowRecordBatches, fields);
         this.filter = filter;
     }
 

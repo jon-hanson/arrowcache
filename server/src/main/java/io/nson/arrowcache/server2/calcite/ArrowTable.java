@@ -1,6 +1,5 @@
 package io.nson.arrowcache.server2.calcite;
 
-import io.nson.arrowcache.server.AllocatorManager;
 import io.nson.arrowcache.server.cache.*;
 import org.apache.arrow.gandiva.evaluator.*;
 import org.apache.arrow.gandiva.exceptions.GandivaException;
@@ -12,7 +11,6 @@ import org.apache.arrow.vector.ipc.message.ArrowRecordBatch;
 import org.apache.arrow.vector.types.pojo.*;
 import org.apache.arrow.vector.types.pojo.Schema;
 import org.apache.calcite.DataContext;
-import org.apache.calcite.adapter.arrow.*;
 import org.apache.calcite.adapter.java.JavaTypeFactory;
 import org.apache.calcite.linq4j.*;
 import org.apache.calcite.linq4j.tree.Expression;
@@ -35,23 +33,17 @@ public class ArrowTable extends AbstractTable
 
     private static final Logger logger = LoggerFactory.getLogger(ArrowTable.class);
 
-//    private final BufferAllocator allocator;
-//    private final String keyColumn;
-//    private final int keyColumnIndex;
+    private final BufferAllocator allocator;
     private final Schema arrowSchema;
     private final List<ArrowRecordBatch> arrowBatches;
 
     private final ReadWriteLock rwLock = new ReentrantReadWriteLock();
 
     public ArrowTable(
-//            AllocatorManager allocatorManager,
-//            String name,
-//            String keyColumn,
+            BufferAllocator allocator,
             Schema arrowSchema
     ) {
-//        this.allocator = allocatorManager.newChildAllocator(name);
-//        this.keyColumn = keyColumn;
-//        this.keyColumnIndex = CacheUtils.findKeyColumn(arrowSchema, keyColumn);
+        this.allocator = allocator;
         this.arrowSchema = arrowSchema;
         this.arrowBatches = new ArrayList<>();
     }
@@ -150,6 +142,7 @@ public class ArrowTable extends AbstractTable
         }
 
         return new ArrowEnumerable(
+                this.allocator,
                 this.arrowSchema,
                 this.arrowBatches,
                 fields,

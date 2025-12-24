@@ -1,6 +1,7 @@
 package io.nson.arrowcache.server2.calcite;
 
 import io.nson.arrowcache.server2.SchemaConfig;
+import org.apache.arrow.memory.BufferAllocator;
 import org.apache.arrow.vector.ipc.message.ArrowRecordBatch;
 import org.apache.arrow.vector.types.pojo.Schema;
 import org.apache.calcite.schema.Table;
@@ -13,10 +14,12 @@ import java.util.*;
 public class ArrowSchema extends AbstractSchema implements AutoCloseable {
     private static final Logger logger = LoggerFactory.getLogger(ArrowSchema.class);
 
+    private final BufferAllocator allocator;
     private final SchemaConfig schemaConfig;
     private final Map<String, Table> tableMap;
 
-    ArrowSchema(SchemaConfig schemaConfig) {
+    ArrowSchema(BufferAllocator allocator, SchemaConfig schemaConfig) {
+        this.allocator = allocator;
         this.schemaConfig = schemaConfig;
         this.tableMap = new TreeMap<>();
     }
@@ -40,7 +43,7 @@ public class ArrowSchema extends AbstractSchema implements AutoCloseable {
                 tableName,
                 tn -> {
                     //final SchemaConfig.TableConfig tableConfig = schemaConfig.tables().get(tableName);
-                    return new ArrowTable(arrowSchema);
+                    return new ArrowTable(allocator, arrowSchema);
                 }
         );
         table.addBatches(arrowSchema, arbs);

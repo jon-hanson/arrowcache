@@ -1,6 +1,7 @@
 package io.nson.arrowcache.server2.calcite;
 
 import org.apache.arrow.gandiva.evaluator.*;
+import org.apache.arrow.memory.BufferAllocator;
 import org.apache.arrow.vector.ipc.message.ArrowRecordBatch;
 import org.apache.arrow.vector.types.pojo.Schema;
 import org.apache.calcite.linq4j.*;
@@ -10,6 +11,7 @@ import org.jspecify.annotations.Nullable;
 import java.util.List;
 
 public class ArrowEnumerable extends AbstractEnumerable<Object> {
+    private final BufferAllocator allocator;
     private final Schema arrowSchema;
     private final List<ArrowRecordBatch> arrowRecordBatches;
     private final ImmutableIntList fields;
@@ -17,12 +19,14 @@ public class ArrowEnumerable extends AbstractEnumerable<Object> {
     private final @Nullable Filter filter;
 
     ArrowEnumerable(
+            BufferAllocator allocator,
             Schema arrowSchema,
             List<ArrowRecordBatch> arrowRecordBatches,
             ImmutableIntList fields,
             @Nullable Projector projector,
             @Nullable Filter filter
     ) {
+        this.allocator = allocator;
         this.arrowSchema = arrowSchema;
         this.arrowRecordBatches = arrowRecordBatches;
         this.projector = projector;
@@ -33,9 +37,21 @@ public class ArrowEnumerable extends AbstractEnumerable<Object> {
     public Enumerator<Object> enumerator() {
         try {
             if (this.projector != null) {
-                return new ArrowProjectEnumerator(this.arrowSchema, arrowRecordBatches, this.fields, this.projector);
+                return new ArrowProjectEnumerator(
+                        this.allocator,
+                        this.arrowSchema,
+                        this.arrowRecordBatches,
+                        this.fields,
+                        this.projector
+                );
             } else if (this.filter != null) {
-                return new ArrowFilterEnumerator(this.arrowSchema, arrowRecordBatches, this.fields, this.filter);
+                return new ArrowFilterEnumerator(
+                        this.allocator,
+                        this.arrowSchema,
+                        arrowRecordBatches,
+                        this.fields,
+                        this.filter
+                );
             } else {
                 throw new IllegalArgumentException("The arrow enumerator must have either a filter or a projection");
             }
