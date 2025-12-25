@@ -5,10 +5,8 @@
         {
             "name": "test",
             "type": "custom",
-            "factory": "io.nson.arrowcache.server2.calcite.ArrowSchemaFactory",
-            "operand": {
-                "schemaConfig": "/schemaconfig.json"
-            },
+            "factory": "io.nson.arrowcache.server2.calcite.ArrowSchemaFactory#INSTANCE",
+            "operand": {},
             "tables": []
         }
     ]

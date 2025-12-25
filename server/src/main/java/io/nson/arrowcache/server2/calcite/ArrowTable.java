@@ -1,6 +1,7 @@
 package io.nson.arrowcache.server2.calcite;
 
 import io.nson.arrowcache.server.cache.*;
+import io.nson.arrowcache.server2.SchemaConfig;
 import org.apache.arrow.gandiva.evaluator.*;
 import org.apache.arrow.gandiva.exceptions.GandivaException;
 import org.apache.arrow.gandiva.expression.*;
@@ -33,18 +34,35 @@ public class ArrowTable extends AbstractTable
 
     private static final Logger logger = LoggerFactory.getLogger(ArrowTable.class);
 
+    private static int findKeyColumn(Schema schema, String keyName) {
+        final List<Field> fields = schema.getFields();
+        for (int i = 0; i < fields.size(); ++i) {
+            if (fields.get(i).getName().equals(keyName)) {
+                return i;
+            }
+        }
+
+        logger.error("Key column name '{}' not found in schema", keyName);
+        throw new RuntimeException("Key column name '" + keyName + "' not found in schema");
+    }
+
     private final BufferAllocator allocator;
     private final Schema arrowSchema;
+    private String keyColumnName;
+    private int keyColumnIndex;
     private final List<ArrowRecordBatch> arrowBatches;
 
     private final ReadWriteLock rwLock = new ReentrantReadWriteLock();
 
     public ArrowTable(
             BufferAllocator allocator,
+            SchemaConfig.TableConfig tableConfig,
             Schema arrowSchema
     ) {
         this.allocator = allocator;
         this.arrowSchema = arrowSchema;
+        this.keyColumnName = tableConfig.keyColumn();
+        this.keyColumnIndex = findKeyColumn(arrowSchema, keyColumnName);
         this.arrowBatches = new ArrayList<>();
     }
 

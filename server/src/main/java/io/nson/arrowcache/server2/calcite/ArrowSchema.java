@@ -16,17 +16,20 @@ public class ArrowSchema extends AbstractSchema implements AutoCloseable {
 
     private final BufferAllocator allocator;
     private final SchemaConfig schemaConfig;
+    private final Map<String, ArrowSchema> childSchemaMap;
     private final Map<String, Table> tableMap;
 
     ArrowSchema(BufferAllocator allocator, SchemaConfig schemaConfig) {
         this.allocator = allocator;
         this.schemaConfig = schemaConfig;
+        this.childSchemaMap = new TreeMap<>();
         this.tableMap = new TreeMap<>();
     }
 
     @Override
     public void close() {
         tableMap.values().forEach(table -> ((ArrowTable)table).close());
+        childSchemaMap.values().forEach(ArrowSchema::close);
     }
 
     @Override
@@ -42,8 +45,8 @@ public class ArrowSchema extends AbstractSchema implements AutoCloseable {
         final ArrowTable table = (ArrowTable)tableMap.computeIfAbsent(
                 tableName,
                 tn -> {
-                    //final SchemaConfig.TableConfig tableConfig = schemaConfig.tables().get(tableName);
-                    return new ArrowTable(allocator, arrowSchema);
+                    final SchemaConfig.TableConfig tableConfig = schemaConfig.tables().get(tableName);
+                    return new ArrowTable(allocator, tableConfig, arrowSchema);
                 }
         );
         table.addBatches(arrowSchema, arbs);

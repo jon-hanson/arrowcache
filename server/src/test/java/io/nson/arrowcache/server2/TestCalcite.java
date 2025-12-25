@@ -21,26 +21,24 @@ public class TestCalcite {
     private static final Logger logger = LoggerFactory.getLogger(TestCalcite.class);
 
     public static void main(String[] args) throws IOException, ClassNotFoundException, SQLException {
-        final SchemaConfig schemaConfig = FileUtils.loadFromResource("cacheconfig.json", SchemaConfig.CODEC);
+        final SchemaConfig schemaConfig = FileUtils.loadFromResource("schemaconfig.json", SchemaConfig.CODEC);
         try(
-                final AllocatorManager allocatorManager = new AllocatorManager(schemaConfig.allocatorMaxSizeConfig());
+                final AllocatorManager allocatorManager = new AllocatorManager(schemaConfig.allocatorMaxSize());
                 final BufferAllocator bufferAlloc = allocatorManager.newChildAllocator("TestCalcite");
         ) {
-            ArrowSchemaFactory.initialise(bufferAlloc);
+            ArrowSchemaFactory.initialise(bufferAlloc, schemaConfig);
 
-            try (
-                    final VectorSchemaRoot vsc = TestData.createTestDataVSC(bufferAlloc);
-                    final ArrowSchema schema = ArrowSchemaFactory.rootSchema();
-            ) {
+            try (final VectorSchemaRoot vsc = TestData.createTestDataVSC(bufferAlloc)) {
+                final ArrowSchema schema = ArrowSchemaFactory.instance().create("test");
                 final VectorUnloader unloader = new VectorUnloader(vsc);
 
                 logger.info("Loading testdata1.csv");
                 final Map<Integer, Map<String, Object>> testDataMap = TestData.loadTestData(vsc, "testdata1.csv");
                 schema.addBatches("abc", vsc.getSchema(), unloader.getRecordBatch());
 
-                //            logger.info("Loading testdata2.csv");
-                //            testDataMap.putAll(TestData.loadTestData(vsc, "testdata2.csv"));
-                //            schema.addBatches("ghi", vsc.getSchema(), unloader.getRecordBatch());
+                logger.info("Loading testdata2.csv");
+                testDataMap.putAll(TestData.loadTestData(vsc, "testdata2.csv"));
+                schema.addBatches("ghi", vsc.getSchema(), unloader.getRecordBatch());
 
                 Class.forName("org.apache.calcite.jdbc.Driver");
                 final Properties props = new Properties();
@@ -70,6 +68,8 @@ public class TestCalcite {
                     }
                 }
             }
+
+            ArrowSchemaFactory.shutdown();
         }
     }
 }

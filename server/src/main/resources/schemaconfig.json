@@ -1,16 +1,20 @@
 {
-    "allocatorMaxSizeConfig": {
+    "allocatorMaxSize": {
         "defaultSize": 268435456,
         "allocatorSizeMap": {
             "flight-server": 8589934592
         }
     },
-    "tables": {
-        "abc": {
-            "keyColumn": "id"
-        },
-        "ghi": {
-            "keyColumn": "id"
+    "childSchema": {
+        "test" : {
+            "tables": {
+                "abc": {
+                    "keyColumn": "id"
+                },
+                "ghi": {
+                    "keyColumn": "id"
+                }
+            }
         }
     }
 }

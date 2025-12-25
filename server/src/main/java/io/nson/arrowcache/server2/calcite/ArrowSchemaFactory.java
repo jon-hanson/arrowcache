@@ -9,56 +9,66 @@ import org.slf4j.*;
 
 import java.io.IOException;
 import java.util.Map;
+import java.util.TreeMap;
 
-public class ArrowSchemaFactory implements SchemaFactory, AutoCloseable {
+public final class ArrowSchemaFactory implements SchemaFactory, AutoCloseable {
     private static final Logger logger = LoggerFactory.getLogger(ArrowSchemaFactory.class);
 
-    private static BufferAllocator allocator;
-    private static @Nullable ArrowSchema rootSchema;
+    public static @Nullable ArrowSchemaFactory INSTANCE;
 
-    public static void initialise(BufferAllocator allocator) {
-        ArrowSchemaFactory.allocator = allocator;
+    public static void initialise(BufferAllocator allocator, String configName) throws IOException {
+        final SchemaConfig schemaConfig = FileUtils.loadFromResource(configName, SchemaConfig.CODEC);
+        initialise(allocator, schemaConfig);
     }
 
-    public ArrowSchemaFactory() {
+    public static void initialise(BufferAllocator allocator, SchemaConfig schemaConfig) {
+        if (INSTANCE == null) {
+            INSTANCE = new ArrowSchemaFactory(
+                    allocator,
+                    schemaConfig
+            );
+        } else {
+            throw new IllegalStateException("ArrowSchemaFactory is already initialised");
+        }
+    }
+
+    public static ArrowSchemaFactory instance() {
+        return INSTANCE;
+    }
+
+    public static void shutdown() {
+        if (INSTANCE != null) {
+            INSTANCE.close();
+            INSTANCE = null;
+        }
+    }
+
+    private final BufferAllocator allocator;
+    private final SchemaConfig schemaConfig;
+    private final Map<String, ArrowSchema> schemaMap;
+
+    public ArrowSchemaFactory(BufferAllocator allocator, SchemaConfig schemaConfig) {
         logger.info("Creating ArrowSchemaFactory");
+        this.allocator = allocator.newChildAllocator("ArrowSchemaFactory", 0, Long.MAX_VALUE);
+        this.schemaConfig = schemaConfig;
+        this.schemaMap = new TreeMap<>();
     }
 
     @Override
     public void close() {
-        if (rootSchema != null) {
-            rootSchema.close();
-            rootSchema = null;
-        }
-    }
-
-    public static ArrowSchema rootSchema() {
-        if (rootSchema == null) {
-            try {
-                final SchemaConfig schemaConfig = FileUtils.loadFromResource("schemaconfig.json", SchemaConfig.CODEC);
-                rootSchema = new ArrowSchema(allocator, schemaConfig);
-            } catch (IOException ex) {
-                throw new RuntimeException(ex);
-            }
-        }
-
-        return rootSchema;
+        schemaMap.values().forEach(ArrowSchema::close);
+        this.allocator.close();
     }
 
     @Override
-    public Schema create(SchemaPlus parentSchema, String name, Map<String, Object> operand) {
-        logger.info("create called for name '{}'", name);
+    public ArrowSchema create(SchemaPlus parentSchema, String name, Map<String, Object> operand) {
+        return create(name);
+    }
 
-        if (rootSchema == null) {
-            try {
-                final String schemaConfigName = (String) operand.get("schemaConfig");
-                final SchemaConfig schemaConfig = FileUtils.loadFromResource(schemaConfigName, SchemaConfig.CODEC);
-                rootSchema = new ArrowSchema(allocator, schemaConfig);
-            } catch (IOException ex) {
-                throw new RuntimeException(ex);
-            }
-        }
-
-        return rootSchema;
+    public ArrowSchema create(String name) {
+        return schemaMap.computeIfAbsent(
+                name,
+                u -> new ArrowSchema(allocator, schemaConfig.childSchema(name))
+        );
     }
 }
