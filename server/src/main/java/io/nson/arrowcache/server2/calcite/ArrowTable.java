@@ -1,6 +1,5 @@
 package io.nson.arrowcache.server2.calcite;
 
-import io.nson.arrowcache.server.cache.*;
 import io.nson.arrowcache.server2.SchemaConfig;
 import org.apache.arrow.gandiva.evaluator.*;
 import org.apache.arrow.gandiva.exceptions.GandivaException;
@@ -46,40 +45,114 @@ public class ArrowTable extends AbstractTable
         throw new RuntimeException("Key column name '" + keyName + "' not found in schema");
     }
 
+    private static final class RowCoordinate {
+        final int batchIndex;
+        final int rowIndex;
+
+        private RowCoordinate(int batchIndex, int rowIndex) {
+            this.batchIndex = batchIndex;
+            this.rowIndex = rowIndex;
+        }
+    }
+
+    public static final class Batch implements AutoCloseable {
+        private static final Logger logger = LoggerFactory.getLogger(Batch.class);
+
+        private final ArrowRecordBatch arrowRecordBatch;
+        private final Set<Integer> deleted;
+
+        private Batch(ArrowRecordBatch arrowRecordBatch, Set<Integer> deleted) {
+            this.arrowRecordBatch = arrowRecordBatch;
+            this.deleted = deleted;
+        }
+
+        private Batch(ArrowRecordBatch batch) {
+            this(batch, new HashSet<>());
+        }
+
+        @Override
+        public void close() {
+            logger.info("Closing...");
+            arrowRecordBatch.close();
+        }
+
+        public ArrowRecordBatch arrowRecordBatch() {
+            return arrowRecordBatch;
+        }
+
+        public Set<Integer> deleted() {
+            return deleted;
+        }
+
+        public void markAsDeleted(int rowIndex) {
+            deleted.add(rowIndex);
+        }
+    }
+
     private final BufferAllocator allocator;
     private final Schema arrowSchema;
-    private String keyColumnName;
-    private int keyColumnIndex;
-    private final List<ArrowRecordBatch> arrowBatches;
+    private final String keyColumnName;
+    private final int keyColumnIndex;
+    private final List<Batch> arrowBatches;
+    private final Map<Object, RowCoordinate> rowCoordinateMap;
 
     private final ReadWriteLock rwLock = new ReentrantReadWriteLock();
 
     public ArrowTable(
+            String name,
             BufferAllocator allocator,
             SchemaConfig.TableConfig tableConfig,
             Schema arrowSchema
     ) {
-        this.allocator = allocator;
+        this.allocator = allocator.newChildAllocator(name, 0, Long.MAX_VALUE);
         this.arrowSchema = arrowSchema;
         this.keyColumnName = tableConfig.keyColumn();
         this.keyColumnIndex = findKeyColumn(arrowSchema, keyColumnName);
         this.arrowBatches = new ArrayList<>();
+        this.rowCoordinateMap = new HashMap<>();
     }
 
     @Override
     public void close() {
-        arrowBatches.forEach(ArrowRecordBatch::close);
+        logger.info("Closing...");
+        arrowBatches.forEach(Batch::close);
+        this.allocator.close();
     }
 
-    public void addBatches(Schema arrowSchema, Collection<ArrowRecordBatch> arbs) {
+    public void addBatches(Schema arrowSchema, Collection<ArrowRecordBatch> batches) {
         if (!this.arrowSchema.equals(arrowSchema)) {
-            throw new IllegalArgumentException("Cannot add batches with a schema different to the schema for this table");
+            ExceptionUtils.logError(
+                    logger,
+                    IllegalArgumentException::new,
+                    "Cannot add batches with a schema different to the schema for this table"
+            );
         } else {
             synchronized (this.rwLock.writeLock()) {
-                this.arrowBatches.addAll(arbs);
+                try (VectorSchemaRoot vsc = VectorSchemaRoot.create(this.arrowSchema, this.allocator)) {
+                    final VectorLoader loader = new VectorLoader(vsc);
+                    for (final ArrowRecordBatch batch : batches) {
+                        loader.load(batch);
+                        arrowBatches.add(new Batch(batch));
+                        processBatch(arrowBatches.size() - 1, vsc);
+                    }
+                }
             }
         }
     }
+
+    private void processBatch(int batchIndex, VectorSchemaRoot vsc) {
+        final int rowCount =  vsc.getRowCount();
+        final FieldVector fv = vsc.getFieldVectors().get(this.keyColumnIndex);
+        for (int rowIndex = 0; rowIndex < rowCount; ++rowIndex) {
+            final Object key = fv.getObject(rowIndex);
+            final RowCoordinate oldRowCoordinate = this.rowCoordinateMap.get(key);
+            if (oldRowCoordinate != null) {
+                arrowBatches.get(oldRowCoordinate.batchIndex).markAsDeleted(oldRowCoordinate.rowIndex);
+            }
+            this.rowCoordinateMap.put(key, new RowCoordinate(batchIndex, rowIndex));
+        }
+    }
+
 
     @Override
     public RelDataType getRowType(RelDataTypeFactory typeFactory) {
@@ -117,6 +190,7 @@ public class ArrowTable extends AbstractTable
                 final TreeNode node = TreeBuilder.makeField(field);
                 expressionTrees.add(TreeBuilder.makeExpression(node, field));
             }
+
             try {
                 projector = Projector.make(this.arrowSchema, expressionTrees);
             } catch (GandivaException ex) {

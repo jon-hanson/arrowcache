@@ -2,7 +2,6 @@ package io.nson.arrowcache.server2.calcite;
 
 import org.apache.arrow.gandiva.evaluator.*;
 import org.apache.arrow.memory.BufferAllocator;
-import org.apache.arrow.vector.ipc.message.ArrowRecordBatch;
 import org.apache.arrow.vector.types.pojo.Schema;
 import org.apache.calcite.linq4j.*;
 import org.apache.calcite.util.*;
@@ -17,7 +16,7 @@ public class ArrowEnumerable extends AbstractEnumerable<Object> {
 
     private final BufferAllocator allocator;
     private final Schema arrowSchema;
-    private final List<ArrowRecordBatch> arrowRecordBatches;
+    private final List<ArrowTable.Batch> arrowTableBatches;
     private final ImmutableIntList fields;
     private final @Nullable Projector projector;
     private final @Nullable Filter filter;
@@ -25,14 +24,14 @@ public class ArrowEnumerable extends AbstractEnumerable<Object> {
     ArrowEnumerable(
             BufferAllocator allocator,
             Schema arrowSchema,
-            List<ArrowRecordBatch> arrowRecordBatches,
+            List<ArrowTable.Batch> arrowTableBatches,
             ImmutableIntList fields,
             @Nullable Projector projector,
             @Nullable Filter filter
     ) {
         this.allocator = allocator;
         this.arrowSchema = arrowSchema;
-        this.arrowRecordBatches = arrowRecordBatches;
+        this.arrowTableBatches = arrowTableBatches;
         this.projector = projector;
         this.filter = filter;
         this.fields = fields;
@@ -44,7 +43,7 @@ public class ArrowEnumerable extends AbstractEnumerable<Object> {
                 return new ArrowProjectEnumerator(
                         this.allocator,
                         this.arrowSchema,
-                        this.arrowRecordBatches,
+                        this.arrowTableBatches,
                         this.fields,
                         this.projector
                 );
@@ -52,7 +51,7 @@ public class ArrowEnumerable extends AbstractEnumerable<Object> {
                 return new ArrowFilterEnumerator(
                         this.allocator,
                         this.arrowSchema,
-                        arrowRecordBatches,
+                        arrowTableBatches,
                         this.fields,
                         this.filter
                 );

@@ -5,6 +5,7 @@ import io.nson.arrowcache.server.TestData;
 import io.nson.arrowcache.server2.calcite.ArrowSchema;
 import io.nson.arrowcache.server2.calcite.ArrowSchemaFactory;
 import org.apache.arrow.memory.BufferAllocator;
+import org.apache.arrow.memory.RootAllocator;
 import org.apache.arrow.vector.VectorSchemaRoot;
 import org.apache.arrow.vector.VectorUnloader;
 import org.apache.calcite.config.CalciteConnectionProperty;
@@ -23,12 +24,11 @@ public class TestCalcite {
     public static void main(String[] args) throws IOException, ClassNotFoundException, SQLException {
         final SchemaConfig schemaConfig = FileUtils.loadFromResource("schemaconfig.json", SchemaConfig.CODEC);
         try(
-                final AllocatorManager allocatorManager = new AllocatorManager(schemaConfig.allocatorMaxSize());
-                final BufferAllocator bufferAlloc = allocatorManager.newChildAllocator("TestCalcite");
+                final RootAllocator rootAllocator = new RootAllocator(Long.MAX_VALUE);
         ) {
-            ArrowSchemaFactory.initialise(bufferAlloc, schemaConfig);
+            ArrowSchemaFactory.initialise(rootAllocator, schemaConfig);
 
-            try (final VectorSchemaRoot vsc = TestData.createTestDataVSC(bufferAlloc)) {
+            try (final VectorSchemaRoot vsc = TestData.createTestDataVSC(rootAllocator)) {
                 final ArrowSchema schema = ArrowSchemaFactory.instance().create("test");
                 final VectorUnloader unloader = new VectorUnloader(vsc);
 
@@ -38,7 +38,7 @@ public class TestCalcite {
 
                 logger.info("Loading testdata2.csv");
                 testDataMap.putAll(TestData.loadTestData(vsc, "testdata2.csv"));
-                schema.addBatches("ghi", vsc.getSchema(), unloader.getRecordBatch());
+                schema.addBatches("abc", vsc.getSchema(), unloader.getRecordBatch());
 
                 Class.forName("org.apache.calcite.jdbc.Driver");
                 final Properties props = new Properties();
@@ -46,7 +46,7 @@ public class TestCalcite {
                 try (final Connection connection = DriverManager.getConnection("jdbc:calcite:model=src/main/resources/model.json", props)) {
                     final CalciteConnection calciteConnection = connection.unwrap(CalciteConnection.class);
                     try (final Statement statement = calciteConnection.createStatement()) {
-                        if (statement.execute("SELECT * FROM test.abc")) {
+                        if (statement.execute("SELECT * FROM test.abc WHERE name = 'ghi'")) {
                             final ResultSet rs = statement.getResultSet();
                             final ResultSetMetaData rsMetadata = rs.getMetaData();
 

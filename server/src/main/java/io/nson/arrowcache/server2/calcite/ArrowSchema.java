@@ -19,8 +19,12 @@ public class ArrowSchema extends AbstractSchema implements AutoCloseable {
     private final Map<String, ArrowSchema> childSchemaMap;
     private final Map<String, Table> tableMap;
 
-    ArrowSchema(BufferAllocator allocator, SchemaConfig schemaConfig) {
-        this.allocator = allocator;
+    ArrowSchema(
+            BufferAllocator allocator,
+            String name,
+            SchemaConfig schemaConfig
+    ) {
+        this.allocator = allocator.newChildAllocator("ArrowSchema:" + name, 0, Long.MAX_VALUE);
         this.schemaConfig = schemaConfig;
         this.childSchemaMap = new TreeMap<>();
         this.tableMap = new TreeMap<>();
@@ -28,13 +32,15 @@ public class ArrowSchema extends AbstractSchema implements AutoCloseable {
 
     @Override
     public void close() {
-        tableMap.values().forEach(table -> ((ArrowTable)table).close());
-        childSchemaMap.values().forEach(ArrowSchema::close);
+        logger.info("Closing...");
+        this.tableMap.values().forEach(table -> ((ArrowTable)table).close());
+        this.childSchemaMap.values().forEach(ArrowSchema::close);
+        this.allocator.close();
     }
 
     @Override
     protected Map<String, Table> getTableMap() {
-        return tableMap;
+        return this.tableMap;
     }
 
     public void addBatches(String tableName, Schema arrowSchema, ArrowRecordBatch arb) {
@@ -42,11 +48,11 @@ public class ArrowSchema extends AbstractSchema implements AutoCloseable {
     }
 
     public void addBatches(String tableName, Schema arrowSchema, List<ArrowRecordBatch> arbs) {
-        final ArrowTable table = (ArrowTable)tableMap.computeIfAbsent(
+        final ArrowTable table = (ArrowTable)this.tableMap.computeIfAbsent(
                 tableName,
                 tn -> {
-                    final SchemaConfig.TableConfig tableConfig = schemaConfig.tables().get(tableName);
-                    return new ArrowTable(allocator, tableConfig, arrowSchema);
+                    final SchemaConfig.TableConfig tableConfig = this.schemaConfig.tables().get(tableName);
+                    return new ArrowTable(tableName, this.allocator, tableConfig, arrowSchema);
                 }
         );
         table.addBatches(arrowSchema, arbs);

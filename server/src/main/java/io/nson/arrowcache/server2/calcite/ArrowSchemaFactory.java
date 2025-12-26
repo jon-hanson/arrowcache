@@ -56,6 +56,7 @@ public final class ArrowSchemaFactory implements SchemaFactory, AutoCloseable {
 
     @Override
     public void close() {
+        logger.info("Closing...");
         schemaMap.values().forEach(ArrowSchema::close);
         this.allocator.close();
     }
@@ -68,7 +69,7 @@ public final class ArrowSchemaFactory implements SchemaFactory, AutoCloseable {
     public ArrowSchema create(String name) {
         return schemaMap.computeIfAbsent(
                 name,
-                u -> new ArrowSchema(allocator, schemaConfig.childSchema(name))
+                u -> new ArrowSchema(allocator, name, schemaConfig.childSchema(name))
         );
     }
 }
