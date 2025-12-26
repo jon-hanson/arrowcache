@@ -12,8 +12,6 @@ import org.apache.calcite.rel.core.Filter;
 import org.apache.calcite.rel.core.Project;
 import org.apache.calcite.rel.logical.LogicalFilter;
 import org.apache.calcite.rel.logical.LogicalProject;
-import org.apache.calcite.rel.type.RelDataType;
-import org.apache.calcite.sql.validate.SqlValidatorUtil;
 
 import com.google.common.collect.ImmutableList;
 import org.jspecify.annotations.Nullable;

@@ -12,7 +12,7 @@ import org.slf4j.LoggerFactory;
 
 import java.util.*;
 
-public class ArrowFilterEnumerator extends AbstractArrowEnumerator {
+public final class ArrowFilterEnumerator extends AbstractArrowEnumerator {
     private static final Logger logger = LoggerFactory.getLogger(ArrowFilterEnumerator.class);
 
     private final Filter filter;

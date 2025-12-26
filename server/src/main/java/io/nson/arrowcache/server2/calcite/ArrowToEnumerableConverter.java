@@ -26,10 +26,10 @@ import java.util.Objects;
 /**
  * Relational expression representing a scan of a table in an Arrow data source.
  */
-class ArrowToEnumerableConverter
+final class ArrowToEnumerableConverter
         extends ConverterImpl implements EnumerableRel {
 
-    protected ArrowToEnumerableConverter(
+    ArrowToEnumerableConverter(
             RelOptCluster cluster,
             RelTraitSet traitSet,
             RelNode input

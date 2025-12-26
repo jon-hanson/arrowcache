@@ -84,6 +84,7 @@ public abstract class AbstractArrowEnumerator implements Enumerator<Object> {
         }
     }
 
+    @Override
     public void reset() {
         throw new UnsupportedOperationException();
     }

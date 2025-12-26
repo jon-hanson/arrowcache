@@ -37,6 +37,7 @@ public class ArrowEnumerable extends AbstractEnumerable<Object> {
         this.fields = fields;
     }
 
+    @Override
     public Enumerator<Object> enumerator() {
         try {
             if (this.projector != null) {

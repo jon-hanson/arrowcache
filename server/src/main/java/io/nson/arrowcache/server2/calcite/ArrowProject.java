@@ -25,7 +25,7 @@ import static java.util.Objects.requireNonNull;
  * Implementation of {@link org.apache.calcite.rel.core.Project}
  * relational expression in Arrow.
  */
-class ArrowProject extends Project implements ArrowRel {
+final class ArrowProject extends Project implements ArrowRel {
 
     ArrowProject(
             RelOptCluster cluster,
@@ -39,7 +39,8 @@ class ArrowProject extends Project implements ArrowRel {
         assert getConvention() == input.getConvention();
     }
 
-    @Override public Project copy(
+    @Override
+    public Project copy(
             RelTraitSet traitSet,
             RelNode input,
             List<RexNode> projects,
@@ -48,7 +49,8 @@ class ArrowProject extends Project implements ArrowRel {
         return new ArrowProject(getCluster(), traitSet, input, projects, rowType);
     }
 
-    @Override public RelOptCost computeSelfCost(
+    @Override
+    public RelOptCost computeSelfCost(
             RelOptPlanner planner,
             RelMetadataQuery mq
     ) {
@@ -56,7 +58,8 @@ class ArrowProject extends Project implements ArrowRel {
         return requireNonNull(cost, "cost").multiplyBy(0.1);
     }
 
-    @Override public void implement(Implementor implementor) {
+    @Override
+    public void implement(Implementor implementor) {
         implementor.visitInput(0, getInput());
         final List<Integer> projectedFields = getProjectFields(getProjects());
         if (projectedFields != null) {

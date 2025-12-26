@@ -11,7 +11,7 @@ import org.slf4j.LoggerFactory;
 
 import java.util.*;
 
-public class ArrowSchema extends AbstractSchema implements AutoCloseable {
+public final class ArrowSchema extends AbstractSchema implements AutoCloseable {
     private static final Logger logger = LoggerFactory.getLogger(ArrowSchema.class);
 
     private final BufferAllocator allocator;

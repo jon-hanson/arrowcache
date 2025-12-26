@@ -10,7 +10,7 @@ import org.apache.calcite.util.ImmutableIntList;
 
 import java.util.List;
 
-public class ArrowTableScan extends TableScan implements ArrowRel {
+public final class ArrowTableScan extends TableScan implements ArrowRel {
     private final ArrowTable arrowTable;
     private final ImmutableIntList fields;
 
@@ -28,15 +28,18 @@ public class ArrowTableScan extends TableScan implements ArrowRel {
         assert this.getConvention() == ArrowRel.CONVENTION;
     }
 
+    @Override
     public RelNode copy(RelTraitSet traitSet, List<RelNode> inputs) {
         Preconditions.checkArgument(inputs.isEmpty());
         return this;
     }
 
+    @Override
     public RelWriter explainTerms(RelWriter pw) {
         return super.explainTerms(pw).item("fields", this.fields);
     }
 
+    @Override
     public RelDataType deriveRowType() {
         final List<RelDataTypeField> fieldList = this.table.getRowType().getFieldList();
         final RelDataTypeFactory.Builder builder = this.getCluster().getTypeFactory().builder();
@@ -48,6 +51,7 @@ public class ArrowTableScan extends TableScan implements ArrowRel {
         return builder.build();
     }
 
+    @Override
     public void register(RelOptPlanner planner) {
         planner.addRule(ArrowRules.TO_ENUMERABLE);
 
@@ -56,6 +60,7 @@ public class ArrowTableScan extends TableScan implements ArrowRel {
         }
     }
 
+    @Override
     public void implement(ArrowRel.Implementor implementor) {
         implementor.arrowTable = this.arrowTable;
         implementor.table = this.table;

@@ -12,11 +12,7 @@ import org.apache.calcite.rex.RexNode;
 import java.util.List;
 import java.util.Objects;
 
-/**
- * Implementation of a {@link org.apache.calcite.rel.core.Filter}
- * relational expression in Arrow.
- */
-class ArrowFilter extends Filter implements ArrowRel {
+final class ArrowFilter extends Filter implements ArrowRel {
     private final List<String> match;
 
     ArrowFilter(RelOptCluster cluster, RelTraitSet traitSet, RelNode input, RexNode condition) {
@@ -29,16 +25,19 @@ class ArrowFilter extends Filter implements ArrowRel {
         assert getConvention() == input.getConvention();
     }
 
-    @Override public RelOptCost computeSelfCost(RelOptPlanner planner, RelMetadataQuery mq) {
+    @Override
+    public RelOptCost computeSelfCost(RelOptPlanner planner, RelMetadataQuery mq) {
         final RelOptCost cost = super.computeSelfCost(planner, mq);
         return Objects.requireNonNull(cost, "cost").multiplyBy(0.1);
     }
 
-    @Override public ArrowFilter copy(RelTraitSet traitSet, RelNode input, RexNode condition) {
+    @Override
+    public ArrowFilter copy(RelTraitSet traitSet, RelNode input, RexNode condition) {
         return new ArrowFilter(getCluster(), traitSet, input, condition);
     }
 
-    @Override public void implement(Implementor implementor) {
+    @Override
+    public void implement(Implementor implementor) {
         implementor.visitInput(0, getInput());
         implementor.addFilters(match);
     }

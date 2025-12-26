@@ -30,7 +30,7 @@ import java.util.Objects;
 /**
  * Translates a {@link RexNode} expression to a Gandiva string.
  */
-class ArrowTranslator {
+final class ArrowTranslator {
     private static final Logger logger = LoggerFactory.getLogger(ArrowTranslator.class);
 
     static List<String> arrowFieldNames(RelDataType rowType) {
@@ -41,14 +41,12 @@ class ArrowTranslator {
     private final RelDataType rowType;
     private final List<String> fieldNames;
 
-    /** Private constructor. */
-    ArrowTranslator(RexBuilder rexBuilder, RelDataType rowType) {
+    private ArrowTranslator(RexBuilder rexBuilder, RelDataType rowType) {
         this.rexBuilder = rexBuilder;
         this.rowType = rowType;
         this.fieldNames = arrowFieldNames(rowType);
     }
 
-    /** Creates an ArrowTranslator. */
     public static ArrowTranslator create(
             RexBuilder rexBuilder,
             RelDataType rowType

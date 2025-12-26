@@ -11,7 +11,7 @@ import org.slf4j.LoggerFactory;
 
 import java.util.List;
 
-public class ArrowProjectEnumerator extends AbstractArrowEnumerator {
+public final class ArrowProjectEnumerator extends AbstractArrowEnumerator {
     private static final Logger logger = LoggerFactory.getLogger(ArrowProjectEnumerator.class);
 
     private final Projector projector;
@@ -38,6 +38,7 @@ public class ArrowProjectEnumerator extends AbstractArrowEnumerator {
         super.close();
     }
 
+    @Override
     protected void evaluateOperator(ArrowRecordBatch arrowRecordBatch) {
         try {
             this.projector.evaluate(arrowRecordBatch, this.valueVectors);
@@ -64,20 +65,6 @@ public class ArrowProjectEnumerator extends AbstractArrowEnumerator {
             if (!arrowTableBatches.get(this.currentBatchIndex).deleted().contains(this.currRowIndex)) {
                 return true;
             }
-        }
-    }
-
-    protected boolean nextRow() {
-        if (this.currRowIndex >= this.rowCount - 1) {
-            if (hasNextBatch()) {
-                loadNextArrowBatch();
-                return true;
-            } else {
-                return false;
-            }
-        } else {
-            ++this.currRowIndex;
-            return true;
         }
     }
 }

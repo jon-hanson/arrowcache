@@ -28,7 +28,7 @@ import java.lang.reflect.Type;
 import java.util.*;
 import java.util.concurrent.locks.*;
 
-public class ArrowTable extends AbstractTable
+public final class ArrowTable extends AbstractTable
         implements TranslatableTable, QueryableTable, AutoCloseable {
 
     private static final Logger logger = LoggerFactory.getLogger(ArrowTable.class);
