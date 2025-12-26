@@ -57,7 +57,7 @@ public abstract class AbstractArrowEnumerator implements Enumerator<Object>, Aut
 
         this.loader.load(arrowRecordBatch);
 
-        for(int i : this.fields) {
+        for (int i : this.fields) {
             this.valueVectors.add(this.vectorSchemaRoot.getVector(i));
         }
 

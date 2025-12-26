@@ -7,10 +7,14 @@ import org.apache.arrow.vector.types.pojo.Schema;
 import org.apache.calcite.linq4j.*;
 import org.apache.calcite.util.*;
 import org.jspecify.annotations.Nullable;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.List;
 
 public class ArrowEnumerable extends AbstractEnumerable<Object> {
+    private static final Logger logger = LoggerFactory.getLogger(ArrowEnumerable.class);
+
     private final BufferAllocator allocator;
     private final Schema arrowSchema;
     private final List<ArrowRecordBatch> arrowRecordBatches;
@@ -53,7 +57,11 @@ public class ArrowEnumerable extends AbstractEnumerable<Object> {
                         this.filter
                 );
             } else {
-                throw new IllegalArgumentException("The arrow enumerator must have either a filter or a projection");
+                throw ExceptionUtils.logError(
+                        logger,
+                        IllegalArgumentException::new,
+                        "The arrow enumerator must have either a filter or a projection"
+                );
             }
         } catch (Exception e) {
             throw Util.toUnchecked(e);

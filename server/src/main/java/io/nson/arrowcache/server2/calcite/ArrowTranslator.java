@@ -15,6 +15,8 @@ import org.apache.calcite.sql.validate.SqlValidatorUtil;
 import org.apache.calcite.util.DateString;
 
 import org.checkerframework.checker.nullness.qual.Nullable;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
@@ -23,19 +25,21 @@ import java.util.List;
 import static org.apache.calcite.util.DateTimeStringUtils.ISO_DATETIME_FRACTIONAL_SECOND_FORMAT;
 import static org.apache.calcite.util.DateTimeStringUtils.getDateFormatter;
 
-import static java.util.Objects.requireNonNull;
+import java.util.Objects;
 
 /**
  * Translates a {@link RexNode} expression to a Gandiva string.
  */
 class ArrowTranslator {
+    private static final Logger logger = LoggerFactory.getLogger(ArrowTranslator.class);
+
     static List<String> arrowFieldNames(RelDataType rowType) {
         return SqlValidatorUtil.uniquify(rowType.getFieldNames(), SqlValidatorUtil.EXPR_SUGGESTER, true);
     }
 
-    final RexBuilder rexBuilder;
-    final RelDataType rowType;
-    final List<String> fieldNames;
+    private final RexBuilder rexBuilder;
+    private final RelDataType rowType;
+    private final List<String> fieldNames;
 
     /** Private constructor. */
     ArrowTranslator(RexBuilder rexBuilder, RelDataType rowType) {
@@ -45,8 +49,10 @@ class ArrowTranslator {
     }
 
     /** Creates an ArrowTranslator. */
-    public static ArrowTranslator create(RexBuilder rexBuilder,
-                                         RelDataType rowType) {
+    public static ArrowTranslator create(
+            RexBuilder rexBuilder,
+            RelDataType rowType
+    ) {
         return new ArrowTranslator(rexBuilder, rowType);
     }
 
@@ -55,7 +61,11 @@ class ArrowTranslator {
         if (disjunctions.size() == 1) {
             return translateAnd(disjunctions.get(0));
         } else {
-            throw new UnsupportedOperationException("Unsupported disjunctive condition " + condition);
+            throw ExceptionUtils.logError(
+                    logger,
+                    UnsupportedOperationException::new,
+                    "Unsupported disjunctive condition " + condition
+            );
         }
     }
 
@@ -72,13 +82,13 @@ class ArrowTranslator {
             case TIMESTAMP_WITH_LOCAL_TIME_ZONE:
                 final SimpleDateFormat dateFormatter =
                         getDateFormatter(ISO_DATETIME_FRACTIONAL_SECOND_FORMAT);
-                Long millis = literal.getValueAs(Long.class);
-                return dateFormatter.format(requireNonNull(millis, "millis"));
+                final Long millis = literal.getValueAs(Long.class);
+                return dateFormatter.format(Objects.requireNonNull(millis, "millis"));
             case DATE:
                 final DateString dateString = literal.getValueAs(DateString.class);
-                return requireNonNull(dateString, "dateString").toString();
+                return Objects.requireNonNull(dateString, "dateString").toString();
             default:
-                return requireNonNull(literal.getValue3());
+                return Objects.requireNonNull(literal.getValue3());
         }
     }
 
@@ -151,59 +161,77 @@ class ArrowTranslator {
         @Nullable String expression = translateBinary2(op, left, right);
         if (expression != null) {
             return expression;
+        } else {
+            expression = translateBinary2(rop, right, left);
+            if (expression != null) {
+                return expression;
+            }
         }
-        expression = translateBinary2(rop, right, left);
-        if (expression != null) {
-            return expression;
-        }
-        throw new UnsupportedOperationException("Unsupported binary operator " + call);
+        throw ExceptionUtils.logError(
+                logger,
+                UnsupportedOperationException::new,
+                "Unsupported binary operator " + call
+        );
     }
 
     /** Translates a call to a binary operator. Returns null on failure. */
     private @Nullable String translateBinary2(String op, RexNode left, RexNode right) {
         if (right.getKind() != SqlKind.LITERAL) {
             return null;
-        }
-        final RexLiteral rightLiteral = (RexLiteral) right;
-        switch (left.getKind()) {
-            case INPUT_REF:
-                final RexInputRef left1 = (RexInputRef) left;
-                String name = fieldNames.get(left1.getIndex());
-                return translateOp2(op, name, rightLiteral);
-            case CAST:
-                // FIXME This will not work in all cases (for example, we ignore string encoding)
-                return translateBinary2(op, ((RexCall) left).operands.get(0), right);
-            default:
-                return null;
+        } else {
+            final RexLiteral rightLiteral = (RexLiteral) right;
+            switch (left.getKind()) {
+                case INPUT_REF:
+                    final RexInputRef left1 = (RexInputRef) left;
+                    String name = fieldNames.get(left1.getIndex());
+                    return translateOp2(op, name, rightLiteral);
+                case CAST:
+                    // FIXME This will not work in all cases (for example, we ignore string encoding)
+                    return translateBinary2(op, ((RexCall) left).operands.get(0), right);
+                default:
+                    return null;
+            }
         }
     }
 
     /** Combines a field name, operator, and literal to produce a predicate string. */
     private String translateOp2(String op, String name, RexLiteral right) {
-        Object value = literalValue(right);
+        final Object value = literalValue(right);
         String valueString = value.toString();
-        String valueType = getLiteralType(right.getType());
+        final String valueType = getLiteralType(right.getType());
 
         if (value instanceof String) {
-            final RelDataTypeField field = requireNonNull(rowType.getField(name, true, false), "field");
-            SqlTypeName typeName = field.getType().getSqlTypeName();
+            final RelDataTypeField field = Objects.requireNonNull(
+                    rowType.getField(
+                            name,
+                            true,
+                            false
+                    ),
+                    "field"
+            );
+            final SqlTypeName typeName = field.getType().getSqlTypeName();
             if (typeName != SqlTypeName.CHAR) {
                 valueString = "'" + valueString + "'";
             }
         }
+
         return name + " " + op + " " + valueString + " " + valueType;
     }
 
     /** Translates a call to a unary operator. */
     private String translateUnary(String op, RexCall call) {
         final RexNode opNode = call.operands.get(0);
-        @Nullable String expression = translateUnary2(op, opNode);
+        final @Nullable String expression = translateUnary2(op, opNode);
 
         if (expression != null) {
             return expression;
+        } else {
+            throw ExceptionUtils.logError(
+                    logger,
+                    UnsupportedOperationException::new,
+                    "Unsupported unary operator " + call
+            );
         }
-
-        throw new UnsupportedOperationException("Unsupported unary operator " + call);
     }
 
     /** Translates a call to a unary operator. Returns null on failure. */
@@ -212,9 +240,9 @@ class ArrowTranslator {
             final RexInputRef inputRef = (RexInputRef) opNode;
             final String name = fieldNames.get(inputRef.getIndex());
             return translateUnaryOp(op, name);
+        } else {
+            return null;
         }
-
-        return null;
     }
 
     /** Combines a field name and a unary operator to produce a predicate string. */
@@ -223,19 +251,24 @@ class ArrowTranslator {
     }
 
     private static String getLiteralType(RelDataType  type) {
-        if (type.getSqlTypeName() == SqlTypeName.DECIMAL) {
-            return "decimal" + "(" + type.getPrecision() + "," + type.getScale() + ")";
-        } else if (type.getSqlTypeName() == SqlTypeName.REAL) {
-            return "float";
-        } else if (type.getSqlTypeName() == SqlTypeName.DOUBLE) {
-            return "double";
-        } else if (type.getSqlTypeName() == SqlTypeName.INTEGER) {
-            return "integer";
-        } else if (type.getSqlTypeName() == SqlTypeName.VARCHAR
-                || type.getSqlTypeName() == SqlTypeName.CHAR) {
-            return "string";
-        } else {
-            throw new UnsupportedOperationException("Unsupported type " + type);
+        switch (type.getSqlTypeName()) {
+            case DECIMAL:
+                return "decimal" + "(" + type.getPrecision() + "," + type.getScale() + ")";
+            case REAL:
+                return "float";
+            case DOUBLE:
+                return "double";
+            case INTEGER:
+                return "integer";
+            case VARCHAR:
+            case CHAR:
+                return "string";
+            default:
+                throw ExceptionUtils.logError(
+                        logger,
+                        UnsupportedOperationException::new,
+                        "Unsupported type " + type
+                );
         }
     }
 }

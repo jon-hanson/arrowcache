@@ -3,6 +3,7 @@ package io.nson.arrowcache.common.utils;
 import com.google.gson.FormattingStyle;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
+import com.google.gson.Strictness;
 
 public class JsonCodec<T> implements Codec<T, String> {
 
@@ -18,7 +19,9 @@ public class JsonCodec<T> implements Codec<T, String> {
     public JsonCodec(Class<T> clazz) {
         this.clazz = clazz;
         this.gson = prepare(
-                new GsonBuilder().setFormattingStyle(FormattingStyle.PRETTY.withIndent("    "))
+                new GsonBuilder()
+                        .setFormattingStyle(FormattingStyle.PRETTY.withIndent("    "))
+                        .setStrictness(Strictness.STRICT)
         ).create();
     }
 

@@ -127,11 +127,16 @@ public class ArrowTable extends AbstractTable
 
             final List<TreeNode> conditionNodes = new ArrayList<>(conditions.size());
             for (String condition : conditions) {
-                String[] data = condition.split(" ");
-                List<TreeNode> treeNodes = new ArrayList<>(2);
+                final String[] data = condition.split(" ");
+                final List<TreeNode> treeNodes = new ArrayList<>(2);
                 treeNodes.add(
-                        TreeBuilder.makeField(this.arrowSchema.getFields()
-                                .get(this.arrowSchema.getFields().indexOf(this.arrowSchema.findField(data[0])))));
+                        TreeBuilder.makeField(
+                                this.arrowSchema.getFields()
+                                        .get(this.arrowSchema.getFields()
+                                                .indexOf(this.arrowSchema.findField(data[0]))
+                                        )
+                        )
+                );
 
                 // if the split condition has more than two parts it's a binary operator
                 // with an additional literal node
@@ -140,15 +145,14 @@ public class ArrowTable extends AbstractTable
                 }
 
                 final String operator = data[1];
-                conditionNodes.add(
-                        TreeBuilder.makeFunction(operator, treeNodes, new ArrowType.Bool()));
+                conditionNodes.add(TreeBuilder.makeFunction(operator, treeNodes, new ArrowType.Bool()));
             }
 
             final Condition filterCondition;
             if (conditionNodes.size() == 1) {
                 filterCondition = TreeBuilder.makeCondition(conditionNodes.get(0));
             } else {
-                TreeNode treeNode = TreeBuilder.makeAnd(conditionNodes);
+                final TreeNode treeNode = TreeBuilder.makeAnd(conditionNodes);
                 filterCondition = TreeBuilder.makeCondition(treeNode);
             }
 
@@ -176,20 +180,25 @@ public class ArrowTable extends AbstractTable
             final int precision = Integer.parseInt(typeParts[0]);
             final int scale = Integer.parseInt(typeParts[1]);
             return TreeBuilder.makeDecimalLiteral(literal, precision, scale);
-        } else if (type.equals("integer")) {
-            return TreeBuilder.makeLiteral(Integer.parseInt(literal));
-        } else if (type.equals("long")) {
-            return TreeBuilder.makeLiteral(Long.parseLong(literal));
-        } else if (type.equals("float")) {
-            return TreeBuilder.makeLiteral(Float.parseFloat(literal));
-        } else if (type.equals("double")) {
-            return TreeBuilder.makeLiteral(Double.parseDouble(literal));
-        } else if (type.equals("string")) {
-            return TreeBuilder.makeStringLiteral(literal.substring(1, literal.length() - 1));
         } else {
-            throw new IllegalArgumentException(
-                    "Invalid literal " + literal + ", type " + type
-            );
+            switch (type) {
+                case "integer":
+                    return TreeBuilder.makeLiteral(Integer.parseInt(literal));
+                case "long":
+                    return TreeBuilder.makeLiteral(Long.parseLong(literal));
+                case "float":
+                    return TreeBuilder.makeLiteral(Float.parseFloat(literal));
+                case "double":
+                    return TreeBuilder.makeLiteral(Double.parseDouble(literal));
+                case "string":
+                    return TreeBuilder.makeStringLiteral(literal.substring(1, literal.length() - 1));
+                default:
+                    throw ExceptionUtils.logError(
+                            logger,
+                            IllegalArgumentException::new,
+                            "Invalid literal " + literal + ", type " + type
+                    );
+            }
         }
     }
 
@@ -211,8 +220,7 @@ public class ArrowTable extends AbstractTable
     @Override
     public RelNode toRel(RelOptTable.ToRelContext context, RelOptTable relOptTable) {
         final int fieldCount = relOptTable.getRowType().getFieldCount();
-        final ImmutableIntList fields =
-                ImmutableIntList.copyOf(Util.range(fieldCount));
+        final ImmutableIntList fields = ImmutableIntList.copyOf(Util.range(fieldCount));
         final RelOptCluster cluster = context.getCluster();
         return new ArrowTableScan(
                 cluster,

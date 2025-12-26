@@ -1,6 +1,5 @@
 package io.nson.arrowcache.server2.calcite;
 
-import io.nson.arrowcache.server.AllocatorManager;
 import org.apache.arrow.gandiva.evaluator.*;
 import org.apache.arrow.gandiva.exceptions.GandivaException;
 import org.apache.arrow.memory.*;

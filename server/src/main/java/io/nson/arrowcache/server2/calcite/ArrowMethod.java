@@ -14,7 +14,7 @@ import java.util.List;
  *
  * @see org.apache.calcite.util.BuiltInMethod
  */
-@SuppressWarnings("ImmutableEnumChecker")
+//@SuppressWarnings("ImmutableEnumChecker")
 enum ArrowMethod {
     ARROW_QUERY(ArrowTable.class, "query", DataContext.class,
             ImmutableIntList.class, List.class);
@@ -32,7 +32,6 @@ enum ArrowMethod {
         MAP = builder.build();
     }
 
-    /** Defines a method. */
     ArrowMethod(Class<?> clazz, String methodName, Class<?>... argumentTypes) {
         this.method = Types.lookupMethod(clazz, methodName, argumentTypes);
     }

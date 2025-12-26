@@ -81,27 +81,27 @@ public final class SchemaConfig {
         }
     }
 
-    private final AllocatorMaxSizeConfig allocatorMaxSizeConfig;
+    private final AllocatorMaxSizeConfig allocatorMaxSize;
     private final Map<TablePath, TableConfig> tables;
 
     public SchemaConfig(
-            AllocatorMaxSizeConfig allocatorMaxSizeConfig,
+            AllocatorMaxSizeConfig allocatorMaxSize,
             Map<TablePath, TableConfig> tables
     ) {
-        this.allocatorMaxSizeConfig = allocatorMaxSizeConfig;
+        this.allocatorMaxSize = allocatorMaxSize;
         this.tables = tables;
     }
 
     @Override
     public String toString() {
         return "CacheConfig{" +
-                "allocatorMaxSizeConfig=" + allocatorMaxSizeConfig +
+                "allocatorMaxSizeConfig=" + allocatorMaxSize +
                 "tables=" + tables +
                 '}';
     }
 
-    public AllocatorMaxSizeConfig allocatorMaxSizeConfig() {
-        return allocatorMaxSizeConfig;
+    public AllocatorMaxSizeConfig allocatorMaxSize() {
+        return allocatorMaxSize;
     }
 
     public Map<TablePath, TableConfig> tables() {

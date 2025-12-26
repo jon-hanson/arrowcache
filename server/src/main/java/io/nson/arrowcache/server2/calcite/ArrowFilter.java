@@ -10,8 +10,7 @@ import org.apache.calcite.rel.metadata.RelMetadataQuery;
 import org.apache.calcite.rex.RexNode;
 
 import java.util.List;
-
-import static java.util.Objects.requireNonNull;
+import java.util.Objects;
 
 /**
  * Implementation of a {@link org.apache.calcite.rel.core.Filter}
@@ -32,7 +31,7 @@ class ArrowFilter extends Filter implements ArrowRel {
 
     @Override public RelOptCost computeSelfCost(RelOptPlanner planner, RelMetadataQuery mq) {
         final RelOptCost cost = super.computeSelfCost(planner, mq);
-        return requireNonNull(cost, "cost").multiplyBy(0.1);
+        return Objects.requireNonNull(cost, "cost").multiplyBy(0.1);
     }
 
     @Override public ArrowFilter copy(RelTraitSet traitSet, RelNode input, RexNode condition) {

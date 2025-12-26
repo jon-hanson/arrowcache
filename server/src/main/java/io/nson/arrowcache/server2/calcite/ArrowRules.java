@@ -16,8 +16,8 @@ import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.sql.validate.SqlValidatorUtil;
 
 import com.google.common.collect.ImmutableList;
+import org.jspecify.annotations.Nullable;
 
-import org.checkerframework.checker.nullness.qual.Nullable;
 //import org.immutables.value.Value;
 
 import java.util.List;
@@ -39,11 +39,6 @@ public class ArrowRules {
                     .toRule(ArrowToEnumerableConverterRule.class);
 
     public static final List<RelOptRule> RULES = ImmutableList.of(PROJECT_SCAN, FILTER_SCAN);
-
-    static List<String> arrowFieldNames(final RelDataType rowType) {
-        return SqlValidatorUtil.uniquify(rowType.getFieldNames(),
-                SqlValidatorUtil.EXPR_SUGGESTER, true);
-    }
 
     /** Base class for planner rules that convert a relational expression to
      * the Arrow calling convention. */
@@ -102,7 +97,7 @@ public class ArrowRules {
     }
 
     /**
-     * Planner rule that projects from an {@link ArrowTableScan} just the columns
+     * Planner rule that projects from a {@link ArrowTableScan} just the columns
      * needed to satisfy a projection. If the projection's expressions are
      * trivial, the projection is removed.
      *
@@ -123,17 +118,19 @@ public class ArrowRules {
 
         @Override public @Nullable RelNode convert(RelNode rel) {
             final Project project = (Project) rel;
-            @Nullable List<Integer> fields =
-                    ArrowProject.getProjectFields(project.getProjects());
+            List<Integer> fields = ArrowProject.getProjectFields(project.getProjects());
             if (fields == null) {
                 // Project contains expressions more complex than just field references.
                 return null;
             }
-            final RelTraitSet traitSet =
-                    project.getTraitSet().replace(ArrowRel.CONVENTION);
-            return new ArrowProject(project.getCluster(), traitSet,
+            final RelTraitSet traitSet = project.getTraitSet().replace(ArrowRel.CONVENTION);
+            return new ArrowProject(
+                    project.getCluster(),
+                    traitSet,
                     convert(project.getInput(), ArrowRel.CONVENTION),
-                    project.getProjects(), project.getRowType());
+                    project.getProjects(),
+                    project.getRowType()
+            );
         }
     }
 
@@ -145,9 +142,12 @@ public class ArrowRules {
 
         /** Default configuration. */
         public static final Config DEFAULT_CONFIG = Config.INSTANCE
-                .withConversion(RelNode.class, ArrowRel.CONVENTION,
-                        EnumerableConvention.INSTANCE, "ArrowToEnumerableConverterRule")
-                .withRuleFactory(ArrowToEnumerableConverterRule::new);
+                .withConversion(
+                        RelNode.class,
+                        ArrowRel.CONVENTION,
+                        EnumerableConvention.INSTANCE,
+                        "ArrowToEnumerableConverterRule"
+                ).withRuleFactory(ArrowToEnumerableConverterRule::new);
 
         /** Creates an ArrowToEnumerableConverterRule. */
         protected ArrowToEnumerableConverterRule(Config config) {

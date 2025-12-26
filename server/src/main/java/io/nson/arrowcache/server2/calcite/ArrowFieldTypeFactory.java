@@ -6,11 +6,14 @@ import org.apache.calcite.sql.type.SqlTypeName;
 
 import org.apache.arrow.vector.types.FloatingPointPrecision;
 import org.apache.arrow.vector.types.pojo.ArrowType;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Arrow field type.
  */
 public class ArrowFieldTypeFactory {
+    private static final Logger logger = LoggerFactory.getLogger(ArrowFieldTypeFactory.class);
 
     private ArrowFieldTypeFactory() {
         throw new UnsupportedOperationException("Utility class");
@@ -42,7 +45,11 @@ public class ArrowFieldTypeFactory {
                     case 8:
                         return typeFactory.createSqlType(SqlTypeName.TINYINT);
                     default:
-                        throw new IllegalArgumentException("Unsupported Int bit width: " + bitWidth);
+                        throw ExceptionUtils.logError(
+                                logger,
+                                IllegalArgumentException::new,
+                                "Unsupported Int bit width: " + bitWidth
+                        );
                 }
             case Bool:
                 return typeFactory.createSqlType(SqlTypeName.BOOLEAN);
@@ -56,7 +63,11 @@ public class ArrowFieldTypeFactory {
                     case DOUBLE:
                         return typeFactory.createSqlType(SqlTypeName.DOUBLE);
                     default:
-                        throw new IllegalArgumentException("Unsupported Floating point precision: " + precision);
+                        throw ExceptionUtils.logError(
+                                logger,
+                                IllegalArgumentException::new,
+                                "Unsupported Floating point precision: " + precision
+                        );
                 }
             case Date:
                 return typeFactory.createSqlType(SqlTypeName.DATE);
@@ -67,7 +78,11 @@ public class ArrowFieldTypeFactory {
             case Time:
                 return typeFactory.createSqlType(SqlTypeName.TIME);
             default:
-                throw new IllegalArgumentException("Unsupported type: " + arrowType);
+                throw ExceptionUtils.logError(
+                        logger,
+                        IllegalArgumentException::new,
+                        "Unsupported type: " + arrowType
+                );
         }
     }
 }

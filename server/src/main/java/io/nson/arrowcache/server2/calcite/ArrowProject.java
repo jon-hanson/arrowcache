@@ -27,29 +27,38 @@ import static java.util.Objects.requireNonNull;
  */
 class ArrowProject extends Project implements ArrowRel {
 
-    /** Creates an ArrowProject. */
-    ArrowProject(RelOptCluster cluster, RelTraitSet traitSet,
-                 RelNode input, List<? extends RexNode> projects, RelDataType rowType) {
+    ArrowProject(
+            RelOptCluster cluster,
+            RelTraitSet traitSet,
+            RelNode input,
+            List<? extends RexNode> projects,
+            RelDataType rowType
+    ) {
         super(cluster, traitSet, ImmutableList.of(), input, projects, rowType, ImmutableSet.of());
         assert getConvention() == ArrowRel.CONVENTION;
         assert getConvention() == input.getConvention();
     }
 
-    @Override public Project copy(RelTraitSet traitSet, RelNode input,
-                                  List<RexNode> projects, RelDataType rowType) {
-        return new ArrowProject(getCluster(), traitSet, input, projects,
-                rowType);
+    @Override public Project copy(
+            RelTraitSet traitSet,
+            RelNode input,
+            List<RexNode> projects,
+            RelDataType rowType
+    ) {
+        return new ArrowProject(getCluster(), traitSet, input, projects, rowType);
     }
 
-    @Override public RelOptCost computeSelfCost(RelOptPlanner planner,
-                                                RelMetadataQuery mq) {
+    @Override public RelOptCost computeSelfCost(
+            RelOptPlanner planner,
+            RelMetadataQuery mq
+    ) {
         final RelOptCost cost = super.computeSelfCost(planner, mq);
         return requireNonNull(cost, "cost").multiplyBy(0.1);
     }
 
     @Override public void implement(Implementor implementor) {
         implementor.visitInput(0, getInput());
-        List<Integer> projectedFields = getProjectFields(getProjects());
+        final List<Integer> projectedFields = getProjectFields(getProjects());
         if (projectedFields != null) {
             implementor.addProjectFields(projectedFields);
         }
@@ -61,7 +70,8 @@ class ArrowProject extends Project implements ArrowRel {
             if (exp instanceof RexInputRef) {
                 fields.add(((RexInputRef) exp).getIndex());
             } else {
-                return null; // not a simple projection
+                // not a simple projection
+                return null;
             }
         }
         return fields;

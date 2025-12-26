@@ -32,7 +32,7 @@ public class DataNodeTest {
     public void test() throws IOException {
         final SchemaConfig schemaConfig = FileUtils.loadFromResource("cacheconfig.json", SchemaConfig.CODEC);
         try(
-                final AllocatorManager allocatorManager = new AllocatorManager(schemaConfig.allocatorMaxSizeConfig());
+                final AllocatorManager allocatorManager = new AllocatorManager(schemaConfig.allocatorMaxSize());
                 final VectorSchemaRoot vsc = TestData.createTestDataVSC(allocatorManager.newChildAllocator("test-data"));
                 final DataNode dataNode = new DataNode("abc", "id", allocatorManager, vsc.getSchema());
         ) {

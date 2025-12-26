@@ -71,7 +71,7 @@ public class ArrowCacheServer implements AutoCloseable {
 
         final SchemaConfig schemaConfig = FileUtils.loadFromResource("cacheconfig.json", SchemaConfig.CODEC);
         final ServerConfig serverConfig = FileUtils.loadFromResource("serverconfig.json", ServerConfig.CODEC);
-        final AllocatorManager allocatorManager = new AllocatorManager(schemaConfig.allocatorMaxSizeConfig());
+        final AllocatorManager allocatorManager = new AllocatorManager(schemaConfig.allocatorMaxSize());
 
         final DataStore dataStore = new DataStore(schemaConfig, allocatorManager);
         final ArrowCacheServer server = new ArrowCacheServer(
