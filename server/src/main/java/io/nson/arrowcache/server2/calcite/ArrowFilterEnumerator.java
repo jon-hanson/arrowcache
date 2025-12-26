@@ -33,7 +33,7 @@ public class ArrowFilterEnumerator extends AbstractArrowEnumerator {
 
     @Override
     public void close() {
-        logger.info("Closing...");
+        logger.debug("Closing...");
         try {
             if (this.buf != null) {
                 this.buf.close();

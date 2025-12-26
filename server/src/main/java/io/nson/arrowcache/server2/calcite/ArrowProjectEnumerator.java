@@ -29,7 +29,7 @@ public class ArrowProjectEnumerator extends AbstractArrowEnumerator {
 
     @Override
     public void close() {
-        logger.info("Closing...");
+        logger.debug("Closing...");
         try {
             this.projector.close();
         } catch (GandivaException ex) {

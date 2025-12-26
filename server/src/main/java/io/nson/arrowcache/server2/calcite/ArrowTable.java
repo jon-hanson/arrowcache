@@ -72,7 +72,7 @@ public class ArrowTable extends AbstractTable
 
         @Override
         public void close() {
-            logger.info("Closing...");
+            logger.debug("Closing...");
             arrowRecordBatch.close();
         }
 

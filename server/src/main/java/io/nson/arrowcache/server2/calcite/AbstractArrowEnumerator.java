@@ -42,7 +42,7 @@ public abstract class AbstractArrowEnumerator implements Enumerator<Object> {
 
     @Override
     public void close() {
-        logger.info("Closing...");
+        logger.debug("Closing...");
         this.vectorSchemaRoot.close();
     }
 
