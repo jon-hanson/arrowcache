@@ -18,8 +18,10 @@ public interface Codec<RAW, ENC> extends BiCodec<ENC, RAW, RAW, ENC> {
         };
     }
 
+    @Override
     ENC encode(RAW raw);
 
+    @Override
     RAW decode(ENC enc);
 
     default <ENC2> Codec<RAW, ENC2> andThen(Codec<ENC, ENC2> next) {

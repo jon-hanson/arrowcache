@@ -43,6 +43,14 @@ public final class SchemaConfig {
             this.allocatorSizeMap = allocatorSizeMap;
         }
 
+        @Override
+        public String toString() {
+            return "AllocatorMaxSizeConfig{" +
+                    "defaultSize='" + defaultSize + '\'' +
+                    " allocatorSizeMap='" + allocatorSizeMap + '\'' +
+                    '}';
+        }
+
         public long defaultSize() {
             return defaultSize;
         }
@@ -95,8 +103,8 @@ public final class SchemaConfig {
     @Override
     public String toString() {
         return "CacheConfig{" +
-                "allocatorMaxSizeConfig=" + allocatorMaxSize +
-                "tables=" + tables +
+                "allocatorMaxSize=" + allocatorMaxSize +
+                " tables=" + tables +
                 '}';
     }
 

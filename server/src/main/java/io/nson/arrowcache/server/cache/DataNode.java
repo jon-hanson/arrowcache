@@ -56,7 +56,7 @@ public final class DataNode implements AutoCloseable {
             arrowRecordBatch.close();
         }
 
-        public void markAsReplaced(int rowIndex) {
+        void markAsReplaced(int rowIndex) {
             replaced.add(rowIndex);
         }
 

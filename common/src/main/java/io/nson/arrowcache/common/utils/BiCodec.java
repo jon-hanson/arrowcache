@@ -6,37 +6,33 @@ import java.util.function.Function;
  * A BiCodec instance encodes values of type ENC2 to values of type ENC1,
  * and decodes values of type DEC2 to values of type DEC1.
  * In effect, it's a generalisation of Codec.
- * @param <ENC1>
- * @param <ENC2>
- * @param <DEC1>
- * @param <DEC2>
  */
-public interface BiCodec<ENC1, ENC2, DEC1, DEC2> {
-    static <ENC1, ENC2, DEC1, DEC2> BiCodec<ENC1, ENC2, DEC1, DEC2> valueOf(
-            Function<ENC2, ENC1> encoder,
-            Function<DEC2, DEC1> decoder
+public interface BiCodec<ENC_R, ENC_T, DEC_R, DEC_T> {
+    static <ENC_R, ENC_T, DEC_R, DEC_T> BiCodec<ENC_R, ENC_T, DEC_R, DEC_T> valueOf(
+            Function<ENC_T, ENC_R> encoder,
+            Function<DEC_T, DEC_R> decoder
     ) {
         return new BiCodec<>() {
             @Override
-            public ENC1 encode(ENC2 raw) {
+            public ENC_R encode(ENC_T raw) {
                 return encoder.apply(raw);
             }
 
             @Override
-            public DEC1 decode(DEC2 enc) {
+            public DEC_R decode(DEC_T enc) {
                 return decoder.apply(enc);
             }
         };
     }
 
-    ENC1 encode(ENC2 raw);
+    ENC_R encode(ENC_T raw);
 
-    DEC1 decode(DEC2 enc);
+    DEC_R decode(DEC_T enc);
 
-    default <ENC3, DEC3> BiCodec<ENC3, ENC2, DEC1, DEC3> andThen(BiCodec<ENC3, ENC1, DEC2, DEC3> next) {
+    default <ENC_3, DEC_3> BiCodec<ENC_3, ENC_T, DEC_R, DEC_3> andThen(BiCodec<ENC_3, ENC_R, DEC_T, DEC_3> next) {
         return valueOf(
-                enc2 -> next.encode(encode(enc2)),
-                dec3 -> decode(next.decode(dec3))
+                enc -> next.encode(encode(enc)),
+                dec -> decode(next.decode(dec))
         );
     }
 }
