@@ -1,6 +1,7 @@
 package io.nson.arrowcache.common.utils;
 
 import org.apache.arrow.flight.Action;
+import org.apache.arrow.flight.FlightDescriptor;
 import org.apache.arrow.flight.FlightProducer;
 import org.apache.arrow.flight.Result;
 import org.apache.arrow.vector.FieldVector;
@@ -64,5 +65,14 @@ public abstract class ArrowUtils {
                             .collect(joining(", "))
             );
         }
+    }
+
+    public static Object toString(FlightDescriptor descriptor) {
+        return "FlightDescriptor{" +
+                    "isCommand=" + descriptor.isCommand() +
+                    (descriptor.isCommand() ?
+                       " command=<" + descriptor.getCommand().length + " bytes>" :
+                        " path=<" + descriptor.getPath()
+                    ) + "}";
     }
 }

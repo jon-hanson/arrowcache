@@ -1,6 +1,6 @@
 package io.nson.arrowcache.client;
 
-import io.nson.arrowcache.common.utils.JsonCodec;
+import io.nson.arrowcache.commonold.utils.JsonCodec;
 
 public class ClientConfig {
     public static final JsonCodec<ClientConfig> CODEC = new JsonCodec<>(ClientConfig.class) {};

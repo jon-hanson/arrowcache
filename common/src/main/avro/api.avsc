@@ -1,0 +1,110 @@
+[
+    {
+        "namespace": "io.nson.arrowcache.common.avro",
+        "type": "record",
+        "name": "AvroDate",
+        "fields": [
+            {
+                "name": "year",
+                "type": "int"
+            },{
+                "name": "month",
+                "type": "int"
+            },{
+                "name": "day",
+                "type": "int"
+            }
+        ]
+    },{
+        "namespace": "io.nson.arrowcache.common.avro",
+        "type": "record",
+        "name": "CriteriaRequest",
+        "fields": [
+            {
+                "name": "schemas",
+                "type": {
+                    "type": "array",
+                    "items": "string"
+                }
+            },{
+                "name": "recursive",
+                "type": "boolean",
+                "default": false
+            }
+        ]
+    },{
+        "namespace": "io.nson.arrowcache.common.avro",
+        "type": "record",
+        "name": "CriteriaResponse",
+        "fields": [
+            {
+                "name": "schemaTables",
+                "type": {
+                    "type": "map",
+                    "values" : {
+                        "type": "array",
+                        "items": "string"
+                    }
+                }
+            }
+        ]
+    },{
+        "namespace": "io.nson.arrowcache.common.avro",
+        "type": "record",
+        "name": "QueryRequest",
+        "fields": [
+            {
+                "name": "sql",
+                "type": "string"
+            }
+        ]
+    },{
+        "namespace": "io.nson.arrowcache.common.avro",
+        "type": "record",
+        "name": "GetRequest",
+        "fields": [
+            {
+                "name": "schema",
+                "type": "string"
+            },{
+                "name": "table",
+                "type": "string"
+            },{
+                "name": "keys",
+                "type": {
+                    "type": "array",
+                    "items": ["int", "long", "string", "AvroDate"]
+                }
+            }
+        ]
+     },{
+        "namespace": "io.nson.arrowcache.common.avro",
+        "type": "record",
+        "name": "DeleteRequest",
+        "fields": [
+            {
+                "name": "schema",
+                "type": "string"
+            },{
+                "name": "table",
+                "type": "string"
+            },{
+                "name": "keys",
+                "type": {
+                    "type": "array",
+                    "items": ["int", "long", "string", "AvroDate"]
+                }
+            }
+        ]
+    },{
+        "namespace": "io.nson.arrowcache.common.avro",
+        "type": "record",
+        "name": "FlightInfoRequest",
+        "fields": [
+            {
+                "name": "request",
+                "type": ["GetRequest", "QueryRequest"]
+            }
+        ]
+    }
+]

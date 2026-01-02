@@ -1,4 +1,5 @@
 package io.nson.arrowcache.common.utils;
+import io.nson.arrowcache.common.Codec;
 
 import java.io.BufferedReader;
 import java.io.IOException;
@@ -38,13 +39,16 @@ public abstract class FileUtils {
     }
 
     public static List<String> openResourceAsLineList(String name) throws IOException {
-        final Stream<String> lineStr =  openResourceAsLineStream(name);
+        final Stream<String> lineStr = openResourceAsLineStream(name);
         final List<String> lines = lineStr.collect(toList());
         lineStr.close();
         return lines;
     }
 
-    public static <T> T loadFromResource(String resourceName, Codec<T, String> codec) throws IOException {
+    public static <T> T loadFromResource(
+            String resourceName,
+            Codec<T, String> codec
+    ) throws IOException {
         return codec.decode(FileUtils.readResource(resourceName));
     }
 

@@ -1,12 +1,12 @@
 package io.nson.arrowcache.client.impl;
 
 import io.nson.arrowcache.client.ClientAPI;
-import io.nson.arrowcache.common.Actions;
-import io.nson.arrowcache.common.Model;
-import io.nson.arrowcache.common.TablePath;
-import io.nson.arrowcache.common.codec.DeleteCodecs;
-import io.nson.arrowcache.common.codec.QueryCodecs;
-import io.nson.arrowcache.common.utils.ArrowUtils;
+import io.nson.arrowcache.commonold.Actions;
+import io.nson.arrowcache.commonold.Model;
+import io.nson.arrowcache.commonold.TablePath;
+import io.nson.arrowcache.commonold.codec.DeleteCodecs;
+import io.nson.arrowcache.commonold.codec.QueryCodecs;
+import io.nson.arrowcache.commonold.utils.ArrowUtils;
 import org.apache.arrow.flight.*;
 import org.apache.arrow.memory.BufferAllocator;
 import org.apache.arrow.memory.RootAllocator;
@@ -16,6 +16,7 @@ import org.slf4j.LoggerFactory;
 
 import java.util.Iterator;
 import java.util.List;
+import java.util.Set;
 import java.util.concurrent.TimeUnit;
 
 public class ArrowFlightClientImpl implements ClientAPI {
@@ -60,7 +61,7 @@ public class ArrowFlightClientImpl implements ClientAPI {
     }
 
     @Override
-    public void put(TablePath path, VectorSchemaRoot vsc, Source src) {
+    public void put(String schema, String table, VectorSchemaRoot vsc, Source src) {
         try {
             final FlightDescriptor flightDesc = FlightDescriptor.path(path.parts());
 
@@ -109,12 +110,12 @@ public class ArrowFlightClientImpl implements ClientAPI {
     }
 
     @Override
-    public void put(TablePath path, VectorSchemaRoot vsc) {
+    public void put(String schema, String table, VectorSchemaRoot vsc) {
         put(path, vsc, new SingleValueSource());
     }
 
     @Override
-    public void get(TablePath path, List<Model.Filter<?>> filters, Listener listener) {
+    public void get(String schema, String table, Set<?> keys, Listener listener) {
         try {
             final Model.Query query = new Model.Query(path, filters);
             final byte[] bytes = QueryCodecs.MODEL_TO_BYTES.encode(query);
@@ -155,7 +156,7 @@ public class ArrowFlightClientImpl implements ClientAPI {
     }
 
     @Override
-    public void remove(TablePath path, List<Model.Filter<?>> filters) {
+    public void remove(String schema, String table, Set<?> keys) {
         try {
             final Model.Delete delete = new Model.Delete(path, filters);
             final byte[] bytes = DeleteCodecs.MODEL_TO_BYTES.encode(delete);

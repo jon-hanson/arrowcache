@@ -1,8 +1,6 @@
 package io.nson.arrowcache.client;
 
 import io.nson.arrowcache.client.impl.ArrowFlightClientImpl;
-import io.nson.arrowcache.common.TablePath;
-import io.nson.arrowcache.common.utils.ArrowUtils;
 import io.nson.arrowcache.common.utils.FileUtils;
 import org.apache.arrow.flight.Location;
 import org.apache.arrow.memory.RootAllocator;
@@ -21,8 +19,6 @@ public class TestClientAPI {
     public static void main(String[] args) throws IOException {
 
         final ClientConfig clientConfig = FileUtils.loadFromResource("clientconfig.json", ClientConfig.CODEC);
-        final TablePath tablePath1 = TablePath.valueOf("abc", "def");
-        final TablePath tablePath2 = TablePath.valueOf("abc", "ghi");
 
         final Location location = Location.forGrpcInsecure(clientConfig.serverHost(), clientConfig.serverPort());
 

@@ -1,10 +1,8 @@
 package io.nson.arrowcache.client;
 
-import io.nson.arrowcache.common.Model;
-import io.nson.arrowcache.common.TablePath;
 import org.apache.arrow.vector.VectorSchemaRoot;
 
-import java.util.List;
+import java.util.Set;
 
 public interface ClientAPI extends AutoCloseable {
     interface Source {
@@ -18,11 +16,11 @@ public interface ClientAPI extends AutoCloseable {
         void onCompleted();
     }
 
-    void put(TablePath path, VectorSchemaRoot vsc, Source src);
+    void put(String schema, String table, VectorSchemaRoot vsc, Source src);
 
-    void put(TablePath path, VectorSchemaRoot vsc);
+    void put(String schema, String table, VectorSchemaRoot vsc);
 
-    void get(TablePath path, List<Model.Filter<?>> filters, Listener listener);
+    void get(String schema, String table, Set<?> keys, Listener listener);
 
-    void remove(TablePath path, List<Model.Filter<?>> filters);
+    void remove(String schema, String table, Set<?> keys);
 }

@@ -1,10 +1,4 @@
 {
-    "allocatorMaxSize": {
-        "defaultSize": 268435456,
-        "allocatorSizeMap": {
-            "flight-server": 8589934592
-        }
-    },
     "childSchema": {
         "test" : {
             "tables": {

@@ -3,7 +3,8 @@ package io.nson.arrowcache.common.utils;
 import java.nio.charset.StandardCharsets;
 
 public abstract class ByteUtils {
-    private ByteUtils() {}
+    private ByteUtils() {
+    }
 
     public static byte[] stringToBytes(String s) {
         return s.getBytes(StandardCharsets.UTF_8);

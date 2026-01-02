@@ -1,7 +1,7 @@
 package io.nson.arrowcache.client;
 
-import io.nson.arrowcache.common.Model;
-import io.nson.arrowcache.common.utils.FileUtils;
+import io.nson.arrowcache.commonold.Model;
+import io.nson.arrowcache.commonold.utils.FileUtils;
 import org.apache.arrow.memory.BufferAllocator;
 import org.apache.arrow.vector.*;
 import org.apache.arrow.vector.types.DateUnit;
