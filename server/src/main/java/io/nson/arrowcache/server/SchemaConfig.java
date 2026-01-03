@@ -53,6 +53,14 @@ public final class SchemaConfig {
                 '}';
     }
 
+    public Map<String, SchemaConfig> childSchema() {
+        return childSchema;
+    }
+
+    public Map<String, TableConfig> tables() {
+        return tables;
+    }
+
     public SchemaConfig childSchema(String name) {
         if (childSchema.containsKey(name)) {
             return childSchema.get(name);
@@ -61,9 +69,5 @@ public final class SchemaConfig {
         } else {
             throw new IllegalArgumentException(String.format("Unknown child schema: %s", name));
         }
-    }
-
-    public Map<String, TableConfig> tables() {
-        return tables;
     }
 }

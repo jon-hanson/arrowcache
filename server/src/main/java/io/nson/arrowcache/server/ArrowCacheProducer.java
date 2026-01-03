@@ -9,6 +9,7 @@ import io.nson.arrowcache.server.utils.ArrowServerUtils;
 import io.nson.arrowcache.server.utils.ByteUtils;
 import io.nson.arrowcache.server.utils.ConcurrencyUtils;
 import org.apache.arrow.flight.*;
+import org.apache.arrow.memory.BufferAllocator;
 import org.apache.arrow.vector.VectorUnloader;
 import org.apache.arrow.vector.ipc.message.ArrowRecordBatch;
 import org.apache.arrow.vector.types.pojo.Schema;
@@ -20,7 +21,9 @@ import java.time.Duration;
 import java.time.Instant;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
 
+import static java.util.stream.Collectors.toMap;
 import static java.util.stream.Collectors.toSet;
 
 public class ArrowCacheProducer extends NoOpFlightProducer implements AutoCloseable {
@@ -28,6 +31,16 @@ public class ArrowCacheProducer extends NoOpFlightProducer implements AutoClosea
     private static final Logger logger = LoggerFactory.getLogger(ArrowCacheProducer.class);
 
     private static final ActionType DELETE = new ActionType("DELETE", "");
+
+    private static Map<String, DataSchema> createDataSchemaMap(BufferAllocator allocator, Map<String, SchemaConfig> schemaConfigMap) {
+        return schemaConfigMap.entrySet().stream()
+                .collect(toMap(
+                        en -> en.getKey(),
+                        en -> new DataSchema(allocator, en.getKey(), en.getValue())
+                ));
+    }
+
+    private final BufferAllocator allocator;
 
     private final SchemaConfig schemaConfig;
 
@@ -37,22 +50,23 @@ public class ArrowCacheProducer extends NoOpFlightProducer implements AutoClosea
 
     private final Map<String, DataSchema> dataSchemaMap;
 
-    private final Map<UUID, RequestExecutor> pendingRequests;
+    private final ConcurrentMap<UUID, RequestExecutor> pendingRequests;
 
     private final Timer requestCleanerTimer = new Timer();
 
     private volatile boolean closing = false;
 
     public ArrowCacheProducer(
+            BufferAllocator allocator,
             SchemaConfig schemaConfig,
             Location location,
-            Duration requestLifetime,
-            Map<String, DataSchema> dataSchemaMap
+            Duration requestLifetime
     ) {
+        this.allocator = allocator.newChildAllocator("ArrowCacheProducer", 0, Integer.MAX_VALUE);
         this.schemaConfig = schemaConfig;
         this.location = location;
         this.requestLifetime = requestLifetime;
-        this.dataSchemaMap = dataSchemaMap;
+        this.dataSchemaMap = createDataSchemaMap(allocator, schemaConfig.childSchema());
         this.pendingRequests = new ConcurrentHashMap<>();
 
         ConcurrencyUtils.scheduleAtFixedRate(
@@ -62,19 +76,12 @@ public class ArrowCacheProducer extends NoOpFlightProducer implements AutoClosea
         );
     }
 
-    public ArrowCacheProducer(
-            SchemaConfig schemaConfig,
-            Location location,
-            Duration requestLifetime
-    ) {
-        this(schemaConfig, location, requestLifetime, new ConcurrentHashMap<>());
-    }
-
     @Override
     public void close() {
         logger.info("Closing...");
         closing = true;
         dataSchemaMap.values().forEach(DataSchema::close);
+        allocator.close();
     }
 
     private void closeStaleRequests() {

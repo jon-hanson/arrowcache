@@ -1,3 +1,4 @@
 {
-    "port": 12233
+    "serverPort": 12233,
+    "requestLifetimeMins": 5
 }

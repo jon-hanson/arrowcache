@@ -29,7 +29,7 @@ public class ArrowCacheServer implements AutoCloseable {
     ) {
         this.allocator = allocator.newChildAllocator("ArrowCacheServer", 0, Integer.MAX_VALUE);
         this.location = location;
-        this.flightProducer = new ArrowCacheProducer(schemaConfig, location, requestLifetime);
+        this.flightProducer = new ArrowCacheProducer(allocator, schemaConfig, location, requestLifetime);
         this.flightServer = FlightServer.builder(allocator, location, flightProducer).build();
 
         logger.info("New instance for location {}", location);
@@ -70,7 +70,7 @@ public class ArrowCacheServer implements AutoCloseable {
     public static void main(String[] args) throws Exception {
         logger.info("Starting");
 
-        final SchemaConfig schemaConfig = FileUtils.loadFromResource("cacheconfig.json", SchemaConfig.CODEC);
+        final SchemaConfig schemaConfig = FileUtils.loadFromResource("schemaconfig.json", SchemaConfig.CODEC);
         final ServerConfig serverConfig = FileUtils.loadFromResource("serverconfig.json", ServerConfig.CODEC);
         RootAllocator allocator = new RootAllocator();
         //final AllocatorManager allocatorManager = new AllocatorManager(schemaConfig.allocatorMaxSize());

@@ -2,6 +2,7 @@ package io.nson.arrowcache.client.impl;
 
 import io.nson.arrowcache.client.ClientAPI;
 import io.nson.arrowcache.common.avro.DeleteRequest;
+import io.nson.arrowcache.common.avro.FlightInfoRequest;
 import io.nson.arrowcache.common.utils.ArrowUtils;
 import io.nson.arrowcache.common.utils.ExceptionUtils;
 import io.nson.arrowcache.common.avro.GetRequest;
@@ -121,7 +122,12 @@ public class ArrowFlightClientImpl implements ClientAPI {
                             .setTable(table)
                             .setKeys(new ArrayList<>(keys))
                             .build();
-            final byte[] bytes = GetRequest.getEncoder().encode(getRequest).array();
+            final FlightInfoRequest flightInfoRequest =
+                    FlightInfoRequest.newBuilder()
+                            .setRequest(getRequest)
+                            .build();
+
+            final byte[] bytes = FlightInfoRequest.getEncoder().encode(flightInfoRequest).array();
             final FlightDescriptor flightDesc = FlightDescriptor.command(bytes);
             final FlightInfo flightInfo = flightClient.getInfo(flightDesc, callTimeout);
 

@@ -1,7 +1,6 @@
 package io.nson.arrowcache.client;
 
-import io.nson.arrowcache.commonold.Model;
-import io.nson.arrowcache.commonold.utils.FileUtils;
+import io.nson.arrowcache.common.utils.FileUtils;
 import org.apache.arrow.memory.BufferAllocator;
 import org.apache.arrow.vector.*;
 import org.apache.arrow.vector.types.DateUnit;
@@ -96,30 +95,8 @@ public class TestData {
         return vsc;
     }
 
-    public static final List<Model.Filter<?>> FILTERS1 =
-            List.of(
-                    Model.Filter.eq("name","abc")
-            );
-
-    public static final List<Model.Filter<?>> FILTERS2 =
-            List.of(
-                    Model.Filter.in("name",Set.of("abc", "def")),
-                    Model.Filter.neq("age", 2.3f)
-            );
-
-    public static final List<Model.Filter<?>> FILTERS3 =
-            List.of(
-                    Model.Filter.in("id", Set.of(12, 22))
-            );
-
-    public static final List<Model.Filter<?>> FILTERS4 =
-            List.of(
-                    Model.Filter.in(
-                            "date",
-                            Set.of(
-                                    LocalDate.of(2023, 3, 3),
-                                    LocalDate.of(2025, 3, 3)
-                            )
-                    )
-            );
+    public static final Set<Integer> KEYS1 = Set.of(11, 14, 21);
+    public static final Set<Integer> KEYS2 = Set.of(12, 13);
+    public static final Set<Integer> KEYS3 = Set.of(14, 22, 23);
+    public static final Set<Integer> KEYS4 = Set.of(12, 21);
 }
