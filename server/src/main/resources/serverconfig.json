@@ -1,4 +1,4 @@
 {
     "serverPort": 12233,
-    "requestLifetimeMins": 5
+    "requestLifetime": "PT30S"
 }

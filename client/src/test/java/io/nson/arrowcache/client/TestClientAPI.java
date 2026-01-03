@@ -92,7 +92,7 @@ public class TestClientAPI {
 
         @Override
         public void onError(Throwable ex) {
-            logger.error(ex.getMessage(), ex);
+            logger.error("ClientAPI.Listener error: {}", ex.getMessage(), ex);
         }
 
         @Override

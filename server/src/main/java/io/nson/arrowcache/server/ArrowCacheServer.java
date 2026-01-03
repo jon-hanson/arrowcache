@@ -78,7 +78,7 @@ public class ArrowCacheServer implements AutoCloseable {
         final ArrowCacheServer server = new ArrowCacheServer(
                 allocator,
                 Location.forGrpcInsecure("localhost", serverConfig.serverPort()),
-                Duration.ofMinutes(serverConfig.requestLifetimeMins()),
+                serverConfig.requestLifetime(),
                 schemaConfig
         );
 

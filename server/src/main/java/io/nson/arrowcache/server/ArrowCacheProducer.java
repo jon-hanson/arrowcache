@@ -85,17 +85,25 @@ public class ArrowCacheProducer extends NoOpFlightProducer implements AutoClosea
     }
 
     private void closeStaleRequests() {
-        if (!closing) {
-            final Instant cutoff = Instant.now().minus(requestLifetime);
-            final Set<UUID> keysToRetire =
-                    pendingRequests.values().stream()
-                            .filter(req -> req.inception().isBefore(cutoff))
-                            .map(RequestExecutor::uuid)
-                            .collect(toSet());
-            keysToRetire.forEach(pendingRequests::remove);
-            keysToRetire.stream()
-                    .map(pendingRequests::get)
-                    .forEach(RequestExecutor::close);
+        if (!closing && !pendingRequests.isEmpty()) {
+            try {
+                logger.info("Checking for timed out requests. {} request(s) pending", pendingRequests.size());
+
+                final Instant cutoff = Instant.now().minus(requestLifetime);
+                final Map<UUID, RequestExecutor> timeoutMap =
+                        pendingRequests.values().stream()
+                                .filter(req -> req.inception().isBefore(cutoff))
+                                .collect(toMap(
+                                        req -> req.uuid(),
+                                        req -> req
+                                ));
+                timeoutMap.keySet().forEach(pendingRequests::remove);
+                timeoutMap.values().stream()
+                        .peek(req -> logger.info("Timing out request: {}", req.uuid()))
+                        .forEach(RequestExecutor::close);
+            } catch (Exception ex) {
+                logger.warn("Ignoring exception", ex);
+            }
         }
     }
 
@@ -231,6 +239,8 @@ public class ArrowCacheProducer extends NoOpFlightProducer implements AutoClosea
                 );
             } else {
                 requestExecutor.execute(listener);
+
+                pendingRequests.remove(uuid);
 
                 listener.completed();
             }

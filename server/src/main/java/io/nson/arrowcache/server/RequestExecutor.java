@@ -36,7 +36,6 @@ public abstract class RequestExecutor implements Closeable {
     }
 
     public void close() {
-
     }
 
     protected RequestExecutor() {
