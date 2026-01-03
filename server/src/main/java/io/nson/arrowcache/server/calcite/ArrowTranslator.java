@@ -1,6 +1,6 @@
 package io.nson.arrowcache.server.calcite;
 
-import io.nson.arrowcache.server.utils.ExceptionUtils;
+import io.nson.arrowcache.common.utils.ExceptionUtils;
 import org.apache.calcite.plan.RelOptUtil;
 import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.rel.type.RelDataTypeField;
@@ -60,11 +60,10 @@ final class ArrowTranslator {
         if (disjunctions.size() == 1) {
             return translateAnd(disjunctions.get(0));
         } else {
-            throw ExceptionUtils.logError(
+            throw ExceptionUtils.exception(
                     logger,
-                    UnsupportedOperationException::new,
                     "Unsupported disjunctive condition " + condition
-            );
+            ).create(UnsupportedOperationException::new);
         }
     }
 
@@ -166,11 +165,11 @@ final class ArrowTranslator {
                 return expression;
             }
         }
-        throw ExceptionUtils.logError(
+
+        throw ExceptionUtils.exception(
                 logger,
-                UnsupportedOperationException::new,
                 "Unsupported binary operator " + call
-        );
+        ).create(UnsupportedOperationException::new);
     }
 
     /** Translates a call to a binary operator. Returns null on failure. */
@@ -225,11 +224,10 @@ final class ArrowTranslator {
         if (expression != null) {
             return expression;
         } else {
-            throw ExceptionUtils.logError(
+            throw ExceptionUtils.exception(
                     logger,
-                    UnsupportedOperationException::new,
                     "Unsupported unary operator " + call
-            );
+            ).create(UnsupportedOperationException::new);
         }
     }
 
@@ -263,11 +261,10 @@ final class ArrowTranslator {
             case CHAR:
                 return "string";
             default:
-                throw ExceptionUtils.logError(
+                throw ExceptionUtils.exception(
                         logger,
-                        UnsupportedOperationException::new,
                         "Unsupported type " + type
-                );
+                ).create(UnsupportedOperationException::new);
         }
     }
 }

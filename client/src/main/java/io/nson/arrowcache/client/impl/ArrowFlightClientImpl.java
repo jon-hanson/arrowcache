@@ -1,12 +1,10 @@
 package io.nson.arrowcache.client.impl;
 
 import io.nson.arrowcache.client.ClientAPI;
-import io.nson.arrowcache.commonold.Actions;
-import io.nson.arrowcache.commonold.Model;
-import io.nson.arrowcache.commonold.TablePath;
-import io.nson.arrowcache.commonold.codec.DeleteCodecs;
-import io.nson.arrowcache.commonold.codec.QueryCodecs;
-import io.nson.arrowcache.commonold.utils.ArrowUtils;
+import io.nson.arrowcache.common.avro.DeleteRequest;
+import io.nson.arrowcache.common.utils.ArrowUtils;
+import io.nson.arrowcache.common.utils.ExceptionUtils;
+import io.nson.arrowcache.common.avro.GetRequest;
 import org.apache.arrow.flight.*;
 import org.apache.arrow.memory.BufferAllocator;
 import org.apache.arrow.memory.RootAllocator;
@@ -14,8 +12,8 @@ import org.apache.arrow.vector.VectorSchemaRoot;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.util.ArrayList;
 import java.util.Iterator;
-import java.util.List;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
 
@@ -63,7 +61,7 @@ public class ArrowFlightClientImpl implements ClientAPI {
     @Override
     public void put(String schema, String table, VectorSchemaRoot vsc, Source src) {
         try {
-            final FlightDescriptor flightDesc = FlightDescriptor.path(path.parts());
+            final FlightDescriptor flightDesc = FlightDescriptor.path(schema, table);
 
             final FlightClient.ClientStreamListener listener = flightClient.startPut(
                     flightDesc,
@@ -111,14 +109,19 @@ public class ArrowFlightClientImpl implements ClientAPI {
 
     @Override
     public void put(String schema, String table, VectorSchemaRoot vsc) {
-        put(path, vsc, new SingleValueSource());
+        put(schema, table, vsc, new SingleValueSource());
     }
 
     @Override
     public void get(String schema, String table, Set<?> keys, Listener listener) {
         try {
-            final Model.Query query = new Model.Query(path, filters);
-            final byte[] bytes = QueryCodecs.MODEL_TO_BYTES.encode(query);
+            final GetRequest getRequest =
+                    GetRequest.newBuilder()
+                            .setSchema$(schema)
+                            .setTable(table)
+                            .setKeys(new ArrayList<>(keys))
+                            .build();
+            final byte[] bytes = GetRequest.getEncoder().encode(getRequest).array();
             final FlightDescriptor flightDesc = FlightDescriptor.command(bytes);
             final FlightInfo flightInfo = flightClient.getInfo(flightDesc, callTimeout);
 
@@ -126,10 +129,14 @@ public class ArrowFlightClientImpl implements ClientAPI {
                     .forEach(endPoint -> {
                         for (Location loc : endPoint.getLocations()) {
                             if (!loc.equals(location)) {
-                                logger.error("Cannot handle location {}", loc.getUri());
-                                throw new RuntimeException("Cannot handle location " + loc.getUri());
+                                throw ExceptionUtils.exception(
+                                        logger,
+                                        "Cannot handle location " + loc.getUri()
+                                ).create();
                             } else {
-                                try (final FlightStream flightStream = flightClient.getStream(endPoint.getTicket(), callTimeout)) {
+                                try (final FlightStream flightStream =
+                                             flightClient.getStream(endPoint.getTicket(), callTimeout)
+                                ) {
                                     final VectorSchemaRoot vsc = flightStream.getRoot();
                                     while (flightStream.next()) {
                                         listener.onNext(vsc);
@@ -145,22 +152,27 @@ public class ArrowFlightClientImpl implements ClientAPI {
             try {
                 listener.onCompleted();
             } catch (Exception ex) {
-                logger.error("listener.onCompleted() threw exception", ex);
-                throw new RuntimeException("listener.onCompleted() error", ex);
+                throw ExceptionUtils.exception(
+                        logger,
+                        "listener.onCompleted() threw exception"
+                ).create();
             }
         } catch (Exception ex) {
-            logger.error("Exception occurred", ex);
             listener.onError(ex);
-            throw ex;
+            throw ExceptionUtils.exception(logger, "Exception occurred").create();
         }
     }
 
     @Override
     public void remove(String schema, String table, Set<?> keys) {
         try {
-            final Model.Delete delete = new Model.Delete(path, filters);
-            final byte[] bytes = DeleteCodecs.MODEL_TO_BYTES.encode(delete);
-            final Action action = new Action(Actions.DELETE_NAME, bytes);
+            final DeleteRequest deleteRequest = DeleteRequest.newBuilder()
+                    .setSchema$(schema)
+                    .setTable(table)
+                    .setKeys(new ArrayList<>(keys))
+                    .build();
+            final byte[] bytes = DeleteRequest.getEncoder().encode(deleteRequest).array();
+            final Action action = new Action("DELETE", bytes);
             final Iterator<Result> deleteActionResult = flightClient.doAction(action);
 
             while (deleteActionResult.hasNext()) {
@@ -169,8 +181,10 @@ public class ArrowFlightClientImpl implements ClientAPI {
                 logger.info("Delete action result: {}", msg);
             }
         } catch (Exception ex) {
-            logger.error("Exception occurred", ex);
-            throw ex;
+            throw ExceptionUtils.exception(
+                    logger,
+                    "Exception occurred"
+            ).cause(ex).create();
         }
     }
 }

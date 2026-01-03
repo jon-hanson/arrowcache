@@ -1,7 +1,7 @@
 package io.nson.arrowcache.server.cache;
 
+import io.nson.arrowcache.common.utils.ExceptionUtils;
 import io.nson.arrowcache.server.SchemaConfig;
-import io.nson.arrowcache.server.utils.ExceptionUtils;
 import org.apache.arrow.flight.FlightProducer;
 import org.apache.arrow.memory.BufferAllocator;
 import org.apache.arrow.vector.FieldVector;
@@ -154,11 +154,10 @@ public class DataTable implements AutoCloseable {
             this.arrowSchema = arrowSchema;
             this.keyColumnIndex = findKeyColumn(arrowSchema, keyColumnName);
         } else if (!this.arrowSchema.equals(arrowSchema)) {
-            throw ExceptionUtils.logError(
+            throw ExceptionUtils.exception(
                     logger,
-                    IllegalArgumentException::new,
                     "Cannot add batches with a different schema"
-            );
+            ).create(IllegalArgumentException::new);
         }
 
         synchronized (this.rwLock.writeLock()) {

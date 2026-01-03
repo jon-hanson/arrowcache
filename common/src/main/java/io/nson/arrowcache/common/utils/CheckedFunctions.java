@@ -4,8 +4,8 @@ import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.function.Supplier;
 
-public abstract class Exceptions {
-    private Exceptions() {}
+public abstract class CheckedFunctions {
+    private CheckedFunctions() {}
 
     public interface CheckedSupplier<T, EX extends Exception> {
         T get() throws EX;

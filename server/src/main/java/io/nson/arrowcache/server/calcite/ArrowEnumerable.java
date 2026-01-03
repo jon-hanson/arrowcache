@@ -1,7 +1,7 @@
 package io.nson.arrowcache.server.calcite;
 
+import io.nson.arrowcache.common.utils.ExceptionUtils;
 import io.nson.arrowcache.server.cache.DataTable;
-import io.nson.arrowcache.server.utils.ExceptionUtils;
 import org.apache.arrow.gandiva.evaluator.*;
 import org.apache.arrow.memory.BufferAllocator;
 import org.apache.arrow.vector.types.pojo.Schema;
@@ -59,11 +59,10 @@ public class ArrowEnumerable extends AbstractEnumerable<Object> {
                         this.filter
                 );
             } else {
-                throw ExceptionUtils.logError(
+                throw ExceptionUtils.exception(
                         logger,
-                        IllegalArgumentException::new,
                         "The arrow enumerator must have either a filter or a projection"
-                );
+                ).create(IllegalArgumentException::new);
             }
         } catch (Exception e) {
             throw Util.toUnchecked(e);

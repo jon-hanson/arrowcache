@@ -6,7 +6,7 @@ import org.slf4j.Logger;
 public class ArrowServerUtils {
     private ArrowServerUtils() {}
 
-    public static CallStatus logError(CallStatus callStatus, Logger logger, String msg) {
+    public static CallStatus exception(CallStatus callStatus, Logger logger, String msg) {
         logger.error(msg);
         return callStatus.withDescription(msg);
     }

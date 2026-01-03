@@ -2,11 +2,12 @@ package io.nson.arrowcache.server;
 
 import io.nson.arrowcache.common.avro.*;
 import io.nson.arrowcache.common.utils.ArrowUtils;
+import io.nson.arrowcache.common.utils.ExceptionUtils;
 import io.nson.arrowcache.server.cache.DataSchema;
 import io.nson.arrowcache.server.cache.DataTable;
 import io.nson.arrowcache.server.utils.ArrowServerUtils;
 import io.nson.arrowcache.server.utils.ByteUtils;
-import io.nson.arrowcache.server.utils.ExceptionUtils;
+import io.nson.arrowcache.server.utils.ConcurrencyUtils;
 import org.apache.arrow.flight.*;
 import org.apache.arrow.vector.VectorUnloader;
 import org.apache.arrow.vector.ipc.message.ArrowRecordBatch;
@@ -38,6 +39,8 @@ public class ArrowCacheProducer extends NoOpFlightProducer implements AutoClosea
 
     private final Map<UUID, RequestExecutor> pendingRequests;
 
+    private final Timer requestCleanerTimer = new Timer();
+
     private volatile boolean closing = false;
 
     public ArrowCacheProducer(
@@ -51,6 +54,12 @@ public class ArrowCacheProducer extends NoOpFlightProducer implements AutoClosea
         this.requestLifetime = requestLifetime;
         this.dataSchemaMap = dataSchemaMap;
         this.pendingRequests = new ConcurrentHashMap<>();
+
+        ConcurrencyUtils.scheduleAtFixedRate(
+                this.requestCleanerTimer,
+                this::closeStaleRequests,
+                requestLifetime.dividedBy(10)
+        );
     }
 
     public ArrowCacheProducer(
@@ -86,7 +95,7 @@ public class ArrowCacheProducer extends NoOpFlightProducer implements AutoClosea
     private DataSchema getDataSchema(String schemaName) {
         return Optional.ofNullable(dataSchemaMap.get(schemaName))
                 .orElseThrow(() ->
-                        ArrowServerUtils.logError(
+                        ArrowServerUtils.exception(
                                 CallStatus.NOT_FOUND,
                                         logger,
                                         "No schema with name: " + schemaName
@@ -97,7 +106,7 @@ public class ArrowCacheProducer extends NoOpFlightProducer implements AutoClosea
     private DataTable getDataTable(DataSchema dataSchema, String tableName) {
         return dataSchema.getTableOpt(tableName)
                 .orElseThrow(() ->
-                        ArrowServerUtils.logError(
+                        ArrowServerUtils.exception(
                                 CallStatus.NOT_FOUND,
                                 logger,
                                 "No table in Schema '" + dataSchema.name() + "' with name: " + tableName
@@ -183,7 +192,7 @@ public class ArrowCacheProducer extends NoOpFlightProducer implements AutoClosea
                 pendingRequests.put(requestExecutor.uuid(), requestExecutor);
                 return requestExecutor.getFlightInfo(descriptor);
             } else {
-                throw ArrowServerUtils.logError(
+                throw ArrowServerUtils.exception(
                         CallStatus.INVALID_ARGUMENT,
                         logger,
                         "Path-based FlightDescriptors  are not supported"
@@ -192,7 +201,7 @@ public class ArrowCacheProducer extends NoOpFlightProducer implements AutoClosea
         } catch (FlightRuntimeException ex) {
             throw ex;
         } catch (Exception ex) {
-            throw ArrowServerUtils.logError(CallStatus.INTERNAL, logger, "Unexpected exception")
+            throw ArrowServerUtils.exception(CallStatus.INTERNAL, logger, "Unexpected exception")
                     .withCause(ex)
                     .toRuntimeException();
         }
@@ -207,7 +216,7 @@ public class ArrowCacheProducer extends NoOpFlightProducer implements AutoClosea
             final RequestExecutor requestExecutor = pendingRequests.get(uuid);
             if (requestExecutor == null) {
                 listener.error(
-                        ArrowServerUtils.logError(
+                        ArrowServerUtils.exception(
                                 CallStatus.NOT_FOUND,
                                 logger,
                                 "No pending query found for ticket UUID " + uuid
@@ -221,7 +230,7 @@ public class ArrowCacheProducer extends NoOpFlightProducer implements AutoClosea
         } catch (FlightRuntimeException ex) {
             throw ex;
         } catch (Exception ex) {
-            throw ArrowServerUtils.logError(CallStatus.INTERNAL, logger, "Unexpected exception")
+            throw ArrowServerUtils.exception(CallStatus.INTERNAL, logger, "Unexpected exception")
                     .withCause(ex)
                     .toRuntimeException();
         }
@@ -238,7 +247,7 @@ public class ArrowCacheProducer extends NoOpFlightProducer implements AutoClosea
             try {
                 final FlightDescriptor flightDesc = flightStream.getDescriptor();
                 if (flightDesc.isCommand()) {
-                    throw ArrowServerUtils.logError(
+                    throw ArrowServerUtils.exception(
                             CallStatus.INVALID_ARGUMENT,
                             logger,
                             "Cannot accept a put operation where the FlightDescriptor is a command - must be a path"
@@ -252,11 +261,10 @@ public class ArrowCacheProducer extends NoOpFlightProducer implements AutoClosea
                         schemaName = flightPath.get(0);
                         tableName = flightPath.get(1);
                     } else {
-                        throw ExceptionUtils.logError(
+                        throw ExceptionUtils.exception(
                                 logger,
-                                Exception::new,
                                 "Invalid flight path: " + flightPath + ". Must be [schema, table]"
-                        );
+                        ).create(Exception::new);
                     }
 
                     final DataSchema dataSchema = getDataSchema(schemaName);
@@ -308,7 +316,7 @@ public class ArrowCacheProducer extends NoOpFlightProducer implements AutoClosea
                 listener.onCompleted();
             } else {
                 listener.onError(
-                        ArrowServerUtils.logError(
+                        ArrowServerUtils.exception(
                                 CallStatus.INVALID_ARGUMENT,
                                 logger,
                                 "Action type '" + action.getType() + "' not supported"
@@ -319,7 +327,7 @@ public class ArrowCacheProducer extends NoOpFlightProducer implements AutoClosea
             throw ex;
         } catch (Exception ex) {
             listener.onError(
-                    ArrowServerUtils.logError(CallStatus.INTERNAL, logger, "Unexpected exception")
+                    ArrowServerUtils.exception(CallStatus.INTERNAL, logger, "Unexpected exception")
                             .withCause(ex)
                             .toRuntimeException()
             );

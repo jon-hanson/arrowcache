@@ -35,7 +35,7 @@ public abstract class FileUtils {
 
     public static Stream<String> openResourceAsLineStream(String name) throws IOException {
         final BufferedReader br = openResource(name);
-        return br.lines().onClose(Exceptions.unchecked(br::close));
+        return br.lines().onClose(CheckedFunctions.unchecked(br::close));
     }
 
     public static List<String> openResourceAsLineList(String name) throws IOException {

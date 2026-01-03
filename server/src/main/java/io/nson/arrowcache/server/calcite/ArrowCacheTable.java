@@ -1,8 +1,8 @@
 package io.nson.arrowcache.server.calcite;
 
+import io.nson.arrowcache.common.utils.ExceptionUtils;
 import io.nson.arrowcache.server.SchemaConfig;
 import io.nson.arrowcache.server.cache.DataTable;
-import io.nson.arrowcache.server.utils.ExceptionUtils;
 import org.apache.arrow.gandiva.evaluator.*;
 import org.apache.arrow.gandiva.exceptions.GandivaException;
 import org.apache.arrow.gandiva.expression.*;
@@ -183,11 +183,10 @@ public final class ArrowCacheTable extends AbstractTable
                 case "string":
                     return TreeBuilder.makeStringLiteral(literal.substring(1, literal.length() - 1));
                 default:
-                    throw ExceptionUtils.logError(
+                    throw ExceptionUtils.exception(
                             logger,
-                            IllegalArgumentException::new,
                             "Invalid literal " + literal + ", type " + type
-                    );
+                    ).create(IllegalArgumentException::new);
             }
         }
     }

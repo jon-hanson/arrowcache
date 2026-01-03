@@ -1,6 +1,6 @@
 package io.nson.arrowcache.server.calcite;
 
-import io.nson.arrowcache.server.utils.ExceptionUtils;
+import io.nson.arrowcache.common.utils.ExceptionUtils;
 import org.apache.calcite.adapter.java.JavaTypeFactory;
 import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.sql.type.SqlTypeName;
@@ -46,11 +46,10 @@ public class ArrowFieldTypeFactory {
                     case 8:
                         return typeFactory.createSqlType(SqlTypeName.TINYINT);
                     default:
-                        throw ExceptionUtils.logError(
+                        throw ExceptionUtils.exception(
                                 logger,
-                                IllegalArgumentException::new,
                                 "Unsupported Int bit width: " + bitWidth
-                        );
+                        ).create(IllegalArgumentException::new);
                 }
             case Bool:
                 return typeFactory.createSqlType(SqlTypeName.BOOLEAN);
@@ -64,11 +63,10 @@ public class ArrowFieldTypeFactory {
                     case DOUBLE:
                         return typeFactory.createSqlType(SqlTypeName.DOUBLE);
                     default:
-                        throw ExceptionUtils.logError(
+                        throw ExceptionUtils.exception(
                                 logger,
-                                IllegalArgumentException::new,
                                 "Unsupported Floating point precision: " + precision
-                        );
+                        ).create(IllegalArgumentException::new);
                 }
             case Date:
                 return typeFactory.createSqlType(SqlTypeName.DATE);
@@ -79,11 +77,10 @@ public class ArrowFieldTypeFactory {
             case Time:
                 return typeFactory.createSqlType(SqlTypeName.TIME);
             default:
-                throw ExceptionUtils.logError(
+                throw ExceptionUtils.exception(
                         logger,
-                        IllegalArgumentException::new,
                         "Unsupported type: " + arrowType
-                );
+                ).create(IllegalArgumentException::new);
         }
     }
 }
