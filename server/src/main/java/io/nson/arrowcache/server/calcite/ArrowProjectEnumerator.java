@@ -6,7 +6,8 @@ import org.apache.arrow.gandiva.exceptions.GandivaException;
 import org.apache.arrow.memory.BufferAllocator;
 import org.apache.arrow.vector.ipc.message.ArrowRecordBatch;
 import org.apache.arrow.vector.types.pojo.Schema;
-import org.apache.calcite.util.*;
+import org.apache.calcite.util.ImmutableIntList;
+import org.apache.calcite.util.Util;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 

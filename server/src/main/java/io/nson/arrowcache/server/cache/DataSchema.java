@@ -2,7 +2,6 @@ package io.nson.arrowcache.server.cache;
 
 import io.nson.arrowcache.server.SchemaConfig;
 import org.apache.arrow.memory.BufferAllocator;
-import org.apache.arrow.util.AutoCloseables;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 

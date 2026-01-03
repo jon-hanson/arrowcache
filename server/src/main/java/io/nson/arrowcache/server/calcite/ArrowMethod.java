@@ -1,10 +1,9 @@
 package io.nson.arrowcache.server.calcite;
 
+import com.google.common.collect.ImmutableMap;
 import org.apache.calcite.DataContext;
 import org.apache.calcite.linq4j.tree.Types;
 import org.apache.calcite.util.ImmutableIntList;
-
-import com.google.common.collect.ImmutableMap;
 
 import java.lang.reflect.Method;
 import java.util.List;

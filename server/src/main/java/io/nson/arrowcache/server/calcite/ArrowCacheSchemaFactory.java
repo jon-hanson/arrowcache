@@ -3,9 +3,11 @@ package io.nson.arrowcache.server.calcite;
 import io.nson.arrowcache.common.utils.FileUtils;
 import io.nson.arrowcache.server.SchemaConfig;
 import org.apache.arrow.memory.BufferAllocator;
-import org.apache.calcite.schema.*;
+import org.apache.calcite.schema.SchemaFactory;
+import org.apache.calcite.schema.SchemaPlus;
 import org.jspecify.annotations.Nullable;
-import org.slf4j.*;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.util.Collections;

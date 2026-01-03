@@ -1,17 +1,21 @@
 package io.nson.arrowcache.server.calcite;
 
 import io.nson.arrowcache.server.cache.DataTable;
-import org.apache.arrow.gandiva.evaluator.*;
+import org.apache.arrow.gandiva.evaluator.Filter;
+import org.apache.arrow.gandiva.evaluator.SelectionVector;
+import org.apache.arrow.gandiva.evaluator.SelectionVectorInt16;
 import org.apache.arrow.gandiva.exceptions.GandivaException;
-import org.apache.arrow.memory.*;
+import org.apache.arrow.memory.ArrowBuf;
+import org.apache.arrow.memory.BufferAllocator;
 import org.apache.arrow.vector.ipc.message.ArrowRecordBatch;
 import org.apache.arrow.vector.types.pojo.Schema;
-import org.apache.calcite.util.*;
+import org.apache.calcite.util.ImmutableIntList;
+import org.apache.calcite.util.Util;
 import org.jspecify.annotations.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.util.*;
+import java.util.List;
 
 public final class ArrowFilterEnumerator extends AbstractArrowEnumerator {
     private static final Logger logger = LoggerFactory.getLogger(ArrowFilterEnumerator.class);

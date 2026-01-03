@@ -1,9 +1,5 @@
 package io.nson.arrowcache.server.utils;
 
-import io.nson.arrowcache.server.SchemaConfig;
-import org.apache.arrow.memory.BufferAllocator;
-import org.apache.arrow.memory.RootAllocator;
-
 public class AllocatorManager {
         //implements AutoCloseable {
 //

@@ -1,12 +1,14 @@
 package io.nson.arrowcache.server.calcite;
 
 import com.google.common.base.Preconditions;
-import org.apache.calcite.plan.*;
+import org.apache.calcite.plan.Convention;
+import org.apache.calcite.plan.RelOptTable;
 import org.apache.calcite.rel.RelNode;
 import org.apache.calcite.util.ImmutableIntList;
 import org.jspecify.annotations.Nullable;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.List;
 
 public interface ArrowRel extends RelNode {
     Convention CONVENTION = new Convention.Impl("ARROW", ArrowRel.class);
