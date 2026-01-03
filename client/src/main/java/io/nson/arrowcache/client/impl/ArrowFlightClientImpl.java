@@ -21,7 +21,7 @@ import java.util.concurrent.TimeUnit;
 public class ArrowFlightClientImpl implements ClientAPI {
     private static final Logger logger = LoggerFactory.getLogger(ArrowFlightClientImpl.class);
 
-    private static final CallOption DEFAULT_CALL_TIMEOUT = CallOptions.timeout(1, TimeUnit.HOURS);
+    private static final CallOption DEFAULT_CALL_TIMEOUT = CallOptions.timeout(1, TimeUnit.MINUTES);
 
     public static ClientAPI create(BufferAllocator allocator, Location location, FlightClient flightClient) {
         return new ArrowFlightClientImpl(allocator, location, flightClient, DEFAULT_CALL_TIMEOUT);

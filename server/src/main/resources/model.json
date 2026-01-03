@@ -5,7 +5,7 @@
         {
             "name": "test",
             "type": "custom",
-            "factory": "io.nson.arrowcache.server2.calcite.ArrowSchemaFactory#INSTANCE",
+            "factory": "io.nson.arrowcache.server.calcite.ArrowCacheSchemaFactory#INSTANCE",
             "operand": {},
             "tables": []
         }

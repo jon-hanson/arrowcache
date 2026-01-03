@@ -45,6 +45,7 @@ public final class ArrowCacheSchema extends AbstractSchema implements AutoClosea
     public void close() {
         logger.info("Closing...");
         this.tableMap.values().forEach(table -> ((ArrowCacheTable) table).close());
+        this.dataSchema.close();
         this.childSchemaMap.values().forEach(ArrowCacheSchema::close);
     }
 
