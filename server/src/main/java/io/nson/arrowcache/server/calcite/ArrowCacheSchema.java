@@ -1,11 +1,12 @@
 package io.nson.arrowcache.server.calcite;
 
-import io.nson.arrowcache.server.SchemaConfig;
+import io.nson.arrowcache.common.utils.ExceptionUtils;
+import io.nson.arrowcache.server.RootSchemaConfig;
 import io.nson.arrowcache.server.cache.DataSchema;
+import io.nson.arrowcache.server.cache.DataTable;
 import org.apache.arrow.memory.BufferAllocator;
 import org.apache.arrow.vector.ipc.message.ArrowRecordBatch;
 import org.apache.arrow.vector.types.pojo.Schema;
-import org.apache.calcite.schema.SchemaPlus;
 import org.apache.calcite.schema.Table;
 import org.apache.calcite.schema.impl.AbstractSchema;
 import org.slf4j.Logger;
@@ -19,35 +20,23 @@ public final class ArrowCacheSchema extends AbstractSchema implements Closeable 
 
     private final BufferAllocator allocator;
     private final DataSchema dataSchema;
-    private final SchemaPlus parent;
-    private final Map<String, ArrowCacheSchema> childSchemaMap;
     private final Map<String, ArrowCacheTable> tableMap;
 
     ArrowCacheSchema(
             BufferAllocator allocator,
-            SchemaPlus parent,
-            String name,
-            SchemaConfig schemaConfig
+            DataSchema dataSchema
     ) {
-        logger.info(
-                "Creating schema for {} with parent {}",
-                name,
-                Optional.ofNullable(parent).map(SchemaPlus::getName).orElse("<null>")
-        );
+        logger.info("Creating schema for {}",dataSchema.name());
 
         this.allocator = allocator;
-        this.dataSchema = new DataSchema(allocator, name, schemaConfig);
-        this.parent = parent;
-        this.childSchemaMap = new TreeMap<>();
+        this.dataSchema = dataSchema;
         this.tableMap = new TreeMap<>();
     }
 
     @Override
     public void close() {
         logger.info("Closing...");
-        this.tableMap.values().forEach(table -> ((ArrowCacheTable) table).close());
-        this.dataSchema.close();
-        this.childSchemaMap.values().forEach(ArrowCacheSchema::close);
+        this.tableMap.values().forEach(ArrowCacheTable::close);
     }
 
     public String name() {
@@ -57,6 +46,10 @@ public final class ArrowCacheSchema extends AbstractSchema implements Closeable 
     @Override
     protected Map<String, Table> getTableMap() {
         return (Map<String, Table>)(Map)this.tableMap;
+    }
+
+    public Set<String> existingTables() {
+        return tableMap.keySet();
     }
 
     public ArrowCacheTable table(String name) {
@@ -75,8 +68,14 @@ public final class ArrowCacheSchema extends AbstractSchema implements Closeable 
         final ArrowCacheTable table = this.tableMap.computeIfAbsent(
                 tableName,
                 tn -> {
-                    final SchemaConfig.TableConfig tableConfig = this.dataSchema.schemaConfig().tables().get(tableName);
-                    return new ArrowCacheTable(this.allocator, tableName, tableConfig, arrowSchema);
+                    final DataTable dataTable = dataSchema.getTableOpt(tableName)
+                            .orElseThrow(() ->
+                                    ExceptionUtils.exception(
+                                            logger,
+                                            "Table '" + tableName + "' not found"
+                                    ).create()
+                            );
+                    return new ArrowCacheTable(this.allocator, tableName, dataTable, arrowSchema);
                 }
         );
         table.addBatches(arrowSchema, arbs);

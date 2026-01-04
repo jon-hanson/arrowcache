@@ -9,6 +9,7 @@ import java.nio.charset.Charset;
 import java.util.List;
 import java.util.stream.Stream;
 
+import static java.nio.charset.StandardCharsets.UTF_8;
 import static java.util.stream.Collectors.toList;
 
 public abstract class FileUtils {
@@ -19,7 +20,7 @@ public abstract class FileUtils {
         if (is == null) {
             throw new IOException("Failed to open resource '" + name + "'");
         } else {
-            return new BufferedReader(new InputStreamReader(is));
+            return new BufferedReader(new InputStreamReader(is, UTF_8));
         }
     }
 

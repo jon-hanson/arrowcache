@@ -1,7 +1,8 @@
 package io.nson.arrowcache.server.cache;
 
+import io.nson.arrowcache.common.utils.ArrowUtils;
 import io.nson.arrowcache.common.utils.ExceptionUtils;
-import io.nson.arrowcache.server.SchemaConfig;
+import io.nson.arrowcache.server.RootSchemaConfig;
 import org.apache.arrow.flight.FlightProducer;
 import org.apache.arrow.memory.BufferAllocator;
 import org.apache.arrow.vector.FieldVector;
@@ -103,7 +104,7 @@ public class DataTable implements AutoCloseable {
     public DataTable(
             BufferAllocator allocator,
             String name,
-            SchemaConfig.TableConfig tableConfig,
+            RootSchemaConfig.TableConfig tableConfig,
             Schema arrowSchema
     ) {
         this.allocator = allocator.newChildAllocator(name, 0, Long.MAX_VALUE);
@@ -117,7 +118,7 @@ public class DataTable implements AutoCloseable {
     public DataTable(
             BufferAllocator allocator,
             String name,
-            SchemaConfig.TableConfig tableConfig
+            RootSchemaConfig.TableConfig tableConfig
     ) {
         this(allocator, name, tableConfig, null);
     }
@@ -133,8 +134,8 @@ public class DataTable implements AutoCloseable {
         return name;
     }
 
-    public Optional<Schema> arrowSchema() {
-        return Optional.ofNullable(arrowSchema);
+    public Schema arrowSchema() {
+        return arrowSchema != null ? arrowSchema : ArrowUtils.EMPTY_SCHEMA;
     }
 
     public List<Batch> arrowBatches() {

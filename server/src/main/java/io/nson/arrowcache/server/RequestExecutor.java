@@ -73,7 +73,7 @@ public abstract class RequestExecutor implements Closeable {
             final FlightEndpoint flightEndpoint = new FlightEndpoint(ticket, location);
 
             return new FlightInfo(
-                    dataTable.arrowSchema().get(),
+                    dataTable.arrowSchema(),
                     descriptor,
                     Collections.singletonList(flightEndpoint),
                     -1,

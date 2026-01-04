@@ -1,6 +1,7 @@
 package io.nson.arrowcache.server;
 
 import io.nson.arrowcache.common.utils.FileUtils;
+import io.nson.arrowcache.server.cache.DataSchema;
 import io.nson.arrowcache.server.calcite.ArrowCacheSchema;
 import io.nson.arrowcache.server.calcite.ArrowCacheSchemaFactory;
 import org.apache.arrow.memory.RootAllocator;
@@ -8,6 +9,7 @@ import org.apache.arrow.vector.VectorSchemaRoot;
 import org.apache.arrow.vector.VectorUnloader;
 import org.apache.calcite.config.CalciteConnectionProperty;
 import org.apache.calcite.jdbc.CalciteConnection;
+import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -20,14 +22,20 @@ public class TestCalcite {
     private static final Logger logger = LoggerFactory.getLogger(TestCalcite.class);
 
     public static void main(String[] args) throws IOException, ClassNotFoundException, SQLException {
-        final SchemaConfig schemaConfig = FileUtils.loadFromResource("schemaconfig.json", SchemaConfig.CODEC);
+        new TestCalcite().test();
+    }
+
+    @Test
+    public void test() throws IOException, ClassNotFoundException, SQLException {
+        final RootSchemaConfig schemaConfig = FileUtils.loadFromResource("schemaconfig.json", RootSchemaConfig.CODEC);
         try(
                 final RootAllocator rootAllocator = new RootAllocator(Long.MAX_VALUE);
+                final DataSchema rootSchema = new DataSchema(rootAllocator, schemaConfig.name(), schemaConfig)
         ) {
-            ArrowCacheSchemaFactory.initialise(rootAllocator, schemaConfig);
+            ArrowCacheSchemaFactory.initialise(rootAllocator, rootSchema);
 
             try (final VectorSchemaRoot vsc = TestData.createTestDataVSC(rootAllocator)) {
-                final ArrowCacheSchema schema = ArrowCacheSchemaFactory.instance().create("test");
+                final ArrowCacheSchema schema = ArrowCacheSchemaFactory.instance().rootSchema();
                 final VectorUnloader unloader = new VectorUnloader(vsc);
 
                 logger.info("Loading testdata1.csv");

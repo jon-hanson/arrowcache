@@ -25,7 +25,7 @@ public class ArrowCacheServer implements AutoCloseable {
             BufferAllocator allocator,
             Location location,
             Duration requestLifetime,
-            SchemaConfig schemaConfig
+            RootSchemaConfig schemaConfig
     ) {
         this.allocator = allocator.newChildAllocator("ArrowCacheServer", 0, Integer.MAX_VALUE);
         this.location = location;
@@ -70,7 +70,7 @@ public class ArrowCacheServer implements AutoCloseable {
     public static void main(String[] args) throws Exception {
         logger.info("Starting");
 
-        final SchemaConfig schemaConfig = FileUtils.loadFromResource("schemaconfig.json", SchemaConfig.CODEC);
+        final RootSchemaConfig schemaConfig = FileUtils.loadFromResource("schemaconfig.json", RootSchemaConfig.CODEC);
         final ServerConfig serverConfig = FileUtils.loadFromResource("serverconfig.json", ServerConfig.CODEC);
         RootAllocator allocator = new RootAllocator();
         //final AllocatorManager allocatorManager = new AllocatorManager(schemaConfig.allocatorMaxSize());

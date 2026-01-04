@@ -1,16 +1,23 @@
 {
     "childSchema": {
-        "test" : {
+        "subtest" : {
             "tables": {
-                "abc": {
+                "uvw": {
                     "keyColumn": "id"
                 },
-                "ghi": {
+                "xyz": {
                     "keyColumn": "id"
                 }
             }
         }
     },
 
-    "tables": []
+    "tables": {
+        "abc": {
+            "keyColumn": "id"
+        },
+        "ghi": {
+            "keyColumn": "id"
+        }
+    }
 }

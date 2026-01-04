@@ -40,7 +40,7 @@ final class ArrowToEnumerableConverter
             RelOptPlanner planner,
             RelMetadataQuery mq
     ) {
-        RelOptCost cost = super.computeSelfCost(planner, mq);
+        final RelOptCost cost = super.computeSelfCost(planner, mq);
         return Objects.requireNonNull(cost, "cost").multiplyBy(0.1);
     }
 

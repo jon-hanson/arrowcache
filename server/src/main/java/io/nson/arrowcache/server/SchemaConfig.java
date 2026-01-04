@@ -1,45 +1,15 @@
 package io.nson.arrowcache.server;
 
-import io.nson.arrowcache.common.JsonCodec;
-
+import java.util.Collections;
 import java.util.Map;
 
-public final class SchemaConfig {
-    public static final String DEFAULT_SCHEMA_NAME = "";
-
-    public static final JsonCodec<SchemaConfig> CODEC = new Codec();
-
-    public static final class TableConfig {
-        private final String keyColumn;
-
-        public TableConfig(String keyColumn) {
-            this.keyColumn = keyColumn;
-        }
-
-        @Override
-        public String toString() {
-            return "SchemaConfig{" +
-                    "keyColumn='" + keyColumn + '\'' +
-                    '}';
-        }
-
-        public String keyColumn() {
-            return keyColumn;
-        }
-    }
-
-    private static class Codec extends JsonCodec<SchemaConfig> {
-        public Codec() {
-            super(SchemaConfig.class);
-        }
-    }
-
-    private final Map<String, SchemaConfig> childSchema;
-    private final Map<String, TableConfig> tables;
+public class SchemaConfig {
+    protected final Map<String, RootSchemaConfig.ChildSchemaConfig> childSchema;
+    protected final Map<String, RootSchemaConfig.TableConfig> tables;
 
     public SchemaConfig(
-            Map<String, SchemaConfig> childSchema,
-            Map<String, TableConfig> tables
+            Map<String, RootSchemaConfig.ChildSchemaConfig> childSchema,
+            Map<String, RootSchemaConfig.TableConfig> tables
     ) {
         this.childSchema = childSchema;
         this.tables = tables;
@@ -47,27 +17,17 @@ public final class SchemaConfig {
 
     @Override
     public String toString() {
-        return "CacheConfig{" +
+        return getClass().getSimpleName() + "{" +
                 "childSchema=" + childSchema +
                 "tables=" + tables +
                 '}';
     }
 
-    public Map<String, SchemaConfig> childSchema() {
-        return childSchema;
+    public Map<String, RootSchemaConfig.ChildSchemaConfig> childSchema() {
+        return childSchema == null ? Collections.emptyMap() : childSchema;
     }
 
-    public Map<String, TableConfig> tables() {
-        return tables;
-    }
-
-    public SchemaConfig childSchema(String name) {
-        if (childSchema.containsKey(name)) {
-            return childSchema.get(name);
-        } else if (childSchema.containsKey(DEFAULT_SCHEMA_NAME)) {
-            return childSchema.get(DEFAULT_SCHEMA_NAME);
-        } else {
-            throw new IllegalArgumentException(String.format("Unknown child schema: %s", name));
-        }
+    public Map<String, RootSchemaConfig.TableConfig> tables() {
+        return tables == null ? Collections.emptyMap() : tables;
     }
 }

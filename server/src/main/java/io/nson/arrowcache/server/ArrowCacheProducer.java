@@ -31,7 +31,10 @@ public class ArrowCacheProducer extends NoOpFlightProducer implements AutoClosea
 
     private static final ActionType DELETE = new ActionType("DELETE", "");
 
-    private static Map<String, DataSchema> createDataSchemaMap(BufferAllocator allocator, Map<String, SchemaConfig> schemaConfigMap) {
+    private static Map<String, DataSchema> createDataSchemaMap(
+            BufferAllocator allocator,
+            Map<String, RootSchemaConfig.ChildSchemaConfig> schemaConfigMap
+    ) {
         return schemaConfigMap.entrySet().stream()
                 .collect(toMap(
                         en -> en.getKey(),
@@ -41,7 +44,7 @@ public class ArrowCacheProducer extends NoOpFlightProducer implements AutoClosea
 
     private final BufferAllocator allocator;
 
-    private final SchemaConfig schemaConfig;
+    private final RootSchemaConfig schemaConfig;
 
     private final Location location;
 
@@ -57,7 +60,7 @@ public class ArrowCacheProducer extends NoOpFlightProducer implements AutoClosea
 
     public ArrowCacheProducer(
             BufferAllocator allocator,
-            SchemaConfig schemaConfig,
+            RootSchemaConfig schemaConfig,
             Location location,
             Duration requestLifetime
     ) {
@@ -143,17 +146,17 @@ public class ArrowCacheProducer extends NoOpFlightProducer implements AutoClosea
             for (String schemaName : criteriaReq.getSchemas()) {
                 final DataSchema schema = getDataSchema(schemaName);
 
-                final Map<String, DataTable> tableMap = schema.getTableMap();
+                final Set<String> tableNames = schema.existingTables();
 
                 final FlightEndpoint flightEndpoint = new FlightEndpoint(
                         new Ticket(new byte[]{}),
                         location
                 );
 
-                tableMap.forEach((tableName, dataTable) -> {
+                tableNames.forEach(tableName -> {
                     final FlightDescriptor descriptor = FlightDescriptor.path(schema.name(), tableName);
                     final FlightInfo flightInfo = new FlightInfo(
-                            dataTable.arrowSchema().get(),
+                            schema.getTableOpt(tableName).get().arrowSchema(),
                             descriptor,
                             Collections.singletonList(flightEndpoint),
                             -1,

@@ -3,7 +3,7 @@ package io.nson.arrowcache.server.cache;
 
 import io.nson.arrowcache.common.utils.ArrowUtils;
 import io.nson.arrowcache.common.utils.FileUtils;
-import io.nson.arrowcache.server.SchemaConfig;
+import io.nson.arrowcache.server.RootSchemaConfig;
 import io.nson.arrowcache.server.TestData;
 import org.apache.arrow.flight.FlightProducer;
 import org.apache.arrow.memory.ArrowBuf;
@@ -30,7 +30,7 @@ public class DataSchemaTest {
 
     @Test
     public void test() throws IOException {
-        final SchemaConfig schemaConfig = FileUtils.loadFromResource("cacheconfig.json", SchemaConfig.CODEC);
+        final RootSchemaConfig schemaConfig = FileUtils.loadFromResource("schemaconfig.json", RootSchemaConfig.CODEC);
         try(
                 //final AllocatorManager allocatorManager = new AllocatorManager(schemaConfig.allocatorMaxSize());
                 final RootAllocator allocator = new RootAllocator(Integer.MAX_VALUE);
@@ -42,7 +42,7 @@ public class DataSchemaTest {
 
             logger.info("Loading testdata1.csv");
             final Map<Integer, Map<String, Object>> testDataMap = TestData.loadTestData(vsc, "testdata1.csv");
-            final DataTable dataTable1 = dataSchema.getTableOpt("abc"). orElseThrow();
+            final DataTable dataTable1 = dataSchema.getTableOpt("abc").orElseThrow();
             dataTable1.addBatch(vsc.getSchema(), unloader.getRecordBatch());
 
             logger.info("Loading testdata2.csv");

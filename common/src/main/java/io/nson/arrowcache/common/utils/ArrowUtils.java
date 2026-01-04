@@ -11,6 +11,7 @@ import org.apache.arrow.vector.types.pojo.Schema;
 import org.apache.arrow.vector.util.Text;
 
 import java.nio.charset.StandardCharsets;
+import java.util.Collections;
 import java.util.List;
 import java.util.function.Consumer;
 
@@ -18,6 +19,10 @@ import static java.util.stream.Collectors.joining;
 
 public abstract class ArrowUtils {
     private ArrowUtils() {}
+
+    public static final Schema EMPTY_SCHEMA = new Schema(
+            Collections.emptyList()
+    );
 
     public static Result stringToResult(String s) {
         return new Result(s.getBytes(StandardCharsets.UTF_8));
