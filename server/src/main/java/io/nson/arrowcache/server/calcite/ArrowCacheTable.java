@@ -36,13 +36,14 @@ import org.apache.calcite.util.Util;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.io.Closeable;
 import java.lang.reflect.Type;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 
 public final class ArrowCacheTable extends AbstractTable
-        implements TranslatableTable, QueryableTable, AutoCloseable {
+        implements TranslatableTable, QueryableTable, Closeable {
 
     private static final Logger logger = LoggerFactory.getLogger(ArrowCacheTable.class);
 
