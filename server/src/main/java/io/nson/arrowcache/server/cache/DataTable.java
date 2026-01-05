@@ -95,7 +95,7 @@ public class DataTable implements AutoCloseable {
     private final String name;
     private @Nullable Schema arrowSchema;
     private final String keyColumnName;
-    private @Nullable int keyColumnIndex;
+    private @Nullable Integer keyColumnIndex;
     private final List<Batch> batches;
     private final Map<Object, RowCoordinate> rowCoordinateMap;
 
@@ -174,6 +174,8 @@ public class DataTable implements AutoCloseable {
     }
 
     private void processBatch(int batchIndex, VectorSchemaRoot vsc) {
+        Objects.requireNonNull(this.keyColumnIndex);
+
         final int rowCount = vsc.getRowCount();
         final FieldVector fv = vsc.getFieldVectors().get(this.keyColumnIndex);
         for (int rowIndex = 0; rowIndex < rowCount; ++rowIndex) {

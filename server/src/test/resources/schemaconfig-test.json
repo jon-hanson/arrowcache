@@ -1,5 +1,4 @@
 {
-    "name": "test",
     "childSchema": {
         "subtest" : {
             "tables": {
@@ -12,6 +11,7 @@
             }
         }
     },
+
     "tables": {
         "abc": {
             "keyColumn": "id"

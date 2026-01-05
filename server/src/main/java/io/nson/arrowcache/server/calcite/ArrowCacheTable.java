@@ -1,7 +1,6 @@
 package io.nson.arrowcache.server.calcite;
 
 import io.nson.arrowcache.common.utils.ExceptionUtils;
-import io.nson.arrowcache.server.RootSchemaConfig;
 import io.nson.arrowcache.server.cache.DataTable;
 import org.apache.arrow.gandiva.evaluator.Filter;
 import org.apache.arrow.gandiva.evaluator.Projector;
@@ -52,9 +51,7 @@ public final class ArrowCacheTable extends AbstractTable
 
     public ArrowCacheTable(
             BufferAllocator allocator,
-            String name,
-            DataTable dataSchema,
-            Schema arrowSchema
+            DataTable dataSchema
     ) {
         this.allocator = allocator;
         this.dataTable = dataSchema;

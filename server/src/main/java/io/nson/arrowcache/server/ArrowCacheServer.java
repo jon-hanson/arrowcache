@@ -1,6 +1,7 @@
 package io.nson.arrowcache.server;
 
 import io.nson.arrowcache.common.utils.FileUtils;
+import io.nson.arrowcache.server.cache.DataSchema;
 import org.apache.arrow.flight.FlightServer;
 import org.apache.arrow.flight.Location;
 import org.apache.arrow.memory.BufferAllocator;
@@ -25,14 +26,15 @@ public class ArrowCacheServer implements AutoCloseable {
             BufferAllocator allocator,
             Location location,
             Duration requestLifetime,
-            RootSchemaConfig schemaConfig
+            RootSchemaConfig schemaConfig,
+            DataSchema rootSchema
     ) {
         this.allocator = allocator.newChildAllocator("ArrowCacheServer", 0, Integer.MAX_VALUE);
         this.location = location;
-        this.flightProducer = new ArrowCacheProducer(allocator, schemaConfig, location, requestLifetime);
+        this.flightProducer = new ArrowCacheProducer(allocator, schemaConfig, rootSchema, location, requestLifetime);
         this.flightServer = FlightServer.builder(allocator, location, flightProducer).build();
 
-        logger.info("New instance for location {}", location);
+        logger.info("New server for location {}", location);
     }
 
     public void close() throws Exception {
@@ -70,16 +72,27 @@ public class ArrowCacheServer implements AutoCloseable {
     public static void main(String[] args) throws Exception {
         logger.info("Starting");
 
-        final RootSchemaConfig schemaConfig = FileUtils.loadFromResource("schemaconfig.json", RootSchemaConfig.CODEC);
-        final ServerConfig serverConfig = FileUtils.loadFromResource("serverconfig.json", ServerConfig.CODEC);
-        RootAllocator allocator = new RootAllocator();
-        //final AllocatorManager allocatorManager = new AllocatorManager(schemaConfig.allocatorMaxSize());
+        final RootSchemaConfig schemaConfig =
+                FileUtils.loadFromResource(
+                        "schemaconfig.json",
+                        RootSchemaConfig.CODEC
+                );
+        final ServerConfig serverConfig =
+                FileUtils.loadFromResource(
+                        "serverconfig.json",
+                        ServerConfig.CODEC
+                );
+
+        final Location location = Location.forGrpcInsecure("localhost", serverConfig.serverPort());
+        final RootAllocator allocator = new RootAllocator();
+        final DataSchema rootSchema = new DataSchema(allocator, schemaConfig.name(), schemaConfig);
 
         final ArrowCacheServer server = new ArrowCacheServer(
                 allocator,
-                Location.forGrpcInsecure("localhost", serverConfig.serverPort()),
+                location,
                 serverConfig.requestLifetime(),
-                schemaConfig
+                schemaConfig,
+                rootSchema
         );
 
         server.start();
@@ -87,7 +100,7 @@ public class ArrowCacheServer implements AutoCloseable {
         Runtime.getRuntime().addShutdownHook(new Thread(() -> {
             try {
                 logger.info("Shutting down...");
-                AutoCloseables.close(server, allocator);
+                AutoCloseables.close(server, rootSchema, allocator);
             } catch (Exception ex) {
                 logger.error("Ignoring exception", ex);
             }

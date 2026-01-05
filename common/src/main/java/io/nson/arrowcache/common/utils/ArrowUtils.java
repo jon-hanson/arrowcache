@@ -13,6 +13,7 @@ import org.apache.arrow.vector.util.Text;
 import java.nio.charset.StandardCharsets;
 import java.util.Collections;
 import java.util.List;
+import java.util.Objects;
 import java.util.function.Consumer;
 
 import static java.util.stream.Collectors.joining;
@@ -66,7 +67,7 @@ public abstract class ArrowUtils {
             lineCons.accept(
                     fvs.stream()
                             .map(fv -> fv.getObject(r2))
-                            .map(Object::toString)
+                            .map(Objects::toString)
                             .collect(joining(", "))
             );
         }

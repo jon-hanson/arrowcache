@@ -1,7 +1,5 @@
 package io.nson.arrowcache.server.calcite;
 
-import io.nson.arrowcache.common.utils.FileUtils;
-import io.nson.arrowcache.server.RootSchemaConfig;
 import io.nson.arrowcache.server.cache.DataSchema;
 import org.apache.arrow.memory.BufferAllocator;
 import org.apache.calcite.schema.SchemaFactory;
@@ -10,7 +8,6 @@ import org.jspecify.annotations.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.io.IOException;
 import java.util.*;
 
 public final class ArrowCacheSchemaFactory implements SchemaFactory, AutoCloseable {
@@ -18,17 +15,9 @@ public final class ArrowCacheSchemaFactory implements SchemaFactory, AutoCloseab
 
     public static @Nullable ArrowCacheSchemaFactory INSTANCE;
 
-//    public static void initialise(BufferAllocator allocator, String configName) throws IOException {
-//        final RootSchemaConfig schemaConfig = FileUtils.loadFromResource(configName, RootSchemaConfig.CODEC);
-//        initialise(allocator, schemaConfig);
-//    }
-
-    public static void initialise(BufferAllocator allocator, DataSchema rootSchema) throws IOException {
+    public static void initialise(BufferAllocator allocator, DataSchema rootSchema) {
         if (INSTANCE == null) {
-            INSTANCE = new ArrowCacheSchemaFactory(
-                    allocator,
-                    rootSchema
-            );
+            INSTANCE = new ArrowCacheSchemaFactory(allocator, rootSchema);
         } else {
             throw new IllegalStateException("ArrowSchemaFactory is already initialised");
         }
@@ -56,10 +45,7 @@ public final class ArrowCacheSchemaFactory implements SchemaFactory, AutoCloseab
         logger.info("Creating instance");
         this.allocator = allocator.newChildAllocator("ArrowSchemaFactory", 0, Long.MAX_VALUE);
         this.rootDataSchema = rootDataSchema;
-        this.rootArrowCacheSchema = new ArrowCacheSchema(
-                this.allocator,
-                rootDataSchema
-        );
+        this.rootArrowCacheSchema = new ArrowCacheSchema(this.allocator, rootDataSchema);
     }
 
     @Override

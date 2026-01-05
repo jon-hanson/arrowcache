@@ -1,6 +1,5 @@
 package io.nson.arrowcache.server.cache;
 
-
 import io.nson.arrowcache.common.utils.ArrowUtils;
 import io.nson.arrowcache.common.utils.FileUtils;
 import io.nson.arrowcache.server.RootSchemaConfig;

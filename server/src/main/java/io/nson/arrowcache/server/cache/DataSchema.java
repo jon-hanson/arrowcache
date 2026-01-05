@@ -7,6 +7,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.util.Map;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
@@ -30,7 +31,7 @@ public class DataSchema implements AutoCloseable {
     private final BufferAllocator allocator;
     private final String name;
     private final Map<String, RootSchemaConfig.TableConfig> tableConfigMap;
-    private final Map<String, DataSchema> schemaMap;
+    private final Map<String, DataSchema> childSchema;
     private final Map<String, DataTable> tableMap;
 
     public DataSchema(
@@ -38,17 +39,19 @@ public class DataSchema implements AutoCloseable {
             String name,
             SchemaConfig schemaConfig
     ) {
+        logger.info("Creating DataSchema {}", name);
         this.allocator = allocator.newChildAllocator("DataSchema:" + name, 0, Long.MAX_VALUE);
-        this.name = name;
+        this.name = Objects.requireNonNull(name);
         this.tableConfigMap = schemaConfig.tables();
-        this.schemaMap = createSchemaMap(allocator, schemaConfig.childSchema());
+        this.childSchema = createSchemaMap(allocator, schemaConfig.childSchema());
         this.tableMap = new ConcurrentHashMap<>();
     }
 
     @Override
     public void close() {
         try {
-            logger.info("Closing...");
+            logger.info("Closing DataSchema {}...", name);
+            childSchema.values().forEach(DataSchema::close);
             tableMap.values().forEach(DataTable::close);
             this.allocator.close();
         } catch (Exception ex) {
@@ -62,7 +65,7 @@ public class DataSchema implements AutoCloseable {
     }
 
     public DataSchema getSchema(String name) {
-        return Optional.ofNullable(schemaMap.get(name))
+        return Optional.ofNullable(childSchema.get(name))
                 .orElseThrow(() -> new IllegalArgumentException("No such schema: " + name));
     }
 

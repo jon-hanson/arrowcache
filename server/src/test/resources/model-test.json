@@ -1,0 +1,13 @@
+{
+    "version": "1.0",
+    "defaultSchema": "test",
+    "schemas": [
+        {
+            "name": "test",
+            "type": "custom",
+            "factory": "io.nson.arrowcache.server.calcite.ArrowCacheSchemaFactory#INSTANCE",
+            "operand": {},
+            "tables": []
+        }
+    ]
+}

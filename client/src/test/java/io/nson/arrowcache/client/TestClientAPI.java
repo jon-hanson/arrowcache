@@ -47,34 +47,34 @@ public class TestClientAPI {
             clientAPI.put(SCHEMA, TABLE2, vsc);
             vsc.clear();
 
-            logger.info("Running query for table: {}.{} and filters: {}", SCHEMA, TABLE1, TestData.KEYS1);
+            logger.info("Running query for table: {}.{} and keys: {}", SCHEMA, TABLE1, TestData.KEYS1);
             clientAPI.get(SCHEMA, TABLE1, TestData.KEYS1, LISTENER);
 
-            logger.info("Running query for table: {}.{} and filters: {}", SCHEMA, TABLE1, TestData.KEYS2);
+            logger.info("Running query for table: {}.{} and keys: {}", SCHEMA, TABLE1, TestData.KEYS2);
             clientAPI.get(SCHEMA, TABLE1, TestData.KEYS2, LISTENER);
 
-            logger.info("Running query for table: {}.{} and filters: {}", SCHEMA, TABLE1, TestData.KEYS3);
+            logger.info("Running query for table: {}.{} and keys: {}", SCHEMA, TABLE1, TestData.KEYS3);
             clientAPI.get(SCHEMA, TABLE1, TestData.KEYS3, LISTENER);
 
-            logger.info("Running query for table: {}.{} and filters: {}", SCHEMA, TABLE1, TestData.KEYS4);
+            logger.info("Running query for table: {}.{} and keys: {}", SCHEMA, TABLE1, TestData.KEYS4);
             clientAPI.get(SCHEMA, TABLE1, TestData.KEYS4, LISTENER);
 
-            logger.info("Running query for table: {}.{} and filters: {}", SCHEMA, TABLE2, TestData.KEYS1);
+            logger.info("Running query for table: {}.{} and keys: {}", SCHEMA, TABLE2, TestData.KEYS1);
             clientAPI.get(SCHEMA, TABLE2, TestData.KEYS1, LISTENER);
 
-            logger.info("Running query for table: {}.{} and filters: {}", SCHEMA, TABLE2, TestData.KEYS2);
+            logger.info("Running query for table: {}.{} and keys: {}", SCHEMA, TABLE2, TestData.KEYS2);
             clientAPI.get(SCHEMA, TABLE2, TestData.KEYS2, LISTENER);
 
-            logger.info("Running query for table: {}.{} and filters: {}", SCHEMA, TABLE2, TestData.KEYS3);
+            logger.info("Running query for table: {}.{} and keys: {}", SCHEMA, TABLE2, TestData.KEYS3);
             clientAPI.get(SCHEMA, TABLE2, TestData.KEYS3, LISTENER);
 
-            logger.info("Running query for table: {}.{} and filters: {}", SCHEMA, TABLE2, TestData.KEYS4);
+            logger.info("Running query for table: {}.{} and keys: {}", SCHEMA, TABLE2, TestData.KEYS4);
             clientAPI.get(SCHEMA, TABLE2, TestData.KEYS4, LISTENER);
 
-            logger.info("Deleting entries for table: {}.{} and filters: {}", SCHEMA, TABLE2, TestData.KEYS4);
+            logger.info("Deleting entries for table: {}.{} and keys: {}", SCHEMA, TABLE2, TestData.KEYS4);
             clientAPI.remove(SCHEMA, TABLE2, TestData.KEYS4);
 
-            logger.info("Running query for table: {}.{} and filters: {}", SCHEMA, TABLE2, TestData.KEYS4);
+            logger.info("Running query for table: {}.{} and keys: {}", SCHEMA, TABLE2, TestData.KEYS4);
             clientAPI.get(SCHEMA, TABLE2, TestData.KEYS4, LISTENER);
 
             logger.info("Done");

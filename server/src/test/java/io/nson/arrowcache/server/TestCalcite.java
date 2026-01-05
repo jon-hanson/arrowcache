@@ -14,6 +14,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
+import java.nio.file.Paths;
 import java.sql.*;
 import java.util.Map;
 import java.util.Properties;
@@ -27,7 +28,7 @@ public class TestCalcite {
 
     @Test
     public void test() throws IOException, ClassNotFoundException, SQLException {
-        final RootSchemaConfig schemaConfig = FileUtils.loadFromResource("schemaconfig.json", RootSchemaConfig.CODEC);
+        final RootSchemaConfig schemaConfig = FileUtils.loadFromResource("schemaconfig-test.json", RootSchemaConfig.CODEC);
         try(
                 final RootAllocator rootAllocator = new RootAllocator(Long.MAX_VALUE);
                 final DataSchema rootSchema = new DataSchema(rootAllocator, schemaConfig.name(), schemaConfig)
@@ -49,7 +50,8 @@ public class TestCalcite {
                 Class.forName("org.apache.calcite.jdbc.Driver");
                 final Properties props = new Properties();
                 props.put(CalciteConnectionProperty.CASE_SENSITIVE.camelName(), "false");
-                try (final Connection connection = DriverManager.getConnection("jdbc:calcite:model=src/main/resources/model.json", props)) {
+                System.out.println("PWD=" + Paths.get("").toAbsolutePath());
+                try (final Connection connection = DriverManager.getConnection("jdbc:calcite:model=src/test/resources/model-test.json", props)) {
                     final CalciteConnection calciteConnection = connection.unwrap(CalciteConnection.class);
                     try (final Statement statement = calciteConnection.createStatement()) {
                         if (statement.execute("SELECT * FROM test.abc WHERE name = 'ghi'")) {

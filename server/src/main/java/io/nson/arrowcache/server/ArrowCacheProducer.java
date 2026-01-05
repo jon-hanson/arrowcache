@@ -50,7 +50,7 @@ public class ArrowCacheProducer extends NoOpFlightProducer implements AutoClosea
 
     private final Duration requestLifetime;
 
-    private final Map<String, DataSchema> dataSchemaMap;
+    private final DataSchema rootSchema;
 
     private final ConcurrentMap<UUID, RequestExecutor> pendingRequests;
 
@@ -58,9 +58,11 @@ public class ArrowCacheProducer extends NoOpFlightProducer implements AutoClosea
 
     private volatile boolean closing = false;
 
+
     public ArrowCacheProducer(
             BufferAllocator allocator,
             RootSchemaConfig schemaConfig,
+            DataSchema rootSchema,
             Location location,
             Duration requestLifetime
     ) {
@@ -68,7 +70,7 @@ public class ArrowCacheProducer extends NoOpFlightProducer implements AutoClosea
         this.schemaConfig = schemaConfig;
         this.location = location;
         this.requestLifetime = requestLifetime;
-        this.dataSchemaMap = createDataSchemaMap(allocator, schemaConfig.childSchema());
+        this.rootSchema = rootSchema;
         this.pendingRequests = new ConcurrentHashMap<>();
 
         ConcurrencyUtils.scheduleAtFixedRate(
@@ -82,7 +84,6 @@ public class ArrowCacheProducer extends NoOpFlightProducer implements AutoClosea
     public void close() {
         logger.info("Closing...");
         closing = true;
-        dataSchemaMap.values().forEach(DataSchema::close);
         allocator.close();
     }
 
@@ -110,14 +111,18 @@ public class ArrowCacheProducer extends NoOpFlightProducer implements AutoClosea
     }
 
     private DataSchema getDataSchema(String schemaName) {
-        return Optional.ofNullable(dataSchemaMap.get(schemaName))
-                .orElseThrow(() ->
-                        ArrowServerUtils.exception(
-                                CallStatus.NOT_FOUND,
-                                        logger,
-                                        "No schema with name: " + schemaName
-                                ).toRuntimeException()
-                );
+        if (schemaName.equals(rootSchema.name())) {
+            return rootSchema;
+        } else {
+            return Optional.ofNullable(rootSchema.getSchema(schemaName))
+                    .orElseThrow(() ->
+                            ArrowServerUtils.exception(
+                                    CallStatus.NOT_FOUND,
+                                    logger,
+                                    "No schema with name: " + schemaName
+                            ).toRuntimeException()
+                    );
+        }
     }
 
     private DataTable getDataTable(DataSchema dataSchema, String tableName) {

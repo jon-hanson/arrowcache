@@ -1,7 +1,6 @@
 package io.nson.arrowcache.server.calcite;
 
 import io.nson.arrowcache.common.utils.ExceptionUtils;
-import io.nson.arrowcache.server.RootSchemaConfig;
 import io.nson.arrowcache.server.cache.DataSchema;
 import io.nson.arrowcache.server.cache.DataTable;
 import org.apache.arrow.memory.BufferAllocator;
@@ -75,7 +74,7 @@ public final class ArrowCacheSchema extends AbstractSchema implements Closeable 
                                             "Table '" + tableName + "' not found"
                                     ).create()
                             );
-                    return new ArrowCacheTable(this.allocator, tableName, dataTable, arrowSchema);
+                    return new ArrowCacheTable(this.allocator, dataTable);
                 }
         );
         table.addBatches(arrowSchema, arbs);
