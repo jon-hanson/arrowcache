@@ -14,7 +14,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
-import java.nio.file.Paths;
 import java.sql.*;
 import java.util.Map;
 import java.util.Properties;
@@ -50,7 +49,7 @@ public class TestCalcite {
                 Class.forName("org.apache.calcite.jdbc.Driver");
                 final Properties props = new Properties();
                 props.put(CalciteConnectionProperty.CASE_SENSITIVE.camelName(), "false");
-                System.out.println("PWD=" + Paths.get("").toAbsolutePath());
+
                 try (final Connection connection = DriverManager.getConnection("jdbc:calcite:model=src/test/resources/model-test.json", props)) {
                     final CalciteConnection calciteConnection = connection.unwrap(CalciteConnection.class);
                     try (final Statement statement = calciteConnection.createStatement()) {
