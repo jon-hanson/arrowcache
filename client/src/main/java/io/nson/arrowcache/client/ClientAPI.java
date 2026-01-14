@@ -2,6 +2,7 @@ package io.nson.arrowcache.client;
 
 import org.apache.arrow.vector.VectorSchemaRoot;
 
+import java.util.List;
 import java.util.Set;
 
 public interface ClientAPI extends AutoCloseable {
@@ -16,11 +17,11 @@ public interface ClientAPI extends AutoCloseable {
         void onCompleted();
     }
 
-    void put(String schema, String table, VectorSchemaRoot vsc, Source src);
+    void put(List<String> path, String table, VectorSchemaRoot vsc, Source src);
 
-    void put(String schema, String table, VectorSchemaRoot vsc);
+    void put(List<String> path, String table, VectorSchemaRoot vsc);
 
-    void get(String schema, String table, Set<?> keys, Listener listener);
+    void get(List<String> path, String table, Set<?> keys, Listener listener);
 
-    void remove(String schema, String table, Set<?> keys);
+    void remove(List<String> path, String table, Set<?> keys);
 }

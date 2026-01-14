@@ -110,31 +110,39 @@ public class ArrowCacheProducer extends NoOpFlightProducer implements AutoClosea
         }
     }
 
-    private DataSchema getDataSchema(String schemaName) {
-        if (schemaName.equals(rootSchema.name())) {
-            return rootSchema;
-        } else {
-            return Optional.ofNullable(rootSchema.getSchema(schemaName))
-                    .orElseThrow(() ->
-                            ArrowServerUtils.exception(
-                                    CallStatus.NOT_FOUND,
-                                    logger,
-                                    "No schema with name: " + schemaName
-                            ).toRuntimeException()
-                    );
-        }
-    }
-
-    private DataTable getDataTable(DataSchema dataSchema, String tableName) {
-        return dataSchema.getTableOpt(tableName)
+    public DataSchema getDataSchema(List<String> path) {
+        return rootSchema.getDataSchema(path)
                 .orElseThrow(() ->
                         ArrowServerUtils.exception(
                                 CallStatus.NOT_FOUND,
                                 logger,
-                                "No table in Schema '" + dataSchema.name() + "' with name: " + tableName
+                                "No schema for path : " + path
                         ).toRuntimeException()
                 );
     }
+
+    public DataTable getDataTable(List<String> path) {
+        return rootSchema.getDataTable(path)
+                .orElseThrow(() ->
+                        ArrowServerUtils.exception(
+                                CallStatus.NOT_FOUND,
+                                logger,
+                                "No schema for path : " + path
+                        ).toRuntimeException()
+                );
+    }
+
+//
+//    private DataTable getDataTable(DataSchema dataSchema, String tableName) {
+//        return dataSchema.getTableOpt(tableName)
+//                .orElseThrow(() ->
+//                        ArrowServerUtils.exception(
+//                                CallStatus.NOT_FOUND,
+//                                logger,
+//                                "No table in Schema '" + dataSchema.name() + "' with name: " + tableName
+//                        ).toRuntimeException()
+//                );
+//    }
 
     @Override
     public void listActions(CallContext context, StreamListener<ActionType> listener) {
@@ -148,8 +156,8 @@ public class ArrowCacheProducer extends NoOpFlightProducer implements AutoClosea
         try {
             final CriteriaRequest criteriaReq = CriteriaRequest.getDecoder().decode(criteria.getExpression());
 
-            for (String schemaName : criteriaReq.getSchemas()) {
-                final DataSchema schema = getDataSchema(schemaName);
+            for (List<String> schemaPath : criteriaReq.getSchemaPaths()) {
+                final DataSchema schema = getDataSchema(schemaPath);
 
                 final Set<String> tableNames = schema.existingTables();
 
@@ -195,8 +203,7 @@ public class ArrowCacheProducer extends NoOpFlightProducer implements AutoClosea
 
                 if (request instanceof GetRequest) {
                     final GetRequest getRequest = (GetRequest) request;
-                    final DataSchema dataSchema = getDataSchema(getRequest.getSchema$());
-                    final DataTable dataTable = getDataTable(dataSchema, getRequest.getTable());
+                    final DataTable dataTable = getDataTable(getRequest.getPath());
                     final List<Object> keys = getRequest.getKeys();
                     logger.info("FlightDescriptor GetRequest: {} keys", keys.size());
                     requestExecutor = RequestExecutor.getRequestExecutor(location, dataTable, keys);
@@ -279,20 +286,15 @@ public class ArrowCacheProducer extends NoOpFlightProducer implements AutoClosea
                 } else {
                     final List<String> flightPath = flightDesc.getPath();
 
-                    final String schemaName;
-                    final String tableName;
-                    if (flightPath.size() == 2) {
-                        schemaName = flightPath.get(0);
-                        tableName = flightPath.get(1);
-                    } else {
+                    final List<String> path;
+                    if (flightPath.isEmpty()) {
                         throw ExceptionUtils.exception(
                                 logger,
-                                "Invalid flight path: " + flightPath + ". Must be [schema, table]"
+                                "Invalid flight path: " + flightPath + ". Must be [<schema-path>, table]"
                         ).create(Exception::new);
                     }
 
-                    final DataSchema dataSchema = getDataSchema(schemaName);
-                    final DataTable table = getDataTable(dataSchema, tableName);
+                    final DataTable table = getDataTable(flightPath);
 
                     long rows = 0;
                     while (flightStream.next()) {
@@ -332,8 +334,7 @@ public class ArrowCacheProducer extends NoOpFlightProducer implements AutoClosea
         try {
             if (action.getType().equals(DELETE.getType())) {
                 final DeleteRequest deleteRequest = DeleteRequest.getDecoder().decode(action.getBody());
-                final DataSchema dataSchema = getDataSchema(deleteRequest.getSchema$());
-                final DataTable table = getDataTable(dataSchema, deleteRequest.getTable());
+                final DataTable table = getDataTable(deleteRequest.getPath());
 
                 table.deleteEntries(deleteRequest.getKeys());
 

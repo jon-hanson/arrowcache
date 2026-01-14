@@ -6,10 +6,7 @@ import org.apache.arrow.memory.BufferAllocator;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.util.Map;
-import java.util.Objects;
-import java.util.Optional;
-import java.util.Set;
+import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 
 import static java.util.stream.Collectors.toUnmodifiableMap;
@@ -67,6 +64,30 @@ public class DataSchema implements AutoCloseable {
     public DataSchema getSchema(String name) {
         return Optional.ofNullable(childSchema.get(name))
                 .orElseThrow(() -> new IllegalArgumentException("No such schema: " + name));
+    }
+
+    public Optional<DataSchema> getDataSchema(List<String> path) {
+        return getDataSchema(path, 0);
+    }
+
+    public Optional<DataSchema> getDataSchema(List<String> path, int depth) {
+        if (depth == path.size()) {
+            return Optional.of(this);
+        } else {
+            return Optional.ofNullable(childSchema.get(path.get(depth)));
+        }
+    }
+
+    public Optional<DataTable> getDataTable(List<String> path) {
+        return getDataTable(path, 0);
+    }
+
+    private Optional<DataTable> getDataTable(List<String> path, int depth) {
+        if (depth == path.size() - 1) {
+            return Optional.ofNullable(tableMap.get(path.get(depth)));
+        } else {
+            return childSchema.get(path.get(depth)).getDataTable(path, depth + 1);
+        }
     }
 
     public Set<String> existingTables() {

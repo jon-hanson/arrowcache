@@ -21,10 +21,13 @@
         "name": "CriteriaRequest",
         "fields": [
             {
-                "name": "schemas",
+                "name": "schemaPaths",
                 "type": {
                     "type": "array",
-                    "items": "string"
+                    "items": {
+                        "type": "array",
+                        "items": "string"
+                    }
                 }
             },{
                 "name": "recursive",
@@ -40,10 +43,25 @@
             {
                 "name": "schemaTables",
                 "type": {
-                    "type": "map",
-                    "values" : {
-                        "type": "array",
-                        "items": "string"
+                    "type": "array",
+                    "items" : {
+                        "type": "record",
+                        "name": "SchemaTables",
+                        "fields": [
+                            {
+                                "name": "path",
+                                "type": {
+                                    "type": "array",
+                                    "items": "string"
+                                }
+                            },{
+                                "name": "tables",
+                                "type": {
+                                    "type": "array",
+                                    "items": "string"
+                                }
+                            }
+                        ]
                     }
                 }
             }
@@ -64,11 +82,11 @@
         "name": "GetRequest",
         "fields": [
             {
-                "name": "schema",
-                "type": "string"
-            },{
-                "name": "table",
-                "type": "string"
+                "name": "path",
+                "type": {
+                    "type": "array",
+                    "items": "string"
+                }
             },{
                 "name": "keys",
                 "type": {
@@ -83,11 +101,11 @@
         "name": "DeleteRequest",
         "fields": [
             {
-                "name": "schema",
-                "type": "string"
-            },{
-                "name": "table",
-                "type": "string"
+                "name": "path",
+                "type": {
+                    "type": "array",
+                    "items": "string"
+                }
             },{
                 "name": "keys",
                 "type": {
