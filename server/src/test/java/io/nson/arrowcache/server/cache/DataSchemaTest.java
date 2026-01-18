@@ -41,7 +41,7 @@ public class DataSchemaTest {
 
             logger.info("Loading testdata1.csv");
             final Map<Integer, Map<String, Object>> testDataMap = TestData.loadTestData(vsc, "testdata1.csv");
-            final DataTable dataTable1 = dataSchema.getTableOpt("abc").orElseThrow();
+            final DataTable dataTable1 = dataSchema.getOrCreateTable("abc").orElseThrow();
             dataTable1.addBatch(vsc.getSchema(), unloader.getRecordBatch());
 
             logger.info("Loading testdata2.csv");

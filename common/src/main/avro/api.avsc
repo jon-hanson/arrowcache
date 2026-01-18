@@ -49,7 +49,7 @@
                         "name": "SchemaTables",
                         "fields": [
                             {
-                                "name": "path",
+                                "name": "schemaPath",
                                 "type": {
                                     "type": "array",
                                     "items": "string"
@@ -82,11 +82,14 @@
         "name": "GetRequest",
         "fields": [
             {
-                "name": "path",
+                "name": "schemaPath",
                 "type": {
                     "type": "array",
                     "items": "string"
                 }
+            },{
+                "name": "table",
+                "type": "string"
             },{
                 "name": "keys",
                 "type": {
@@ -101,11 +104,14 @@
         "name": "DeleteRequest",
         "fields": [
             {
-                "name": "path",
+                "name": "schemaPath",
                 "type": {
                     "type": "array",
                     "items": "string"
                 }
+            },{
+                "name": "table",
+                "type": "string"
             },{
                 "name": "keys",
                 "type": {

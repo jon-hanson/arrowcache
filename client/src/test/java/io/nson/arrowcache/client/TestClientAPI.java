@@ -10,11 +10,12 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
+import java.util.List;
 
 public class TestClientAPI {
     private static final Logger logger = LoggerFactory.getLogger(TestClientAPI.class);
 
-    private static final String SCHEMA = "test";
+    private static final List<String> SCHEMA = List.of("test");
     private static final String TABLE1 = "abc";
     private static final String TABLE2 = "ghi";
     

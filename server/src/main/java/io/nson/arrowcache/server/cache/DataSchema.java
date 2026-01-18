@@ -78,23 +78,15 @@ public class DataSchema implements AutoCloseable {
         }
     }
 
-    public Optional<DataTable> getDataTable(List<String> path) {
-        return getDataTable(path, 0);
-    }
-
-    private Optional<DataTable> getDataTable(List<String> path, int depth) {
-        if (depth == path.size() - 1) {
-            return Optional.ofNullable(tableMap.get(path.get(depth)));
-        } else {
-            return childSchema.get(path.get(depth)).getDataTable(path, depth + 1);
-        }
+    public Optional<DataTable> getDataTable(List<String> schemaPath, String table) {
+        return getDataSchema(schemaPath).map(ds -> ds.tableMap.get(table));
     }
 
     public Set<String> existingTables() {
         return tableMap.keySet();
     }
 
-    public Optional<DataTable> getTableOpt(String name) {
+    public Optional<DataTable> getOrCreateTable(String name) {
         return Optional.ofNullable(tableMap.get(name))
                 .or(() -> Optional.ofNullable(tableConfigMap.get(name))
                         .map(tc -> createDataTable(name, tc)));

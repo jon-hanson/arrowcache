@@ -17,11 +17,11 @@ public interface ClientAPI extends AutoCloseable {
         void onCompleted();
     }
 
-    void put(List<String> path, String table, VectorSchemaRoot vsc, Source src);
+    void put(List<String> schemaPath, String table, VectorSchemaRoot vsc, Source src);
 
-    void put(List<String> path, String table, VectorSchemaRoot vsc);
+    void put(List<String> schemaPath, String table, VectorSchemaRoot vsc);
 
-    void get(List<String> path, String table, Set<?> keys, Listener listener);
+    void get(List<String> schemaPath, String table, Set<?> keys, Listener listener);
 
-    void remove(List<String> path, String table, Set<?> keys);
+    void remove(List<String> schemaPath, String table, Set<?> keys);
 }

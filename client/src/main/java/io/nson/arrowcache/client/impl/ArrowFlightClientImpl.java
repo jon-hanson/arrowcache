@@ -60,17 +60,17 @@ public class ArrowFlightClientImpl implements ClientAPI {
         allocator.close();
     }
 
-    private static FlightDescriptor flightDescriptor(List<String> path, String table) {
-        final List<String> pathTable = new ArrayList<>(path.size() + 1);
-        pathTable.addAll(path);
+    private static FlightDescriptor flightDescriptor(List<String> schemaPath, String table) {
+        final List<String> pathTable = new ArrayList<>(schemaPath.size() + 1);
+        pathTable.addAll(schemaPath);
         pathTable.add(table);
         return FlightDescriptor.path(pathTable.toArray(new String[0]));
     }
 
     @Override
-    public void put(List<String> path, String table, VectorSchemaRoot vsc, Source src) {
+    public void put(List<String> schemaPath, String table, VectorSchemaRoot vsc, Source src) {
         try {
-            final FlightDescriptor flightDesc = flightDescriptor(path, table);
+            final FlightDescriptor flightDesc = flightDescriptor(schemaPath, table);
 
             final FlightClient.ClientStreamListener listener = flightClient.startPut(
                     flightDesc,
@@ -117,16 +117,16 @@ public class ArrowFlightClientImpl implements ClientAPI {
     }
 
     @Override
-    public void put(List<String> path, String table, VectorSchemaRoot vsc) {
-        put(path, table, vsc, new SingleValueSource());
+    public void put(List<String> schemaPath, String table, VectorSchemaRoot vsc) {
+        put(schemaPath, table, vsc, new SingleValueSource());
     }
 
     @Override
-    public void get(List<String> path, String table, Set<?> keys, Listener listener) {
+    public void get(List<String> schemaPath, String table, Set<?> keys, Listener listener) {
         try {
             final GetRequest getRequest =
                     GetRequest.newBuilder()
-                            .setSchema$(schema)
+                            .setSchemaPath(schemaPath)
                             .setTable(table)
                             .setKeys(new ArrayList<>(keys))
                             .build();
@@ -178,10 +178,10 @@ public class ArrowFlightClientImpl implements ClientAPI {
     }
 
     @Override
-    public void remove(List<String> path, String table, Set<?> keys) {
+    public void remove(List<String> schemaPath, String table, Set<?> keys) {
         try {
             final DeleteRequest deleteRequest = DeleteRequest.newBuilder()
-                    .setSchema$(schema)
+                    .setSchemaPath(schemaPath)
                     .setTable(table)
                     .setKeys(new ArrayList<>(keys))
                     .build();

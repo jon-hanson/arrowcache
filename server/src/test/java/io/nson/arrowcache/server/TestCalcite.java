@@ -10,6 +10,8 @@ import org.apache.arrow.vector.VectorUnloader;
 import org.apache.calcite.config.CalciteConnectionProperty;
 import org.apache.calcite.jdbc.CalciteConnection;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.condition.EnabledOnOs;
+import org.junit.jupiter.api.condition.OS;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -26,6 +28,7 @@ public class TestCalcite {
     }
 
     @Test
+    @EnabledOnOs(OS.LINUX)
     public void test() throws IOException, ClassNotFoundException, SQLException {
         final RootSchemaConfig schemaConfig = FileUtils.loadFromResource("schemaconfig-test.json", RootSchemaConfig.CODEC);
         try(

@@ -31,17 +31,6 @@ public class ArrowCacheProducer extends NoOpFlightProducer implements AutoClosea
 
     private static final ActionType DELETE = new ActionType("DELETE", "");
 
-    private static Map<String, DataSchema> createDataSchemaMap(
-            BufferAllocator allocator,
-            Map<String, RootSchemaConfig.ChildSchemaConfig> schemaConfigMap
-    ) {
-        return schemaConfigMap.entrySet().stream()
-                .collect(toMap(
-                        en -> en.getKey(),
-                        en -> new DataSchema(allocator, en.getKey(), en.getValue())
-                ));
-    }
-
     private final BufferAllocator allocator;
 
     private final RootSchemaConfig schemaConfig;
@@ -121,28 +110,16 @@ public class ArrowCacheProducer extends NoOpFlightProducer implements AutoClosea
                 );
     }
 
-    public DataTable getDataTable(List<String> path) {
-        return rootSchema.getDataTable(path)
+    public DataTable getDataTable(List<String> schemaPath, String table) {
+        return rootSchema.getDataTable(schemaPath, table)
                 .orElseThrow(() ->
                         ArrowServerUtils.exception(
                                 CallStatus.NOT_FOUND,
                                 logger,
-                                "No schema for path : " + path
+                                "No schema for path : " + schemaPath
                         ).toRuntimeException()
                 );
     }
-
-//
-//    private DataTable getDataTable(DataSchema dataSchema, String tableName) {
-//        return dataSchema.getTableOpt(tableName)
-//                .orElseThrow(() ->
-//                        ArrowServerUtils.exception(
-//                                CallStatus.NOT_FOUND,
-//                                logger,
-//                                "No table in Schema '" + dataSchema.name() + "' with name: " + tableName
-//                        ).toRuntimeException()
-//                );
-//    }
 
     @Override
     public void listActions(CallContext context, StreamListener<ActionType> listener) {
@@ -169,7 +146,7 @@ public class ArrowCacheProducer extends NoOpFlightProducer implements AutoClosea
                 tableNames.forEach(tableName -> {
                     final FlightDescriptor descriptor = FlightDescriptor.path(schema.name(), tableName);
                     final FlightInfo flightInfo = new FlightInfo(
-                            schema.getTableOpt(tableName).get().arrowSchema(),
+                            schema.getOrCreateTable(tableName).get().arrowSchema(),
                             descriptor,
                             Collections.singletonList(flightEndpoint),
                             -1,
@@ -203,7 +180,7 @@ public class ArrowCacheProducer extends NoOpFlightProducer implements AutoClosea
 
                 if (request instanceof GetRequest) {
                     final GetRequest getRequest = (GetRequest) request;
-                    final DataTable dataTable = getDataTable(getRequest.getPath());
+                    final DataTable dataTable = getDataTable(getRequest.getSchemaPath(), getRequest.getTable());
                     final List<Object> keys = getRequest.getKeys();
                     logger.info("FlightDescriptor GetRequest: {} keys", keys.size());
                     requestExecutor = RequestExecutor.getRequestExecutor(location, dataTable, keys);
@@ -253,6 +230,7 @@ public class ArrowCacheProducer extends NoOpFlightProducer implements AutoClosea
                 );
             } else {
                 requestExecutor.execute(listener);
+                requestExecutor.close();
 
                 pendingRequests.remove(uuid);
 
@@ -284,7 +262,7 @@ public class ArrowCacheProducer extends NoOpFlightProducer implements AutoClosea
                             "Cannot accept a put operation where the FlightDescriptor is a command - must be a path"
                     ).toRuntimeException();
                 } else {
-                    final List<String> flightPath = flightDesc.getPath();
+                    final List<String> flightPath = flightDesc.getPath().subList(0, flightDesc.getPath().size() - 1);
 
                     final List<String> path;
                     if (flightPath.isEmpty()) {
@@ -294,7 +272,9 @@ public class ArrowCacheProducer extends NoOpFlightProducer implements AutoClosea
                         ).create(Exception::new);
                     }
 
-                    final DataTable table = getDataTable(flightPath);
+                    final List<String> schemaPath = flightPath.subList(0, flightDesc.getPath().size() - 1);
+                    final String tableName =  flightPath.get(flightDesc.getPath().size() - 1);
+                    final DataTable table = getDataTable(schemaPath, tableName);
 
                     long rows = 0;
                     while (flightStream.next()) {
@@ -334,7 +314,7 @@ public class ArrowCacheProducer extends NoOpFlightProducer implements AutoClosea
         try {
             if (action.getType().equals(DELETE.getType())) {
                 final DeleteRequest deleteRequest = DeleteRequest.getDecoder().decode(action.getBody());
-                final DataTable table = getDataTable(deleteRequest.getPath());
+                final DataTable table = getDataTable(deleteRequest.getSchemaPath(), deleteRequest.getTable());
 
                 table.deleteEntries(deleteRequest.getKeys());
 
