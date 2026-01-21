@@ -15,7 +15,7 @@ import java.util.List;
 public class TestClientAPI {
     private static final Logger logger = LoggerFactory.getLogger(TestClientAPI.class);
 
-    private static final List<String> SCHEMA = List.of("test");
+    private static final List<String> SCHEMA = List.of("test", "subtest");
     private static final String TABLE1 = "abc";
     private static final String TABLE2 = "ghi";
     

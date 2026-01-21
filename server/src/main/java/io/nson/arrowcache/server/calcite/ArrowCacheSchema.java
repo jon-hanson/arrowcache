@@ -67,7 +67,7 @@ public final class ArrowCacheSchema extends AbstractSchema implements Closeable 
         final ArrowCacheTable table = this.tableMap.computeIfAbsent(
                 tableName,
                 tn -> {
-                    final DataTable dataTable = dataSchema.getOrCreateTable(tableName)
+                    final DataTable dataTable = dataSchema.getDataTable(tableName)
                             .orElseThrow(() ->
                                     ExceptionUtils.exception(
                                             logger,

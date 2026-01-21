@@ -47,7 +47,6 @@ public class ArrowCacheProducer extends NoOpFlightProducer implements AutoClosea
 
     private volatile boolean closing = false;
 
-
     public ArrowCacheProducer(
             BufferAllocator allocator,
             RootSchemaConfig schemaConfig,
@@ -99,24 +98,24 @@ public class ArrowCacheProducer extends NoOpFlightProducer implements AutoClosea
         }
     }
 
-    public DataSchema getDataSchema(List<String> path) {
-        return rootSchema.getDataSchema(path)
-                .orElseThrow(() ->
-                        ArrowServerUtils.exception(
-                                CallStatus.NOT_FOUND,
-                                logger,
-                                "No schema for path : " + path
-                        ).toRuntimeException()
-                );
-    }
-
-    public DataTable getDataTable(List<String> schemaPath, String table) {
-        return rootSchema.getDataTable(schemaPath, table)
+    public DataSchema getDataSchema(List<String> schemaPath) {
+        return rootSchema.getDataSchema(schemaPath)
                 .orElseThrow(() ->
                         ArrowServerUtils.exception(
                                 CallStatus.NOT_FOUND,
                                 logger,
                                 "No schema for path : " + schemaPath
+                        ).toRuntimeException()
+                );
+    }
+
+    public DataTable getDataTable(List<String> schemaPath, String table) {
+        return getDataSchema(schemaPath).getDataTable(table)
+                .orElseThrow(() ->
+                        ArrowServerUtils.exception(
+                                CallStatus.NOT_FOUND,
+                                logger,
+                                "Table '" + table + "' not found in schema: " + schemaPath
                         ).toRuntimeException()
                 );
     }
@@ -136,7 +135,7 @@ public class ArrowCacheProducer extends NoOpFlightProducer implements AutoClosea
             for (List<String> schemaPath : criteriaReq.getSchemaPaths()) {
                 final DataSchema schema = getDataSchema(schemaPath);
 
-                final Set<String> tableNames = schema.existingTables();
+                final Set<String> tableNames = schema.dataTableNames();
 
                 final FlightEndpoint flightEndpoint = new FlightEndpoint(
                         new Ticket(new byte[]{}),
@@ -146,7 +145,7 @@ public class ArrowCacheProducer extends NoOpFlightProducer implements AutoClosea
                 tableNames.forEach(tableName -> {
                     final FlightDescriptor descriptor = FlightDescriptor.path(schema.name(), tableName);
                     final FlightInfo flightInfo = new FlightInfo(
-                            schema.getOrCreateTable(tableName).get().arrowSchema(),
+                            schema.getDataTable(tableName).get().arrowSchema(),
                             descriptor,
                             Collections.singletonList(flightEndpoint),
                             -1,
@@ -262,10 +261,9 @@ public class ArrowCacheProducer extends NoOpFlightProducer implements AutoClosea
                             "Cannot accept a put operation where the FlightDescriptor is a command - must be a path"
                     ).toRuntimeException();
                 } else {
-                    final List<String> flightPath = flightDesc.getPath().subList(0, flightDesc.getPath().size() - 1);
+                    final List<String> flightPath = flightDesc.getPath();
 
-                    final List<String> path;
-                    if (flightPath.isEmpty()) {
+                    if (flightPath.size() < 2) {
                         throw ExceptionUtils.exception(
                                 logger,
                                 "Invalid flight path: " + flightPath + ". Must be [<schema-path>, table]"

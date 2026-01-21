@@ -3,6 +3,7 @@ package io.nson.arrowcache.server.cache;
 import io.nson.arrowcache.common.utils.ArrowUtils;
 import io.nson.arrowcache.common.utils.ExceptionUtils;
 import io.nson.arrowcache.server.RootSchemaConfig;
+import io.nson.arrowcache.server.utils.ArrowServerUtils;
 import org.apache.arrow.flight.FlightProducer;
 import org.apache.arrow.memory.BufferAllocator;
 import org.apache.arrow.vector.FieldVector;
@@ -190,15 +191,22 @@ public class DataTable implements AutoCloseable {
 
     public void get(Set<?> keys, FlightProducer.ServerStreamListener listener) {
         synchronized (rwLock.readLock()) {
-            final Map<Integer, Set<Integer>> matches = keys.stream()
-                    .filter(rowCoordinateMap::containsKey)
-                    .map(rowCoordinateMap::get)
-                    .collect(Collectors.groupingBy(
-                            RowCoordinate::getBatchIndex,
-                            mapping(RowCoordinate::getRowIndex, toSet())
-                    ));
+            if (this.arrowSchema == null) {
+                try (VectorSchemaRoot vsc = VectorSchemaRoot.create(ArrowServerUtils.EMPTY_SCHEMA, this.allocator)) {
+                    listener.start(vsc);
+                    listener.completed();
+                }
+            } else {
+                final Map<Integer, Set<Integer>> matches = keys.stream()
+                        .filter(rowCoordinateMap::containsKey)
+                        .map(rowCoordinateMap::get)
+                        .collect(Collectors.groupingBy(
+                                RowCoordinate::getBatchIndex,
+                                mapping(RowCoordinate::getRowIndex, toSet())
+                        ));
 
-            getImpl(matches, listener);
+                getImpl(matches, listener);
+            }
         }
     }
 

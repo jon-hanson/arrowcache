@@ -8,7 +8,9 @@ import org.slf4j.LoggerFactory;
 
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
 
+import static java.util.stream.Collectors.toConcurrentMap;
 import static java.util.stream.Collectors.toUnmodifiableMap;
 
 public class DataSchema implements AutoCloseable {
@@ -25,11 +27,21 @@ public class DataSchema implements AutoCloseable {
                 ));
     }
 
+    private static ConcurrentMap<String, DataTable> createTableMap(
+            BufferAllocator allocator,
+            Map<String, RootSchemaConfig.TableConfig> tableConfigMap
+    ) {
+        return tableConfigMap.entrySet().stream()
+                .collect(toConcurrentMap(
+                        en -> en.getKey(),
+                        en -> new DataTable(allocator, en.getKey(), en.getValue())
+                ));
+    }
+
     private final BufferAllocator allocator;
     private final String name;
-    private final Map<String, RootSchemaConfig.TableConfig> tableConfigMap;
     private final Map<String, DataSchema> childSchema;
-    private final Map<String, DataTable> tableMap;
+    private final ConcurrentMap<String, DataTable> tableMap;
 
     public DataSchema(
             BufferAllocator allocator,
@@ -39,9 +51,8 @@ public class DataSchema implements AutoCloseable {
         logger.info("Creating DataSchema {}", name);
         this.allocator = allocator.newChildAllocator("DataSchema:" + name, 0, Long.MAX_VALUE);
         this.name = Objects.requireNonNull(name);
-        this.tableConfigMap = schemaConfig.tables();
         this.childSchema = createSchemaMap(allocator, schemaConfig.childSchema());
-        this.tableMap = new ConcurrentHashMap<>();
+        this.tableMap = createTableMap(allocator, schemaConfig.tables());
     }
 
     @Override
@@ -67,34 +78,27 @@ public class DataSchema implements AutoCloseable {
     }
 
     public Optional<DataSchema> getDataSchema(List<String> path) {
-        return getDataSchema(path, 0);
+        if (path.isEmpty() || !path.get(0).equals(name)) {
+            return Optional.empty();
+        } else {
+            return getDataSchema(path, 1);
+        }
     }
 
     public Optional<DataSchema> getDataSchema(List<String> path, int depth) {
         if (depth == path.size()) {
             return Optional.of(this);
         } else {
-            return Optional.ofNullable(childSchema.get(path.get(depth)));
+            return Optional.ofNullable(childSchema.get(path.get(depth)))
+                    .flatMap(ds -> ds.getDataSchema(path, depth + 1));
         }
     }
 
-    public Optional<DataTable> getDataTable(List<String> schemaPath, String table) {
-        return getDataSchema(schemaPath).map(ds -> ds.tableMap.get(table));
-    }
-
-    public Set<String> existingTables() {
+    public Set<String> dataTableNames() {
         return tableMap.keySet();
     }
 
-    public Optional<DataTable> getOrCreateTable(String name) {
-        return Optional.ofNullable(tableMap.get(name))
-                .or(() -> Optional.ofNullable(tableConfigMap.get(name))
-                        .map(tc -> createDataTable(name, tc)));
-    }
-
-    private DataTable createDataTable(String name, RootSchemaConfig.TableConfig tableConfig) {
-        final DataTable datatable = new DataTable(allocator, name, tableConfig);
-        tableMap.put(name, datatable);
-        return datatable;
+    public Optional<DataTable> getDataTable(String table) {
+        return Optional.ofNullable(tableMap.get(table));
     }
 }

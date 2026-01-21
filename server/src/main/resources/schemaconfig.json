@@ -3,20 +3,20 @@
     "childSchema": {
         "subtest" : {
             "tables": {
-                "uvw": {
+                "abc": {
                     "keyColumn": "id"
                 },
-                "xyz": {
+                "ghi": {
                     "keyColumn": "id"
                 }
             }
         }
     },
     "tables": {
-        "abc": {
+        "vwx": {
             "keyColumn": "id"
         },
-        "ghi": {
+        "xyz": {
             "keyColumn": "id"
         }
     }
