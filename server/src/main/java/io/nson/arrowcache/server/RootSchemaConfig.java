@@ -1,9 +1,11 @@
 package io.nson.arrowcache.server;
 
 import io.nson.arrowcache.common.JsonCodec;
+import org.jspecify.annotations.NullMarked;
 
 import java.util.Map;
 
+@NullMarked
 public final class RootSchemaConfig extends SchemaConfig {
     public static final String DEFAULT_SCHEMA_NAME = "";
 

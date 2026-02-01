@@ -5,10 +5,12 @@ import com.google.gson.TypeAdapter;
 import com.google.gson.stream.JsonReader;
 import com.google.gson.stream.JsonWriter;
 import io.nson.arrowcache.common.JsonCodec;
+import org.jspecify.annotations.NullMarked;
 
 import java.io.IOException;
 import java.time.Duration;
 
+@NullMarked
 public class ServerConfig {
     public static final JsonCodec<ServerConfig> CODEC = new JsonCodec<>(ServerConfig.class) {
         @Override
@@ -44,9 +46,4 @@ public class ServerConfig {
     public Duration requestLifetime() {
         return requestLifetime;
     }
-//
-//    public static void main(String[] args) {
-//        final ServerConfig sc = new ServerConfig(12345, Duration.ofSeconds(30));
-//        System.out.println(CODEC.encode(sc));
-//    }
 }

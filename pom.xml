@@ -36,6 +36,7 @@
         <slf4j.version>2.0.17</slf4j.version>
 
         <error-prone.version>2.45.0</error-prone.version>
+        <nullaway.version>0.10.15</nullaway.version>
 
         <avro-maven-plugin.version>${avro.version}</avro-maven-plugin.version>
         <jacoco-maven-plugin.version>0.8.13</jacoco-maven-plugin.version>
@@ -297,14 +298,19 @@
                     <encoding>UTF-8</encoding>
                     <compilerArgs>
                         <arg>-XDcompilePolicy=simple</arg>
+                        <arg>-Xplugin:ErrorProne -XepDisableWarningsInGeneratedCode -XepOpt:NullAway:AnnotatedPackages=com.uber</arg>
                         <arg>--should-stop=ifError=FLOW</arg>
-                        <arg>-Xplugin:ErrorProne</arg>
                     </compilerArgs>
                     <annotationProcessorPaths>
                         <path>
                             <groupId>com.google.errorprone</groupId>
                             <artifactId>error_prone_core</artifactId>
                             <version>${error-prone.version}</version>
+                        </path>
+                        <path>
+                            <groupId>com.uber.nullaway</groupId>
+                            <artifactId>nullaway</artifactId>
+                            <version>${nullaway.version}</version>
                         </path>
                         <!-- Other annotation processors go here.
 

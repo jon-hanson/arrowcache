@@ -13,6 +13,7 @@ import org.apache.arrow.memory.BufferAllocator;
 import org.apache.arrow.vector.VectorUnloader;
 import org.apache.arrow.vector.ipc.message.ArrowRecordBatch;
 import org.apache.arrow.vector.types.pojo.Schema;
+import org.jspecify.annotations.NullMarked;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -25,6 +26,7 @@ import java.util.concurrent.ConcurrentMap;
 
 import static java.util.stream.Collectors.toMap;
 
+@NullMarked
 public class ArrowCacheProducer extends NoOpFlightProducer implements AutoCloseable {
 
     private static final Logger logger = LoggerFactory.getLogger(ArrowCacheProducer.class);

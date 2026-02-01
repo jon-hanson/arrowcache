@@ -29,7 +29,7 @@ public class DataSchemaTest {
 
     @Test
     public void test() throws IOException {
-        final RootSchemaConfig schemaConfig = FileUtils.loadFromResource("schemaconfig.json", RootSchemaConfig.CODEC);
+        final RootSchemaConfig schemaConfig = FileUtils.loadFromResource("schemaconfig-test.json", RootSchemaConfig.CODEC);
         try(
                 //final AllocatorManager allocatorManager = new AllocatorManager(schemaConfig.allocatorMaxSize());
                 final RootAllocator allocator = new RootAllocator(Integer.MAX_VALUE);

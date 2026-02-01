@@ -7,12 +7,14 @@ import org.apache.arrow.flight.Location;
 import org.apache.arrow.memory.BufferAllocator;
 import org.apache.arrow.memory.RootAllocator;
 import org.apache.arrow.util.AutoCloseables;
+import org.jspecify.annotations.NullMarked;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.time.Duration;
 
+@NullMarked
 public class ArrowCacheServer implements AutoCloseable {
 
     private static final Logger logger = LoggerFactory.getLogger(ArrowCacheServer.class);

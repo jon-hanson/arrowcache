@@ -4,6 +4,7 @@ import io.nson.arrowcache.server.cache.DataTable;
 import io.nson.arrowcache.server.utils.ByteUtils;
 import io.nson.arrowcache.server.utils.CollectionUtils;
 import org.apache.arrow.flight.*;
+import org.jspecify.annotations.NullMarked;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -11,6 +12,7 @@ import java.io.Closeable;
 import java.time.Instant;
 import java.util.*;
 
+@NullMarked
 public abstract class RequestExecutor implements Closeable {
     private static final Logger logger = LoggerFactory.getLogger(RequestExecutor.class);
 

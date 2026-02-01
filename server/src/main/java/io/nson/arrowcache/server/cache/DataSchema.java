@@ -3,16 +3,17 @@ package io.nson.arrowcache.server.cache;
 import io.nson.arrowcache.server.RootSchemaConfig;
 import io.nson.arrowcache.server.SchemaConfig;
 import org.apache.arrow.memory.BufferAllocator;
+import org.jspecify.annotations.NullMarked;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.util.*;
-import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 
 import static java.util.stream.Collectors.toConcurrentMap;
 import static java.util.stream.Collectors.toUnmodifiableMap;
 
+@NullMarked
 public class DataSchema implements AutoCloseable {
     private static final Logger logger = LoggerFactory.getLogger(DataSchema.class);
 
@@ -34,7 +35,7 @@ public class DataSchema implements AutoCloseable {
         return tableConfigMap.entrySet().stream()
                 .collect(toConcurrentMap(
                         en -> en.getKey(),
-                        en -> new DataTable(allocator, en.getKey(), en.getValue())
+                        en -> DataTable.create(allocator, en.getKey(), en.getValue())
                 ));
     }
 

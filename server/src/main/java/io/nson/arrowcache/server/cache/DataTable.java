@@ -13,6 +13,7 @@ import org.apache.arrow.vector.ipc.message.ArrowRecordBatch;
 import org.apache.arrow.vector.types.pojo.Field;
 import org.apache.arrow.vector.types.pojo.Schema;
 import org.apache.arrow.vector.util.VectorSchemaRootAppender;
+import org.jspecify.annotations.NullMarked;
 import org.jspecify.annotations.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -25,8 +26,26 @@ import java.util.stream.Collectors;
 import static java.util.stream.Collectors.mapping;
 import static java.util.stream.Collectors.toSet;
 
+@NullMarked
 public class DataTable implements AutoCloseable {
     private static final Logger logger = LoggerFactory.getLogger(DataTable.class);
+
+    public static DataTable create(
+            BufferAllocator allocator,
+            String name,
+            RootSchemaConfig.TableConfig tableConfig,
+            Schema arrowSchema
+    ) {
+        return new DataTable(allocator, name, tableConfig, arrowSchema);
+    }
+
+    public static DataTable create(
+            BufferAllocator allocator,
+            String name,
+            RootSchemaConfig.TableConfig tableConfig
+    ) {
+        return new DataTable(allocator, name, tableConfig, null);
+    }
 
     private static final class RowCoordinate {
         private final int batchIndex;
@@ -95,38 +114,30 @@ public class DataTable implements AutoCloseable {
     private final BufferAllocator allocator;
     private final String name;
     private @Nullable Schema arrowSchema;
-    private final String keyColumnName;
+    private @Nullable final String keyColumnName;
     private @Nullable Integer keyColumnIndex;
     private final List<Batch> batches;
     private final Map<Object, RowCoordinate> rowCoordinateMap;
 
     private final ReadWriteLock rwLock = new ReentrantReadWriteLock();
 
-    public DataTable(
+    private DataTable(
             BufferAllocator allocator,
             String name,
             RootSchemaConfig.TableConfig tableConfig,
-            Schema arrowSchema
+            @Nullable Schema arrowSchema
     ) {
         this.allocator = allocator.newChildAllocator(name, 0, Long.MAX_VALUE);
-        this.name = name;
+        this.name = Objects.requireNonNull(name);
         this.arrowSchema = arrowSchema;
-        this.keyColumnName = tableConfig.keyColumn();
+        this.keyColumnName = Objects.requireNonNull(tableConfig.keyColumn());
         this.batches = new ArrayList<>();
         this.rowCoordinateMap = new HashMap<>();
     }
 
-    public DataTable(
-            BufferAllocator allocator,
-            String name,
-            RootSchemaConfig.TableConfig tableConfig
-    ) {
-        this(allocator, name, tableConfig, null);
-    }
-
     @Override
     public void close() {
-        logger.info("Closing...");
+        logger.info("Closing {}...", name);
         batches.forEach(Batch::close);
         this.allocator.close();
     }
