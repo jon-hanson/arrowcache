@@ -254,12 +254,15 @@ public class DataTable implements AutoCloseable {
         synchronized (this.rwLock.readLock()) {
             try (
                     final VectorSchemaRoot resultVsc = VectorSchemaRoot.create(this.arrowSchema, this.allocator);
-                    final VectorSchemaRoot vsc = VectorSchemaRoot.create(this.arrowSchema, this.allocator)
+                    final VectorSchemaRoot batchVsc = VectorSchemaRoot.create(this.arrowSchema, this.allocator)
             ) {
-                final VectorLoader loader = new VectorLoader(vsc);
+                resultVsc.allocateNew();
+
+                final VectorLoader loader = new VectorLoader(batchVsc);
 
                 listener.start(resultVsc);
 
+                // Extract the matched rows for each batch and write back to the listener.
                 batchMatches.forEach((batchIndex, matches) -> {
                     final Batch batch = this.batches.get(batchIndex);
                     loader.load(batch.arrowRecordBatch);
@@ -274,12 +277,15 @@ public class DataTable implements AutoCloseable {
 
                         vecSlices = slices.stream()
                                 .filter(slice -> slice.length() > 0)
-                                .map(slice -> vsc.slice(slice.start(), slice.length()))
+                                .map(slice -> batchVsc.slice(slice.start(), slice.length()))
                                 .toArray(VectorSchemaRoot[]::new);
 
-                        resultVsc.allocateNew();
-                        VectorSchemaRootAppender.append(false, resultVsc, vecSlices);
-                        listener.putNext();
+                        if (vecSlices.length > 0) {
+                            VectorSchemaRootAppender.append(false, resultVsc, vecSlices);
+                            listener.putNext();
+//                            resultVsc.clear();
+//                            resultVsc.allocateNew();
+                        }
                     } finally {
                         if (vecSlices != null) {
                             for (VectorSchemaRoot vecSlice : vecSlices) {
@@ -303,22 +309,26 @@ public class DataTable implements AutoCloseable {
         }
     }
 
-    public void merge() {
-        Objects.requireNonNull(this.arrowSchema);
-
+    public void mergeBatches() {
         if (this.batches.size() > 1) {
-            try (
-                    final VectorSchemaRoot mergedVsc = VectorSchemaRoot.create(this.arrowSchema, this.allocator)
-            ) {
+            Objects.requireNonNull(this.arrowSchema);
+
+            logger.info("Merging {} batches into 1", this.batches.size());
+
+            try (final VectorSchemaRoot mergedVsc = VectorSchemaRoot.create(this.arrowSchema, this.allocator)) {
                 synchronized (this.rwLock.writeLock()) {
                     mergedVsc.allocateNew();
+
+                    // Merge the active records from each batch into a single VectorSchemaRoot.
                     for (Batch batch : this.batches) {
                         batch.writeActiveRecords(mergedVsc);
                     }
 
+                    // Regenerate the row coordinate map.
                     this.rowCoordinateMap.clear();
                     this.updateRowCoordMap(0, mergedVsc);
 
+                    // Create a new batch from the merged VectorSchemaRoot.
                     final VectorUnloader unloader = new VectorUnloader(mergedVsc);
                     this.batches.forEach(Batch::close);
                     this.batches.clear();
