@@ -11,6 +11,7 @@ import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.util.List;
+import java.util.Set;
 
 public class TestClientAPI {
     private static final Logger logger = LoggerFactory.getLogger(TestClientAPI.class);
@@ -48,6 +49,8 @@ public class TestClientAPI {
             clientAPI.put(SCHEMA, TABLE2, vsc);
             vsc.clear();
 
+            logger.info("Phase 1");
+
             logger.info("Running query for table: {}.{} and keys: {}", SCHEMA, TABLE1, TestData.KEYS1);
             clientAPI.get(SCHEMA, TABLE1, TestData.KEYS1, LISTENER);
 
@@ -59,6 +62,26 @@ public class TestClientAPI {
 
             logger.info("Running query for table: {}.{} and keys: {}", SCHEMA, TABLE1, TestData.KEYS4);
             clientAPI.get(SCHEMA, TABLE1, TestData.KEYS4, LISTENER);
+
+            logger.info("Phase 2");
+
+            logger.info("Merging table {}", TABLE1);
+
+            clientAPI.mergeTables(SCHEMA, Set.of(TABLE1));
+
+            logger.info("Running query for table: {}.{} and keys: {}", SCHEMA, TABLE1, TestData.KEYS1);
+            clientAPI.get(SCHEMA, TABLE1, TestData.KEYS1, LISTENER);
+
+            logger.info("Running query for table: {}.{} and keys: {}", SCHEMA, TABLE1, TestData.KEYS2);
+            clientAPI.get(SCHEMA, TABLE1, TestData.KEYS2, LISTENER);
+
+            logger.info("Running query for table: {}.{} and keys: {}", SCHEMA, TABLE1, TestData.KEYS3);
+            clientAPI.get(SCHEMA, TABLE1, TestData.KEYS3, LISTENER);
+
+            logger.info("Running query for table: {}.{} and keys: {}", SCHEMA, TABLE1, TestData.KEYS4);
+            clientAPI.get(SCHEMA, TABLE1, TestData.KEYS4, LISTENER);
+
+            logger.info("Phase 3");
 
             logger.info("Running query for table: {}.{} and keys: {}", SCHEMA, TABLE2, TestData.KEYS1);
             clientAPI.get(SCHEMA, TABLE2, TestData.KEYS1, LISTENER);

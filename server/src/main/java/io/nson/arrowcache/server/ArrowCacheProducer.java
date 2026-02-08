@@ -1,5 +1,6 @@
 package io.nson.arrowcache.server;
 
+import io.nson.arrowcache.common.Actions;
 import io.nson.arrowcache.common.avro.*;
 import io.nson.arrowcache.common.utils.ArrowUtils;
 import io.nson.arrowcache.common.utils.ExceptionUtils;
@@ -30,8 +31,6 @@ import static java.util.stream.Collectors.toMap;
 public class ArrowCacheProducer extends NoOpFlightProducer implements AutoCloseable {
 
     private static final Logger logger = LoggerFactory.getLogger(ArrowCacheProducer.class);
-
-    private static final ActionType DELETE = new ActionType("DELETE", "");
 
     private final BufferAllocator allocator;
 
@@ -125,7 +124,8 @@ public class ArrowCacheProducer extends NoOpFlightProducer implements AutoClosea
     @Override
     public void listActions(CallContext context, StreamListener<ActionType> listener) {
         logger.info("listActions: {}", context.peerIdentity());
-        listener.onNext(DELETE);
+        listener.onNext(Actions.DELETE.actionType());
+        listener.onNext(Actions.MERGE.actionType());
         listener.onCompleted();
     }
 
@@ -312,11 +312,22 @@ public class ArrowCacheProducer extends NoOpFlightProducer implements AutoClosea
         );
 
         try {
-            if (action.getType().equals(DELETE.getType())) {
+            if (action.getType().equals(Actions.DELETE.name())) {
                 final DeleteRequest deleteRequest = DeleteRequest.getDecoder().decode(action.getBody());
                 final DataTable table = getDataTable(deleteRequest.getSchemaPath(), deleteRequest.getTable());
 
                 table.deleteEntries(deleteRequest.getKeys());
+
+                listener.onCompleted();
+            } else if (action.getType().equals(Actions.MERGE.name())) {
+                final MergeRequest mergeRequest = MergeRequest.getDecoder().decode(action.getBody());
+                final DataSchema dataSchema = getDataSchema(mergeRequest.getSchemaPath());
+                final List<String> tables = mergeRequest.getTables();
+                if (tables.isEmpty()) {
+                    dataSchema.mergeEachTable();
+                } else {
+                    dataSchema.mergeEachTable(tables);
+                }
 
                 listener.onCompleted();
             } else {

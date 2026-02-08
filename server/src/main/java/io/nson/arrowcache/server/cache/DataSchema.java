@@ -60,8 +60,8 @@ public class DataSchema implements AutoCloseable {
     public void close() {
         try {
             logger.info("Closing DataSchema {}...", name);
-            childSchema.values().forEach(DataSchema::close);
-            tableMap.values().forEach(DataTable::close);
+            this.childSchema.values().forEach(DataSchema::close);
+            this.tableMap.values().forEach(DataTable::close);
             this.allocator.close();
         } catch (Exception ex) {
             logger.warn("Error while closing", ex);
@@ -74,7 +74,7 @@ public class DataSchema implements AutoCloseable {
     }
 
     public DataSchema getSchema(String name) {
-        return Optional.ofNullable(childSchema.get(name))
+        return Optional.ofNullable(this.childSchema.get(name))
                 .orElseThrow(() -> new IllegalArgumentException("No such schema: " + name));
     }
 
@@ -90,16 +90,32 @@ public class DataSchema implements AutoCloseable {
         if (depth == path.size()) {
             return Optional.of(this);
         } else {
-            return Optional.ofNullable(childSchema.get(path.get(depth)))
+            return Optional.ofNullable(this.childSchema.get(path.get(depth)))
                     .flatMap(ds -> ds.getDataSchema(path, depth + 1));
         }
     }
 
     public Set<String> dataTableNames() {
-        return tableMap.keySet();
+        return this.tableMap.keySet();
     }
 
     public Optional<DataTable> getDataTable(String table) {
-        return Optional.ofNullable(tableMap.get(table));
+        return Optional.ofNullable(this.tableMap.get(table));
+    }
+
+    public void mergeEachTable() {
+        this.tableMap.values().forEach(DataTable::merge);
+    }
+
+    public void mergeEachTable(Collection<String> tables) {
+        synchronized(this.tableMap) {
+            final Set<String> tables2 = new HashSet<>(tables);
+            tables2.removeAll(this.tableMap.keySet());
+            if (!tables2.isEmpty()) {
+                throw new IllegalArgumentException("The following tables are not found: " + tables2);
+            } else {
+                tables.forEach(table -> this.tableMap.get(table).merge());
+            }
+        }
     }
 }

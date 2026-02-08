@@ -123,6 +123,25 @@
     },{
         "namespace": "io.nson.arrowcache.common.avro",
         "type": "record",
+        "name": "MergeRequest",
+        "fields": [
+            {
+                "name": "schemaPath",
+                "type": {
+                    "type": "array",
+                    "items": "string"
+                }
+            },{
+                "name": "tables",
+                "type": {
+                    "type": "array",
+                    "items": "string"
+                }
+            }
+        ]
+    },{
+        "namespace": "io.nson.arrowcache.common.avro",
+        "type": "record",
         "name": "FlightInfoRequest",
         "fields": [
             {

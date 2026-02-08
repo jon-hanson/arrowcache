@@ -24,4 +24,8 @@ public interface ClientAPI extends AutoCloseable {
     void get(List<String> schemaPath, String table, Set<?> keys, Listener listener);
 
     void remove(List<String> schemaPath, String table, Set<?> keys);
+
+    void mergeTables(List<String> schemaPath);
+
+    void mergeTables(List<String> schemaPath, Set<String> tables);
 }

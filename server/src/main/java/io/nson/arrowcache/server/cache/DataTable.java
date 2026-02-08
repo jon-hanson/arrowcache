@@ -4,13 +4,14 @@ import io.nson.arrowcache.common.utils.ArrowUtils;
 import io.nson.arrowcache.common.utils.ExceptionUtils;
 import io.nson.arrowcache.server.RootSchemaConfig;
 import io.nson.arrowcache.server.utils.ArrowServerUtils;
+import io.nson.arrowcache.server.utils.CollectionUtils;
 import org.apache.arrow.flight.FlightProducer;
 import org.apache.arrow.memory.BufferAllocator;
 import org.apache.arrow.vector.FieldVector;
 import org.apache.arrow.vector.VectorLoader;
 import org.apache.arrow.vector.VectorSchemaRoot;
+import org.apache.arrow.vector.VectorUnloader;
 import org.apache.arrow.vector.ipc.message.ArrowRecordBatch;
-import org.apache.arrow.vector.types.pojo.Field;
 import org.apache.arrow.vector.types.pojo.Schema;
 import org.apache.arrow.vector.util.VectorSchemaRootAppender;
 import org.jspecify.annotations.NullMarked;
@@ -23,8 +24,7 @@ import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 import java.util.stream.Collectors;
 
-import static java.util.stream.Collectors.mapping;
-import static java.util.stream.Collectors.toSet;
+import static java.util.stream.Collectors.*;
 
 @NullMarked
 public class DataTable implements AutoCloseable {
@@ -65,19 +65,18 @@ public class DataTable implements AutoCloseable {
         }
     }
 
-    public static final class Batch implements AutoCloseable {
-        private static final Logger logger = LoggerFactory.getLogger(Batch.class);
+    public final class Batch implements AutoCloseable {
 
         private final ArrowRecordBatch arrowRecordBatch;
-        private final Set<Integer> deleted;
+        private final SortedSet<Integer> deleted;
 
-        private Batch(ArrowRecordBatch arrowRecordBatch, Set<Integer> deleted) {
+        private Batch(ArrowRecordBatch arrowRecordBatch, SortedSet<Integer> deleted) {
             this.arrowRecordBatch = arrowRecordBatch;
             this.deleted = deleted;
         }
 
         private Batch(ArrowRecordBatch batch) {
-            this(batch, new HashSet<>());
+            this(batch, new TreeSet<>());
         }
 
         @Override
@@ -97,24 +96,43 @@ public class DataTable implements AutoCloseable {
         public void markAsDeleted(int rowIndex) {
             deleted.add(rowIndex);
         }
-    }
 
-    private static int findKeyColumn(Schema schema, String keyName) {
-        final List<Field> fields = schema.getFields();
-        for (int i = 0; i < fields.size(); ++i) {
-            if (fields.get(i).getName().equals(keyName)) {
-                return i;
+        public void writeActiveRecords(VectorSchemaRoot targetVsc) {
+            if (deleted.isEmpty()) {
+                try (final VectorSchemaRoot vsc = VectorSchemaRoot.create(arrowSchema, allocator)) {
+                    final VectorLoader loader = new VectorLoader(vsc);
+                    loader.load(arrowRecordBatch);
+                    VectorSchemaRootAppender.append(false, targetVsc, vsc);
+                }
+            } else {
+                try (final VectorSchemaRoot vsc = VectorSchemaRoot.create(arrowSchema, allocator)) {
+                    final VectorLoader loader = new VectorLoader(vsc);
+                    loader.load(arrowRecordBatch);
+
+                    final VectorSchemaRoot[] vscSlices =
+                            CollectionUtils.slicesFromExcluded(
+                                            arrowRecordBatch.getLength(),
+                                            deleted
+                                    ).stream()
+                                    .map(slice -> vsc.slice(slice.start(), slice.length()))
+                                    .toArray(VectorSchemaRoot[]::new);
+
+                    try {
+                        VectorSchemaRootAppender.append(false, targetVsc, vscSlices);
+                    } finally {
+                        for (VectorSchemaRoot vscSlice : vscSlices) {
+                            vsc.close();
+                        }
+                    }
+                }
             }
         }
-
-        logger.error("Key column name '{}' not found in schema", keyName);
-        throw new RuntimeException("Key column name '" + keyName + "' not found in schema");
     }
 
     private final BufferAllocator allocator;
     private final String name;
     private @Nullable Schema arrowSchema;
-    private @Nullable final String keyColumnName;
+    private final @Nullable String keyColumnName;
     private @Nullable Integer keyColumnIndex;
     private final List<Batch> batches;
     private final Map<Object, RowCoordinate> rowCoordinateMap;
@@ -165,7 +183,13 @@ public class DataTable implements AutoCloseable {
     public void addBatches(Schema arrowSchema, Collection<ArrowRecordBatch> batches) {
         if (this.arrowSchema == null) {
             this.arrowSchema = arrowSchema;
-            this.keyColumnIndex = findKeyColumn(arrowSchema, keyColumnName);
+            this.keyColumnIndex = ArrowServerUtils.findKeyColumn(arrowSchema, keyColumnName)
+                    .orElseThrow(() ->
+                            ExceptionUtils.exception(
+                                    logger,
+                                    "Key column name '" + keyColumnName + "' not found in schema"
+                            ).create(IllegalArgumentException::new)
+                    );
         } else if (!this.arrowSchema.equals(arrowSchema)) {
             throw ExceptionUtils.exception(
                     logger,
@@ -179,13 +203,13 @@ public class DataTable implements AutoCloseable {
                 for (final ArrowRecordBatch batch : batches) {
                     loader.load(batch);
                     this.batches.add(new Batch(batch));
-                    processBatch(this.batches.size() - 1, vsc);
+                    updateRowCoordMap(this.batches.size() - 1, vsc);
                 }
             }
         }
     }
 
-    private void processBatch(int batchIndex, VectorSchemaRoot vsc) {
+    private void updateRowCoordMap(int batchIndex, VectorSchemaRoot vsc) {
         Objects.requireNonNull(this.keyColumnIndex);
 
         final int rowCount = vsc.getRowCount();
@@ -208,12 +232,12 @@ public class DataTable implements AutoCloseable {
                     listener.completed();
                 }
             } else {
-                final Map<Integer, Set<Integer>> matches = keys.stream()
+                final Map<Integer, SortedSet<Integer>> matches = keys.stream()
                         .filter(rowCoordinateMap::containsKey)
                         .map(rowCoordinateMap::get)
                         .collect(Collectors.groupingBy(
                                 RowCoordinate::getBatchIndex,
-                                mapping(RowCoordinate::getRowIndex, toSet())
+                                mapping(RowCoordinate::getRowIndex, toCollection(TreeSet::new))
                         ));
 
                 getImpl(matches, listener);
@@ -222,9 +246,11 @@ public class DataTable implements AutoCloseable {
     }
 
     protected void getImpl(
-            Map<Integer, Set<Integer>> batchMatches,
+            Map<Integer, SortedSet<Integer>> batchMatches,
             FlightProducer.ServerStreamListener listener
     ) {
+        Objects.requireNonNull(this.arrowSchema);
+
         synchronized (this.rwLock.readLock()) {
             try (
                     final VectorSchemaRoot resultVsc = VectorSchemaRoot.create(this.arrowSchema, this.allocator);
@@ -237,20 +263,27 @@ public class DataTable implements AutoCloseable {
                 batchMatches.forEach((batchIndex, matches) -> {
                     final Batch batch = this.batches.get(batchIndex);
                     loader.load(batch.arrowRecordBatch);
-                    VectorSchemaRoot[] slices = null;
+                    VectorSchemaRoot[] vecSlices = null;
 
                     try {
-                        slices = matches.stream()
-                                .map(i -> vsc.slice(i, 1))
+                        final List<CollectionUtils.Slice> slices =
+                                CollectionUtils.slicesFromIncluded(
+                                        batch.arrowRecordBatch.getLength(),
+                                        matches
+                                );
+
+                        vecSlices = slices.stream()
+                                .filter(slice -> slice.length() > 0)
+                                .map(slice -> vsc.slice(slice.start(), slice.length()))
                                 .toArray(VectorSchemaRoot[]::new);
 
                         resultVsc.allocateNew();
-                        VectorSchemaRootAppender.append(false, resultVsc, slices);
+                        VectorSchemaRootAppender.append(false, resultVsc, vecSlices);
                         listener.putNext();
                     } finally {
-                        if (slices != null) {
-                            for (VectorSchemaRoot slice : slices) {
-                                slice.close();
+                        if (vecSlices != null) {
+                            for (VectorSchemaRoot vecSlice : vecSlices) {
+                                vecSlice.close();
                             }
                         }
                     }
@@ -267,6 +300,31 @@ public class DataTable implements AutoCloseable {
                     batches.get(rowCoord.batchIndex).markAsDeleted(rowCoord.rowIndex);
                 }
             });
+        }
+    }
+
+    public void merge() {
+        Objects.requireNonNull(this.arrowSchema);
+
+        if (this.batches.size() > 1) {
+            try (
+                    final VectorSchemaRoot mergedVsc = VectorSchemaRoot.create(this.arrowSchema, this.allocator)
+            ) {
+                synchronized (this.rwLock.writeLock()) {
+                    mergedVsc.allocateNew();
+                    for (Batch batch : this.batches) {
+                        batch.writeActiveRecords(mergedVsc);
+                    }
+
+                    this.rowCoordinateMap.clear();
+                    this.updateRowCoordMap(0, mergedVsc);
+
+                    final VectorUnloader unloader = new VectorUnloader(mergedVsc);
+                    this.batches.forEach(Batch::close);
+                    this.batches.clear();
+                    this.batches.add(new Batch(unloader.getRecordBatch()));
+                }
+            }
         }
     }
 }

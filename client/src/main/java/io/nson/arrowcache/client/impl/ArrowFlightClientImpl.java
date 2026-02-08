@@ -1,9 +1,11 @@
 package io.nson.arrowcache.client.impl;
 
 import io.nson.arrowcache.client.ClientAPI;
+import io.nson.arrowcache.common.Actions;
 import io.nson.arrowcache.common.avro.DeleteRequest;
 import io.nson.arrowcache.common.avro.FlightInfoRequest;
 import io.nson.arrowcache.common.avro.GetRequest;
+import io.nson.arrowcache.common.avro.MergeRequest;
 import io.nson.arrowcache.common.utils.ArrowUtils;
 import io.nson.arrowcache.common.utils.ExceptionUtils;
 import org.apache.arrow.flight.*;
@@ -14,10 +16,7 @@ import org.jspecify.annotations.NullMarked;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.util.ArrayList;
-import java.util.Iterator;
-import java.util.List;
-import java.util.Set;
+import java.util.*;
 import java.util.concurrent.TimeUnit;
 
 @NullMarked
@@ -188,13 +187,50 @@ public class ArrowFlightClientImpl implements ClientAPI {
                     .setKeys(new ArrayList<>(keys))
                     .build();
             final byte[] bytes = DeleteRequest.getEncoder().encode(deleteRequest).array();
-            final Action action = new Action("DELETE", bytes);
-            final Iterator<Result> deleteActionResult = flightClient.doAction(action);
+            final Action action = Actions.DELETE.createAction(bytes);
+            final Iterator<Result> resultIter = flightClient.doAction(action);
 
-            while (deleteActionResult.hasNext()) {
-                final Result result = deleteActionResult.next();
+            while (resultIter.hasNext()) {
+                final Result result = resultIter.next();
                 final String msg = ArrowUtils.resultToString(result);
                 logger.info("Delete action result: {}", msg);
+            }
+        } catch (Exception ex) {
+            throw ExceptionUtils.exception(
+                    logger,
+                    "Exception occurred"
+            ).cause(ex).create();
+        }
+    }
+
+    @Override
+    public void mergeTables(List<String> schemaPath) {
+        mergeTablesImpl(schemaPath, Collections.emptySet());
+    }
+
+    @Override
+    public void mergeTables(List<String> schemaPath, Set<String> tables) {
+        if (tables.isEmpty()) {
+            throw new RuntimeException("Merge called for an empty set of tables");
+        } else {
+            mergeTablesImpl(schemaPath, tables);
+        }
+    }
+
+    private void mergeTablesImpl(List<String> schemaPath, Set<String> tables) {
+        try {
+            final MergeRequest mergeRequest = MergeRequest.newBuilder()
+                    .setSchemaPath(schemaPath)
+                    .setTables(new ArrayList<>(tables))
+                    .build();
+            final byte[] bytes = MergeRequest.getEncoder().encode(mergeRequest).array();
+            final Action action = Actions.MERGE.createAction(bytes);
+            final Iterator<Result> resultIter = flightClient.doAction(action);
+
+            while (resultIter.hasNext()) {
+                final Result result = resultIter.next();
+                final String msg = ArrowUtils.resultToString(result);
+                logger.info("Merge action result: {}", msg);
             }
         } catch (Exception ex) {
             throw ExceptionUtils.exception(
