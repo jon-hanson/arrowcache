@@ -7,7 +7,6 @@ import java.util.Map;
 
 @NullMarked
 public final class RootSchemaConfig extends SchemaConfig {
-    public static final String DEFAULT_SCHEMA_NAME = "";
 
     public static final JsonCodec<RootSchemaConfig> CODEC = new JsonCodec<>(RootSchemaConfig.class) {};
 
@@ -49,15 +48,5 @@ public final class RootSchemaConfig extends SchemaConfig {
 
     public String name() {
         return name;
-    }
-
-    public ChildSchemaConfig childSchema(String name) {
-        if (childSchema.containsKey(name)) {
-            return childSchema.get(name);
-        } else if (childSchema.containsKey(DEFAULT_SCHEMA_NAME)) {
-            return childSchema.get(DEFAULT_SCHEMA_NAME);
-        } else {
-            throw new IllegalArgumentException(String.format("Unknown child schema: %s", name));
-        }
     }
 }

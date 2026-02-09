@@ -66,6 +66,7 @@ public final class ArrowFilterEnumerator extends AbstractArrowEnumerator {
         }
     }
 
+    @Override
     public boolean moveNext() {
         while (true) {
             if (this.selectionVector != null &&

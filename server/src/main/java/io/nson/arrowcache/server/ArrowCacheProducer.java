@@ -34,8 +34,6 @@ public class ArrowCacheProducer extends NoOpFlightProducer implements AutoClosea
 
     private final BufferAllocator allocator;
 
-    private final RootSchemaConfig schemaConfig;
-
     private final Location location;
 
     private final Duration requestLifetime;
@@ -50,13 +48,11 @@ public class ArrowCacheProducer extends NoOpFlightProducer implements AutoClosea
 
     public ArrowCacheProducer(
             BufferAllocator allocator,
-            RootSchemaConfig schemaConfig,
             DataSchema rootSchema,
             Location location,
             Duration requestLifetime
     ) {
         this.allocator = allocator.newChildAllocator("ArrowCacheProducer", 0, Integer.MAX_VALUE);
-        this.schemaConfig = schemaConfig;
         this.location = location;
         this.requestLifetime = requestLifetime;
         this.rootSchema = rootSchema;
@@ -324,7 +320,7 @@ public class ArrowCacheProducer extends NoOpFlightProducer implements AutoClosea
                 final DataSchema dataSchema = getDataSchema(mergeRequest.getSchemaPath());
                 final List<String> tables = mergeRequest.getTables();
                 if (tables.isEmpty()) {
-                    dataSchema.mergeEachTable();
+                    dataSchema.mergeAllTables();
                 } else {
                     dataSchema.mergeEachTable(tables);
                 }

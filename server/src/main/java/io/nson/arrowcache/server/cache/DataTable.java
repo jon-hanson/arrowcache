@@ -56,11 +56,11 @@ public class DataTable implements AutoCloseable {
             this.rowIndex = rowIndex;
         }
 
-        public int getBatchIndex() {
+        int getBatchIndex() {
             return batchIndex;
         }
 
-        public int getRowIndex() {
+        int getRowIndex() {
             return rowIndex;
         }
     }
@@ -121,7 +121,7 @@ public class DataTable implements AutoCloseable {
                         VectorSchemaRootAppender.append(false, targetVsc, vscSlices);
                     } finally {
                         for (VectorSchemaRoot vscSlice : vscSlices) {
-                            vsc.close();
+                            vscSlice.close();
                         }
                     }
                 }

@@ -28,17 +28,17 @@ public class ArrowCacheServer implements AutoCloseable {
             BufferAllocator allocator,
             Location location,
             Duration requestLifetime,
-            RootSchemaConfig schemaConfig,
             DataSchema rootSchema
     ) {
         this.allocator = allocator.newChildAllocator("ArrowCacheServer", 0, Integer.MAX_VALUE);
         this.location = location;
-        this.flightProducer = new ArrowCacheProducer(allocator, schemaConfig, rootSchema, location, requestLifetime);
+        this.flightProducer = new ArrowCacheProducer(allocator, rootSchema, location, requestLifetime);
         this.flightServer = FlightServer.builder(allocator, location, flightProducer).build();
 
         logger.info("New server for location {}", location);
     }
 
+    @Override
     public void close() throws Exception {
         logger.info("Closing for location {}...", location);
         AutoCloseables.close(
@@ -93,7 +93,6 @@ public class ArrowCacheServer implements AutoCloseable {
                 allocator,
                 location,
                 serverConfig.requestLifetime(),
-                schemaConfig,
                 rootSchema
         );
 

@@ -10,8 +10,6 @@ import java.util.TimerTask;
 public abstract class ConcurrencyUtils {
     private ConcurrencyUtils() {}
 
-    private static final Logger logger = LoggerFactory.getLogger(ConcurrencyUtils.class);
-
     public static void scheduleAtFixedRate(Timer timer, Runnable runnable, Duration delay) {
         timer.scheduleAtFixedRate(
                 new TimerTask() {

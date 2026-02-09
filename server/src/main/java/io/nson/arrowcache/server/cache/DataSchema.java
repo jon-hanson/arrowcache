@@ -103,7 +103,7 @@ public class DataSchema implements AutoCloseable {
         return Optional.ofNullable(this.tableMap.get(table));
     }
 
-    public void mergeEachTable() {
+    public void mergeAllTables() {
         this.tableMap.values().forEach(DataTable::mergeBatches);
     }
 
@@ -111,10 +111,10 @@ public class DataSchema implements AutoCloseable {
         synchronized(this.tableMap) {
             final Set<String> tables2 = new HashSet<>(tables);
             tables2.removeAll(this.tableMap.keySet());
-            if (!tables2.isEmpty()) {
+            if (tables2.isEmpty()) {
                 throw new IllegalArgumentException("The following tables are not found: " + tables2);
             } else {
-                tables.forEach(table -> this.tableMap.get(table).mergeBatches());
+                tables2.forEach(table -> this.tableMap.get(table).mergeBatches());
             }
         }
     }
