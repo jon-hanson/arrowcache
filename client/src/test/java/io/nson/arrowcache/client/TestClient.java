@@ -77,22 +77,6 @@ public class TestClient {
 
             doGetFlight(client, FLIGHT_DESC);
 
-            {
-//                logger.info("QUERY1: {}", QueryCodecs.MODEL_TO_AVRO.encode(TestData.QUERY1));
-//                final byte[] bytes = QueryCodecs.MODEL_TO_BYTES.encode(TestData.QUERY1);
-//                final FlightDescriptor FLIGHT_DESC_QUERY = FlightDescriptor.command(bytes);
-//
-//                doGetFlight(client, FLIGHT_DESC_QUERY);
-            }
-
-            {
-//                logger.info("QUERY2: {}", QueryCodecs.MODEL_TO_AVRO.encode(TestData.QUERY2));
-//                final byte[] bytes = QueryCodecs.MODEL_TO_BYTES.encode(TestData.QUERY2);
-//                final FlightDescriptor FLIGHT_DESC_QUERY = FlightDescriptor.command(bytes);
-//
-//                doGetFlight(client, FLIGHT_DESC_QUERY);
-            }
-
             listFlights(client);
 
             {
@@ -116,9 +100,7 @@ public class TestClient {
     private static void listFlights(FlightClient client) {
         logger.info("Flights:");
         client.listFlights(Criteria.ALL, CALL_TIMEOUT)
-                .forEach(flightInfo -> {
-                    logger.info("    {}", flightInfo);
-                });
+                .forEach(flightInfo -> logger.info("    {}", flightInfo));
     }
 
     private static void doGetFlight(FlightClient client, FlightDescriptor flightDescriptor) {

@@ -7,7 +7,7 @@ public class CollectionUtils {
     protected CollectionUtils() {}
 
     public static <T> Set<T> intersect(Set<T> lhs, Set<T> rhs) {
-        final Set<T> result = new HashSet<T>(lhs);
+        final Set<T> result = new HashSet<>(lhs);
         result.retainAll(rhs);
         return result;
     }

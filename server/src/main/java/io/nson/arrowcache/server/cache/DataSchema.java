@@ -7,7 +7,13 @@ import org.jspecify.annotations.NullMarked;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.util.*;
+import java.util.Collection;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Objects;
+import java.util.Optional;
+import java.util.Set;
 import java.util.concurrent.ConcurrentMap;
 
 import static java.util.stream.Collectors.toConcurrentMap;
@@ -23,7 +29,7 @@ public class DataSchema implements AutoCloseable {
     ) {
         return childSchemaConfig.entrySet().stream()
                 .collect(toUnmodifiableMap(
-                    en-> en.getKey(),
+                        Map.Entry::getKey,
                     en ->  new DataSchema(allocator, en.getKey(), en.getValue())
                 ));
     }
@@ -34,7 +40,7 @@ public class DataSchema implements AutoCloseable {
     ) {
         return tableConfigMap.entrySet().stream()
                 .collect(toConcurrentMap(
-                        en -> en.getKey(),
+                        Map.Entry::getKey,
                         en -> DataTable.create(allocator, en.getKey(), en.getValue())
                 ));
     }

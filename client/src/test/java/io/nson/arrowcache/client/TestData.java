@@ -2,7 +2,11 @@ package io.nson.arrowcache.client;
 
 import io.nson.arrowcache.common.utils.FileUtils;
 import org.apache.arrow.memory.BufferAllocator;
-import org.apache.arrow.vector.*;
+import org.apache.arrow.vector.DateDayVector;
+import org.apache.arrow.vector.Float4Vector;
+import org.apache.arrow.vector.IntVector;
+import org.apache.arrow.vector.VarCharVector;
+import org.apache.arrow.vector.VectorSchemaRoot;
 import org.apache.arrow.vector.types.DateUnit;
 import org.apache.arrow.vector.types.FloatingPointPrecision;
 import org.apache.arrow.vector.types.pojo.ArrowType;
@@ -56,7 +60,7 @@ public class TestData {
         return VectorSchemaRoot.create(schema, allocator);
     }
 
-    public static VectorSchemaRoot loadTestDataIntoVsc(VectorSchemaRoot vsc, String fileName) throws IOException {
+    public static void loadTestDataIntoVsc(VectorSchemaRoot vsc, String fileName) throws IOException {
 
         final IntVector idVector = (IntVector) vsc.getVector("id");
         final VarCharVector nameVector = (VarCharVector) vsc.getVector("name");
@@ -91,8 +95,6 @@ public class TestData {
         }
 
         vsc.setRowCount(rowCount);
-
-        return vsc;
     }
 
     public static final Set<Integer> KEYS1 = Set.of(11, 14, 21);

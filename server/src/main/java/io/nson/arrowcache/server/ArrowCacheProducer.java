@@ -1,7 +1,12 @@
 package io.nson.arrowcache.server;
 
 import io.nson.arrowcache.common.Actions;
-import io.nson.arrowcache.common.avro.*;
+import io.nson.arrowcache.common.avro.CriteriaRequest;
+import io.nson.arrowcache.common.avro.DeleteRequest;
+import io.nson.arrowcache.common.avro.FlightInfoRequest;
+import io.nson.arrowcache.common.avro.GetRequest;
+import io.nson.arrowcache.common.avro.MergeRequest;
+import io.nson.arrowcache.common.avro.QueryRequest;
 import io.nson.arrowcache.common.utils.ArrowUtils;
 import io.nson.arrowcache.common.utils.ExceptionUtils;
 import io.nson.arrowcache.server.cache.DataSchema;
@@ -18,12 +23,18 @@ import org.jspecify.annotations.NullMarked;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.io.IOException;
 import java.time.Duration;
 import java.time.Instant;
-import java.util.*;
+import java.util.Collections;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.Timer;
+import java.util.TimerTask;
+import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
+import java.util.function.Function;
 
 import static java.util.stream.Collectors.toMap;
 
@@ -43,6 +54,7 @@ public class ArrowCacheProducer extends NoOpFlightProducer implements AutoClosea
     private final ConcurrentMap<UUID, RequestExecutor> pendingRequests;
 
     private final Timer requestCleanerTimer = new Timer();
+    private final TimerTask requestCleanerTask;
 
     private volatile boolean closing = false;
 
@@ -58,7 +70,7 @@ public class ArrowCacheProducer extends NoOpFlightProducer implements AutoClosea
         this.rootSchema = rootSchema;
         this.pendingRequests = new ConcurrentHashMap<>();
 
-        ConcurrencyUtils.scheduleAtFixedRate(
+        requestCleanerTask = ConcurrencyUtils.scheduleAtFixedRate(
                 this.requestCleanerTimer,
                 this::closeStaleRequests,
                 requestLifetime.dividedBy(10)
@@ -69,6 +81,8 @@ public class ArrowCacheProducer extends NoOpFlightProducer implements AutoClosea
     public void close() {
         logger.info("Closing...");
         closing = true;
+        requestCleanerTimer.cancel();
+        requestCleanerTask.cancel();
         allocator.close();
     }
 
@@ -82,8 +96,8 @@ public class ArrowCacheProducer extends NoOpFlightProducer implements AutoClosea
                         pendingRequests.values().stream()
                                 .filter(req -> req.inception().isBefore(cutoff))
                                 .collect(toMap(
-                                        req -> req.uuid(),
-                                        req -> req
+                                        RequestExecutor::uuid,
+                                        Function.identity()
                                 ));
                 timeoutMap.keySet().forEach(pendingRequests::remove);
                 timeoutMap.values().stream()
@@ -142,8 +156,10 @@ public class ArrowCacheProducer extends NoOpFlightProducer implements AutoClosea
 
                 tableNames.forEach(tableName -> {
                     final FlightDescriptor descriptor = FlightDescriptor.path(schema.name(), tableName);
+                    final DataTable table = schema.getDataTable(tableName)
+                            .orElseThrow(() -> new RuntimeException("No data table for name: " + tableName));
                     final FlightInfo flightInfo = new FlightInfo(
-                            schema.getDataTable(tableName).get().arrowSchema(),
+                            table.arrowSchema(),
                             descriptor,
                             Collections.singletonList(flightEndpoint),
                             -1,
@@ -154,7 +170,7 @@ public class ArrowCacheProducer extends NoOpFlightProducer implements AutoClosea
             }
 
             listener.onCompleted();
-        } catch (IOException ex) {
+        } catch (Exception ex) {
             logger.error("Failure in listFlights()", ex);
             listener.onError(ex);
         }

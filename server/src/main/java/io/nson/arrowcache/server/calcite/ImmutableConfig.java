@@ -25,7 +25,7 @@ final class ImmutableConfig implements ArrowRules.ArrowFilterRule.Config {
     private static final byte STAGE_INITIALIZING = -1;
     private static final byte STAGE_UNINITIALIZED = 0;
     private static final byte STAGE_INITIALIZED = 1;
-    private transient volatile ImmutableConfig.InitShim initShim;
+    @Nullable private transient volatile ImmutableConfig.InitShim initShim;
     private static final ImmutableConfig INSTANCE = validate(new ImmutableConfig());
 
     private ImmutableConfig() {
@@ -83,24 +83,27 @@ final class ImmutableConfig implements ArrowRules.ArrowFilterRule.Config {
         return shim != null ? shim.operandSupplier() : this.operandSupplier;
     }
 
-    public final ImmutableConfig withRelBuilderFactory(RelBuilderFactory value) {
+    @Override
+    public ImmutableConfig withRelBuilderFactory(RelBuilderFactory value) {
         if (this.relBuilderFactory == value) {
             return this;
         } else {
-            RelBuilderFactory newValue = (RelBuilderFactory) Objects.requireNonNull(value, "relBuilderFactory");
+            RelBuilderFactory newValue = Objects.requireNonNull(value, "relBuilderFactory");
             return validate(new ImmutableConfig(newValue, this.description, this.operandSupplier));
         }
     }
 
-    public final ImmutableConfig withDescription(@Nullable String value) {
+    @Override
+    public ImmutableConfig withDescription(@Nullable String value) {
         return Objects.equals(this.description, value) ? this : validate(new ImmutableConfig(this.relBuilderFactory, value, this.operandSupplier));
     }
 
-    public final ImmutableConfig withOperandSupplier(RelRule.OperandTransform value) {
+    @Override
+    public ImmutableConfig withOperandSupplier(RelRule.OperandTransform value) {
         if (this.operandSupplier == value) {
             return this;
         } else {
-            RelRule.OperandTransform newValue = (RelRule.OperandTransform)Objects.requireNonNull(value, "operandSupplier");
+            RelRule.OperandTransform newValue = Objects.requireNonNull(value, "operandSupplier");
             return validate(new ImmutableConfig(this.relBuilderFactory, this.description, newValue));
         }
     }
@@ -137,8 +140,10 @@ final class ImmutableConfig implements ArrowRules.ArrowFilterRule.Config {
         return INSTANCE != null && INSTANCE.equalTo(instance) ? INSTANCE : instance;
     }
 
-    public static ImmutableConfig copyOf(ArrowRules.ArrowFilterRule.Config instance) {
-        return instance instanceof ImmutableConfig ? (ImmutableConfig)instance : builder().from(instance).build();
+    public static ArrowRules.ArrowFilterRule.Config copyOf(ArrowRules.ArrowFilterRule.Config instance) {
+        return instance instanceof ImmutableConfig ?
+                (ImmutableConfig)instance :
+                builder().from(instance).build();
     }
 
     public static ImmutableConfig.Builder builder() {
@@ -162,7 +167,7 @@ final class ImmutableConfig implements ArrowRules.ArrowFilterRule.Config {
             } else {
                 if (this.relBuilderFactoryBuildStage == 0) {
                     this.relBuilderFactoryBuildStage = -1;
-                    this.relBuilderFactory = (RelBuilderFactory)Objects.requireNonNull(ImmutableConfig.this.relBuilderFactoryInitialize(), "relBuilderFactory");
+                    this.relBuilderFactory = Objects.requireNonNull(ImmutableConfig.this.relBuilderFactoryInitialize(), "relBuilderFactory");
                     this.relBuilderFactoryBuildStage = 1;
                 }
 
@@ -181,7 +186,7 @@ final class ImmutableConfig implements ArrowRules.ArrowFilterRule.Config {
             } else {
                 if (this.operandSupplierBuildStage == 0) {
                     this.operandSupplierBuildStage = -1;
-                    this.operandSupplier = (RelRule.OperandTransform)Objects.requireNonNull(ImmutableConfig.this.operandSupplierInitialize(), "operandSupplier");
+                    this.operandSupplier = Objects.requireNonNull(ImmutableConfig.this.operandSupplierInitialize(), "operandSupplier");
                     this.operandSupplierBuildStage = 1;
                 }
 
@@ -195,7 +200,7 @@ final class ImmutableConfig implements ArrowRules.ArrowFilterRule.Config {
         }
 
         private String formatInitCycleMessage() {
-            List<String> attributes = new ArrayList();
+            List<String> attributes = new ArrayList<>();
             if (this.relBuilderFactoryBuildStage == -1) {
                 attributes.add("relBuilderFactory");
             }
@@ -221,14 +226,14 @@ final class ImmutableConfig implements ArrowRules.ArrowFilterRule.Config {
         }
 
         @CanIgnoreReturnValue
-        public final ImmutableConfig.Builder from(RelRule.Config instance) {
+        public ImmutableConfig.Builder from(RelRule.Config instance) {
             Objects.requireNonNull(instance, "instance");
             this.from((Object)instance);
             return this;
         }
 
         @CanIgnoreReturnValue
-        public final ImmutableConfig.Builder from(ArrowRules.ArrowFilterRule.Config instance) {
+        public ImmutableConfig.Builder from(ArrowRules.ArrowFilterRule.Config instance) {
             Objects.requireNonNull(instance, "instance");
             this.from((Object)instance);
             return this;
@@ -248,24 +253,24 @@ final class ImmutableConfig implements ArrowRules.ArrowFilterRule.Config {
         }
 
         @CanIgnoreReturnValue
-        public final ImmutableConfig.Builder withRelBuilderFactory(RelBuilderFactory relBuilderFactory) {
-            this.relBuilderFactory = (RelBuilderFactory)Objects.requireNonNull(relBuilderFactory, "relBuilderFactory");
+        public ImmutableConfig.Builder withRelBuilderFactory(RelBuilderFactory relBuilderFactory) {
+            this.relBuilderFactory = Objects.requireNonNull(relBuilderFactory, "relBuilderFactory");
             return this;
         }
 
         @CanIgnoreReturnValue
-        public final ImmutableConfig.Builder withDescription(@Nullable String description) {
+        public ImmutableConfig.Builder withDescription(@Nullable String description) {
             this.description = description;
             return this;
         }
 
         @CanIgnoreReturnValue
-        public final ImmutableConfig.Builder withOperandSupplier(RelRule.OperandTransform operandSupplier) {
-            this.operandSupplier = (RelRule.OperandTransform)Objects.requireNonNull(operandSupplier, "operandSupplier");
+        public ImmutableConfig.Builder withOperandSupplier(RelRule.OperandTransform operandSupplier) {
+            this.operandSupplier = Objects.requireNonNull(operandSupplier, "operandSupplier");
             return this;
         }
 
-        public ImmutableConfig build() {
+        public ArrowRules.ArrowFilterRule.Config build() {
             return ImmutableConfig.validate(new ImmutableConfig(this));
         }
     }

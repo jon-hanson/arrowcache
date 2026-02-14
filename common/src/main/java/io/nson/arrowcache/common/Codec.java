@@ -5,7 +5,7 @@ import java.util.function.Function;
 public interface Codec<RAW, ENC> {
 
     static <RAW, ENC> Codec<RAW, ENC> valueOf(Function<RAW, ENC> encoder, Function<ENC, RAW> decoder) {
-        return new Codec<RAW, ENC>() {
+        return new Codec<>() {
             @Override
             public ENC encode(RAW raw) {
                 return encoder.apply(raw);

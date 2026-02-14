@@ -6,7 +6,6 @@ import io.nson.arrowcache.server.RootSchemaConfig;
 import io.nson.arrowcache.server.TestData;
 import org.apache.arrow.flight.FlightProducer;
 import org.apache.arrow.memory.ArrowBuf;
-import org.apache.arrow.memory.BufferAllocator;
 import org.apache.arrow.memory.RootAllocator;
 import org.apache.arrow.vector.FieldVector;
 import org.apache.arrow.vector.VectorSchemaRoot;
@@ -19,7 +18,11 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
-import java.util.*;
+import java.util.Collection;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.Map;
+import java.util.Set;
 
 import static java.util.stream.Collectors.toSet;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -31,9 +34,7 @@ public class DataSchemaTest {
     public void test() throws IOException {
         final RootSchemaConfig schemaConfig = FileUtils.loadFromResource("schemaconfig-test.json", RootSchemaConfig.CODEC);
         try(
-                //final AllocatorManager allocatorManager = new AllocatorManager(schemaConfig.allocatorMaxSize());
                 final RootAllocator allocator = new RootAllocator(Integer.MAX_VALUE);
-                final BufferAllocator testDataAllocator = allocator.newChildAllocator("test-data", 0, Integer.MAX_VALUE);
                 final VectorSchemaRoot vsc = TestData.createTestDataVSC(allocator);
                 final DataSchema dataSchema = new DataSchema(allocator, "test", schemaConfig)
         ) {

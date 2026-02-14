@@ -24,7 +24,8 @@ import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 import java.util.stream.Collectors;
 
-import static java.util.stream.Collectors.*;
+import static java.util.stream.Collectors.mapping;
+import static java.util.stream.Collectors.toCollection;
 
 @NullMarked
 public class DataTable implements AutoCloseable {
@@ -98,6 +99,8 @@ public class DataTable implements AutoCloseable {
         }
 
         public void writeActiveRecords(VectorSchemaRoot targetVsc) {
+            Objects.requireNonNull(arrowSchema);
+
             if (deleted.isEmpty()) {
                 try (final VectorSchemaRoot vsc = VectorSchemaRoot.create(arrowSchema, allocator)) {
                     final VectorLoader loader = new VectorLoader(vsc);
@@ -132,7 +135,7 @@ public class DataTable implements AutoCloseable {
     private final BufferAllocator allocator;
     private final String name;
     private @Nullable Schema arrowSchema;
-    private final @Nullable String keyColumnName;
+    private final String keyColumnName;
     private @Nullable Integer keyColumnIndex;
     private final List<Batch> batches;
     private final Map<Object, RowCoordinate> rowCoordinateMap;
@@ -270,10 +273,7 @@ public class DataTable implements AutoCloseable {
 
                     try {
                         final List<CollectionUtils.Slice> slices =
-                                CollectionUtils.slicesFromIncluded(
-                                        batch.arrowRecordBatch.getLength(),
-                                        matches
-                                );
+                                CollectionUtils.slicesFromIncluded(matches);
 
                         vecSlices = slices.stream()
                                 .filter(slice -> slice.length() > 0)
@@ -283,8 +283,6 @@ public class DataTable implements AutoCloseable {
                         if (vecSlices.length > 0) {
                             VectorSchemaRootAppender.append(false, resultVsc, vecSlices);
                             listener.putNext();
-//                            resultVsc.clear();
-//                            resultVsc.allocateNew();
                         }
                     } finally {
                         if (vecSlices != null) {

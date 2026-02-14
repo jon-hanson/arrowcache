@@ -28,5 +28,4 @@ public class ArrowServerUtils {
 
         return OptionalInt.empty();
     }
-
 }

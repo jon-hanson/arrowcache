@@ -4,13 +4,17 @@ import io.nson.arrowcache.server.cache.DataSchema;
 import org.apache.arrow.memory.BufferAllocator;
 import org.apache.calcite.schema.SchemaFactory;
 import org.apache.calcite.schema.SchemaPlus;
+import org.jspecify.annotations.NullMarked;
 import org.jspecify.annotations.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.util.*;
+import java.io.Closeable;
+import java.util.Map;
+import java.util.Objects;
 
-public final class ArrowCacheSchemaFactory implements SchemaFactory, AutoCloseable {
+@NullMarked
+public final class ArrowCacheSchemaFactory implements SchemaFactory, Closeable {
     private static final Logger logger = LoggerFactory.getLogger(ArrowCacheSchemaFactory.class);
 
     public static @Nullable ArrowCacheSchemaFactory INSTANCE;
@@ -24,7 +28,7 @@ public final class ArrowCacheSchemaFactory implements SchemaFactory, AutoCloseab
     }
 
     public static ArrowCacheSchemaFactory instance() {
-        return INSTANCE;
+        return Objects.requireNonNull(INSTANCE);
     }
 
     public static void shutdown() {
@@ -69,9 +73,9 @@ public final class ArrowCacheSchemaFactory implements SchemaFactory, AutoCloseab
         return rootArrowCacheSchema;
     }
 
-    public ArrowCacheSchema create(String name) {
-        return create(null, name, Collections.emptyMap());
-    }
+//    public ArrowCacheSchema create(String name) {
+//        return create(null, name, Collections.emptyMap());
+//    }
 
     private DataSchema getSchema(SchemaPlus schema) {
         if (schema.getParentSchema() == null) {

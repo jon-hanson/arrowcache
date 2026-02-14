@@ -1,6 +1,8 @@
 package io.nson.arrowcache.server.utils;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.SortedSet;
 
 public abstract class CollectionUtils extends io.nson.arrowcache.common.utils.CollectionUtils {
     private CollectionUtils() {}
@@ -45,9 +47,7 @@ public abstract class CollectionUtils extends io.nson.arrowcache.common.utils.Co
         return slices;
     }
 
-    // 0 1 2 3 4 5
-    //   x x   x
-    public static List<Slice> slicesFromIncluded(int size, SortedSet<Integer> include) {
+    public static List<Slice> slicesFromIncluded(SortedSet<Integer> include) {
         final List<Slice> slices = new ArrayList<>();
 
         int start = -1;

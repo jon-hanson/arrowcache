@@ -32,7 +32,7 @@ public class TestClientAPI {
         try (
                 final RootAllocator allocator = new RootAllocator();
                 final ClientAPI clientAPI = ArrowFlightClientImpl.create(location);
-                final VectorSchemaRoot vsc = TestData.createTestDataVSC(allocator);
+                final VectorSchemaRoot vsc = TestData.createTestDataVSC(allocator)
         ) {
             logger.info("Loading testdata1.csv into server");
             TestData.loadTestDataIntoVsc(vsc, "testdata1.csv");
@@ -107,7 +107,7 @@ public class TestClientAPI {
         }
     }
 
-    private static ClientAPI.Listener LISTENER = new ClientAPI.Listener() {
+    private static final ClientAPI.Listener LISTENER = new ClientAPI.Listener() {
 
         @Override
         public void onNext(VectorSchemaRoot vsc) {

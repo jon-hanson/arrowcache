@@ -3,14 +3,23 @@ package io.nson.arrowcache.server;
 import io.nson.arrowcache.server.cache.DataTable;
 import io.nson.arrowcache.server.utils.ByteUtils;
 import io.nson.arrowcache.server.utils.CollectionUtils;
-import org.apache.arrow.flight.*;
+import org.apache.arrow.flight.FlightDescriptor;
+import org.apache.arrow.flight.FlightEndpoint;
+import org.apache.arrow.flight.FlightInfo;
+import org.apache.arrow.flight.FlightProducer;
+import org.apache.arrow.flight.Location;
+import org.apache.arrow.flight.Ticket;
 import org.jspecify.annotations.NullMarked;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.Closeable;
 import java.time.Instant;
-import java.util.*;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.Set;
+import java.util.TreeSet;
+import java.util.UUID;
 
 @NullMarked
 public abstract class RequestExecutor implements Closeable {
@@ -35,13 +44,17 @@ public abstract class RequestExecutor implements Closeable {
     protected RequestExecutor(Instant inception, UUID uuid) {
         this.inception = inception;
         this.uuid = uuid;
-    }
 
-    public void close() {
+        logger.info("Creating {}, uuid: {}", getClass().getSimpleName(), uuid);
     }
 
     protected RequestExecutor() {
         this(Instant.now(), UUID.randomUUID());
+    }
+
+    @Override
+    public void close() {
+        logger.info("Closing {}, uuid: {}", getClass().getSimpleName(), uuid);
     }
 
     public Instant inception() {
