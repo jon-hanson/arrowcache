@@ -121,12 +121,16 @@ public class ArrowCacheProducer extends NoOpFlightProducer implements AutoClosea
     }
 
     public DataTable getDataTable(List<String> schemaPath, String table) {
-        return getDataSchema(schemaPath).getDataTable(table)
+        return getDataTable(getDataSchema(schemaPath), table);
+    }
+
+    private static DataTable getDataTable(DataSchema schema, String table) {
+        return schema.getDataTable(table)
                 .orElseThrow(() ->
                         ArrowServerUtils.exception(
                                 CallStatus.NOT_FOUND,
                                 logger,
-                                "Table '" + table + "' not found in schema: " + schemaPath
+                                "Table '" + table + "' not found in schema: " + schema.name()
                         ).toRuntimeException()
                 );
     }
@@ -156,8 +160,7 @@ public class ArrowCacheProducer extends NoOpFlightProducer implements AutoClosea
 
                 tableNames.forEach(tableName -> {
                     final FlightDescriptor descriptor = FlightDescriptor.path(schema.name(), tableName);
-                    final DataTable table = schema.getDataTable(tableName)
-                            .orElseThrow(() -> new RuntimeException("No data table for name: " + tableName));
+                    final DataTable table = getDataTable(schema, tableName);
                     final FlightInfo flightInfo = new FlightInfo(
                             table.arrowSchema(),
                             descriptor,
@@ -220,9 +223,12 @@ public class ArrowCacheProducer extends NoOpFlightProducer implements AutoClosea
         } catch (FlightRuntimeException ex) {
             throw ex;
         } catch (Exception ex) {
-            throw ArrowServerUtils.exception(CallStatus.INTERNAL, logger, "Unexpected exception")
-                    .withCause(ex)
-                    .toRuntimeException();
+            throw ArrowServerUtils.exception(
+                    CallStatus.INTERNAL,
+                    logger,
+                    "Unexpected exception"
+            ).withCause(ex)
+            .toRuntimeException();
         }
     }
 
@@ -236,7 +242,7 @@ public class ArrowCacheProducer extends NoOpFlightProducer implements AutoClosea
             if (requestExecutor == null) {
                 listener.error(
                         ArrowServerUtils.exception(
-                                CallStatus.NOT_FOUND,
+                                CallStatus.INVALID_ARGUMENT,
                                 logger,
                                 "No pending query found for ticket UUID " + uuid
                         ).toRuntimeException()
@@ -252,9 +258,12 @@ public class ArrowCacheProducer extends NoOpFlightProducer implements AutoClosea
         } catch (FlightRuntimeException ex) {
             throw ex;
         } catch (Exception ex) {
-            throw ArrowServerUtils.exception(CallStatus.INTERNAL, logger, "Unexpected exception")
-                    .withCause(ex)
-                    .toRuntimeException();
+            throw ArrowServerUtils.exception(
+                    CallStatus.INTERNAL,
+                    logger,
+                    "Unexpected exception"
+            ).withCause(ex)
+            .toRuntimeException();
         }
     }
 
@@ -278,10 +287,11 @@ public class ArrowCacheProducer extends NoOpFlightProducer implements AutoClosea
                     final List<String> flightPath = flightDesc.getPath();
 
                     if (flightPath.size() < 2) {
-                        throw ExceptionUtils.exception(
+                        throw ArrowServerUtils.exception(
+                                CallStatus.INVALID_ARGUMENT,
                                 logger,
                                 "Invalid flight path: " + flightPath + ". Must be [<schema-path>, table]"
-                        ).create(Exception::new);
+                        ).toRuntimeException();
                     }
 
                     final List<String> schemaPath = flightPath.subList(0, flightDesc.getPath().size() - 1);
@@ -336,9 +346,9 @@ public class ArrowCacheProducer extends NoOpFlightProducer implements AutoClosea
                 final DataSchema dataSchema = getDataSchema(mergeRequest.getSchemaPath());
                 final List<String> tables = mergeRequest.getTables();
                 if (tables.isEmpty()) {
-                    dataSchema.mergeAllTables();
+                    dataSchema.mergeTableBatches();
                 } else {
-                    dataSchema.mergeEachTable(tables);
+                    dataSchema.mergeTableBatches(tables);
                 }
 
                 listener.onCompleted();
@@ -355,9 +365,12 @@ public class ArrowCacheProducer extends NoOpFlightProducer implements AutoClosea
             throw ex;
         } catch (Exception ex) {
             listener.onError(
-                    ArrowServerUtils.exception(CallStatus.INTERNAL, logger, "Unexpected exception")
-                            .withCause(ex)
-                            .toRuntimeException()
+                    ArrowServerUtils.exception(
+                            CallStatus.INTERNAL,
+                            logger,
+                            "Unexpected exception"
+                    ).withCause(ex)
+                    .toRuntimeException()
             );
         }
     }

@@ -208,20 +208,20 @@ public class ArrowFlightClientImpl implements ClientAPI {
     }
 
     @Override
-    public void mergeTables(List<String> schemaPath) {
-        mergeTablesImpl(schemaPath, Collections.emptySet());
+    public void mergeTableBatches(List<String> schemaPath) {
+        mergeTableBatchesImpl(schemaPath, Collections.emptySet());
     }
 
     @Override
-    public void mergeTables(List<String> schemaPath, Set<String> tables) {
+    public void mergeTableBatches(List<String> schemaPath, Set<String> tables) {
         if (tables.isEmpty()) {
             throw new RuntimeException("Merge called for an empty set of tables");
         } else {
-            mergeTablesImpl(schemaPath, tables);
+            mergeTableBatchesImpl(schemaPath, tables);
         }
     }
 
-    private void mergeTablesImpl(List<String> schemaPath, Set<String> tables) {
+    private void mergeTableBatchesImpl(List<String> schemaPath, Set<String> tables) {
         try {
             final MergeRequest mergeRequest = MergeRequest.newBuilder()
                     .setSchemaPath(schemaPath)

@@ -37,10 +37,6 @@
             <version>${arrow.version}</version>
         </dependency>
 
-<!--        <dependency>-->
-<!--            <groupId>org.apache.calcite</groupId>-->
-<!--            <artifactId>calcite-arrow</artifactId>-->
-<!--        </dependency>-->
         <dependency>
             <groupId>org.apache.calcite</groupId>
             <artifactId>calcite-core</artifactId>

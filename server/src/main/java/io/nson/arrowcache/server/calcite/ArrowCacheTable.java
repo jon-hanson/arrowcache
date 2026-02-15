@@ -2,6 +2,7 @@ package io.nson.arrowcache.server.calcite;
 
 import io.nson.arrowcache.common.utils.ExceptionUtils;
 import io.nson.arrowcache.server.cache.DataTable;
+import io.nson.arrowcache.common.utils.StringUtils;
 import org.apache.arrow.gandiva.evaluator.Filter;
 import org.apache.arrow.gandiva.evaluator.Projector;
 import org.apache.arrow.gandiva.exceptions.GandivaException;
@@ -128,24 +129,24 @@ public final class ArrowCacheTable extends AbstractTable
 
             final List<TreeNode> conditionNodes = new ArrayList<>(conditions.size());
             for (String condition : conditions) {
-                final String[] data = condition.split(" ");
+                final List<String> data = StringUtils.split(condition, ' ');
                 final List<TreeNode> treeNodes = new ArrayList<>(2);
                 treeNodes.add(
                         TreeBuilder.makeField(
                                 arrowSchema.getFields()
                                         .get(arrowSchema.getFields()
-                                                .indexOf(arrowSchema.findField(data[0]))
+                                                .indexOf(arrowSchema.findField(data.get(0)))
                                         )
                         )
                 );
 
                 // if the split condition has more than two parts it's a binary operator
                 // with an additional literal node
-                if (data.length > 2) {
-                    treeNodes.add(makeLiteralNode(data[2], data[3]));
+                if (data.size() > 2) {
+                    treeNodes.add(makeLiteralNode(data.get(2), data.get(3)));
                 }
 
-                final String operator = data[1];
+                final String operator = data.get(1);
                 conditionNodes.add(TreeBuilder.makeFunction(operator, treeNodes, new ArrowType.Bool()));
             }
 
@@ -176,10 +177,10 @@ public final class ArrowCacheTable extends AbstractTable
 
     private static TreeNode makeLiteralNode(String literal, String type) {
         if (type.startsWith("decimal")) {
-            final String[] typeParts =
-                    type.substring(type.indexOf('(') + 1, type.indexOf(')')).split(",");
-            final int precision = Integer.parseInt(typeParts[0]);
-            final int scale = Integer.parseInt(typeParts[1]);
+            final List<String> typeParts =
+                    StringUtils.split(type.substring(type.indexOf('(') + 1, type.indexOf(')')), ',');
+            final int precision = Integer.parseInt(typeParts.get(0));
+            final int scale = Integer.parseInt(typeParts.get(1));
             return TreeBuilder.makeDecimalLiteral(literal, precision, scale);
         } else {
             switch (type) {

@@ -13,10 +13,15 @@ import java.util.List;
  *
  * @see org.apache.calcite.util.BuiltInMethod
  */
-//@SuppressWarnings("ImmutableEnumChecker")
+@SuppressWarnings("ImmutableEnumChecker")
 enum ArrowMethod {
-    ARROW_QUERY(ArrowCacheTable.class, "query", DataContext.class,
-            ImmutableIntList.class, List.class);
+    ARROW_QUERY(
+            ArrowCacheTable.class,
+            "query",
+            DataContext.class,
+            ImmutableIntList.class,
+            List.class
+    );
 
     final Method method;
 

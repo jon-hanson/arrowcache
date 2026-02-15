@@ -109,11 +109,11 @@ public class DataSchema implements AutoCloseable {
         return Optional.ofNullable(this.tableMap.get(table));
     }
 
-    public void mergeAllTables() {
+    public void mergeTableBatches() {
         this.tableMap.values().forEach(DataTable::mergeBatches);
     }
 
-    public void mergeEachTable(Collection<String> tables) {
+    public void mergeTableBatches(Collection<String> tables) {
         synchronized(this.tableMap) {
             final Set<String> tables2 = new HashSet<>(tables);
             tables2.removeAll(this.tableMap.keySet());

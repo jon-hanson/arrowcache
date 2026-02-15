@@ -1,6 +1,7 @@
 package io.nson.arrowcache.client;
 
 import io.nson.arrowcache.common.utils.FileUtils;
+import io.nson.arrowcache.common.utils.StringUtils;
 import org.apache.arrow.memory.BufferAllocator;
 import org.apache.arrow.vector.DateDayVector;
 import org.apache.arrow.vector.Float4Vector;
@@ -81,12 +82,12 @@ public class TestData {
                 continue;
             }
 
-            final String[] parts = line.split(",");
+            final List<String> parts = StringUtils.split(line, ',');
 
-            final int id = Integer.parseInt(parts[0].trim());
-            final String name = parts[1].trim();
-            final float age = Float.parseFloat(parts[2].trim());
-            final LocalDate date = LocalDate.parse(parts[3].trim(), DateTimeFormatter.ISO_LOCAL_DATE);
+            final int id = Integer.parseInt(parts.get(0).trim());
+            final String name = parts.get(1).trim();
+            final float age = Float.parseFloat(parts.get(2).trim());
+            final LocalDate date = LocalDate.parse(parts.get(3).trim(), DateTimeFormatter.ISO_LOCAL_DATE);
 
             idVector.set(i, id);
             nameVector.set(i, name.getBytes(StandardCharsets.UTF_8));

@@ -67,7 +67,7 @@ public class TestClientAPI {
 
             logger.info("Merging table {}", TABLE1);
 
-            clientAPI.mergeTables(SCHEMA, Set.of(TABLE1));
+            clientAPI.mergeTableBatches(SCHEMA, Set.of(TABLE1));
 
             logger.info("Running query for table: {}.{} and keys: {}", SCHEMA, TABLE1, TestData.KEYS1);
             clientAPI.get(SCHEMA, TABLE1, TestData.KEYS1, LISTENER);

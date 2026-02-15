@@ -22,9 +22,6 @@ final class ImmutableConfig implements ArrowRules.ArrowFilterRule.Config {
     @Nullable
     private final String description;
     private final RelRule.OperandTransform operandSupplier;
-    private static final byte STAGE_INITIALIZING = -1;
-    private static final byte STAGE_UNINITIALIZED = 0;
-    private static final byte STAGE_INITIALIZED = 1;
     @Nullable private transient volatile ImmutableConfig.InitShim initShim;
     private static final ImmutableConfig INSTANCE = validate(new ImmutableConfig());
 
@@ -68,16 +65,18 @@ final class ImmutableConfig implements ArrowRules.ArrowFilterRule.Config {
         return ArrowRules.ArrowFilterRule.Config.super.operandSupplier();
     }
 
+    @Override
     public RelBuilderFactory relBuilderFactory() {
         ImmutableConfig.InitShim shim = this.initShim;
         return shim != null ? shim.relBuilderFactory() : this.relBuilderFactory;
     }
 
-    @Nullable
-    public String description() {
+    @Override
+    public @Nullable String description() {
         return this.description;
     }
 
+    @Override
     public RelRule.OperandTransform operandSupplier() {
         ImmutableConfig.InitShim shim = this.initShim;
         return shim != null ? shim.operandSupplier() : this.operandSupplier;
@@ -108,6 +107,7 @@ final class ImmutableConfig implements ArrowRules.ArrowFilterRule.Config {
         }
     }
 
+    @Override
     public boolean equals(@Nullable Object another) {
         if (this == another) {
             return true;
@@ -120,6 +120,7 @@ final class ImmutableConfig implements ArrowRules.ArrowFilterRule.Config {
         return this.relBuilderFactory.equals(another.relBuilderFactory) && Objects.equals(this.description, another.description) && this.operandSupplier.equals(another.operandSupplier);
     }
 
+    @Override
     public int hashCode() {
         int h = 5381;
         h += (h << 5) + this.relBuilderFactory.hashCode();
@@ -128,6 +129,7 @@ final class ImmutableConfig implements ArrowRules.ArrowFilterRule.Config {
         return h;
     }
 
+    @Override
     public String toString() {
         return MoreObjects.toStringHelper("Config").omitNullValues().add("relBuilderFactory", this.relBuilderFactory).add("description", this.description).add("operandSupplier", this.operandSupplier).toString();
     }
@@ -215,12 +217,10 @@ final class ImmutableConfig implements ArrowRules.ArrowFilterRule.Config {
 
     @NotThreadSafe
     public static final class Builder {
-        @Nullable
-        private RelBuilderFactory relBuilderFactory;
-        @Nullable
-        private String description;
-        @Nullable
-        private RelRule.OperandTransform operandSupplier;
+
+        private @Nullable RelBuilderFactory relBuilderFactory;
+        private @Nullable String description;
+        private @Nullable RelRule.OperandTransform operandSupplier;
 
         private Builder() {
         }
