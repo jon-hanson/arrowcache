@@ -300,6 +300,11 @@
                         <arg>-XDcompilePolicy=simple</arg>
                         <arg>-Xplugin:ErrorProne -XepDisableWarningsInGeneratedCode -XepOpt:NullAway:AnnotatedPackages=com.uber</arg>
                         <arg>--should-stop=ifError=FLOW</arg>
+                        <arg>-Xmaxerrs</arg>
+                        <arg>10000</arg>
+                        <arg>-Xmaxwarns</arg>
+                        <arg>10000</arg>
+                        <!-- <arg>-Awarns</arg> --> <!-- -Awarns turns type-checking errors into warnings. -->
                     </compilerArgs>
                     <annotationProcessorPaths>
                         <path>
@@ -311,6 +316,11 @@
                             <groupId>com.uber.nullaway</groupId>
                             <artifactId>nullaway</artifactId>
                             <version>${nullaway.version}</version>
+                        </path>
+                        <path>
+                            <groupId>io.github.eisop</groupId>
+                            <artifactId>checker</artifactId>
+                            <version>${eisop.version}</version>
                         </path>
                         <!-- Other annotation processors go here.
 

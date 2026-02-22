@@ -206,7 +206,12 @@ public class ArrowCacheProducer extends NoOpFlightProducer implements AutoClosea
 
                     logger.info("FlightDescriptor QueryRequest: {}", sql);
 
-                    requestExecutor = RequestExecutor.queryRequestExecutor(sql);
+                    throw ArrowServerUtils.exception(
+                            CallStatus.INVALID_ARGUMENT,
+                            logger,
+                            "QueryRequest is not supported"
+                    ).toRuntimeException();
+                    //requestExecutor = RequestExecutor.queryRequestExecutor(sql);
                 } else {
                     throw new IllegalArgumentException("Unsupported request type: " + request.getClass());
                 }
@@ -217,7 +222,7 @@ public class ArrowCacheProducer extends NoOpFlightProducer implements AutoClosea
                 throw ArrowServerUtils.exception(
                         CallStatus.INVALID_ARGUMENT,
                         logger,
-                        "Path-based FlightDescriptors  are not supported"
+                        "Path-based FlightDescriptors are not supported"
                 ).toRuntimeException();
             }
         } catch (FlightRuntimeException ex) {

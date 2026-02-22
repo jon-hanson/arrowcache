@@ -115,12 +115,12 @@ public class DataSchema implements AutoCloseable {
 
     public void mergeTableBatches(Collection<String> tables) {
         synchronized(this.tableMap) {
-            final Set<String> tables2 = new HashSet<>(tables);
-            tables2.removeAll(this.tableMap.keySet());
-            if (tables2.isEmpty()) {
-                throw new IllegalArgumentException("The following tables are not found: " + tables2);
+            if (this.tableMap.keySet().containsAll(tables)) {
+                tables.forEach(table -> this.tableMap.get(table).mergeBatches());
             } else {
-                tables2.forEach(table -> this.tableMap.get(table).mergeBatches());
+                final Set<String> tables2 = new HashSet<>(tables);
+                tables2.removeAll(this.tableMap.keySet());
+                throw new IllegalArgumentException("The following tables are not found: " + tables2);
             }
         }
     }
