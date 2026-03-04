@@ -29,7 +29,7 @@ public final class ArrowCacheSchema extends AbstractSchema implements Closeable 
             BufferAllocator allocator,
             DataSchema dataSchema
     ) {
-        logger.info("Creating schema for {}",dataSchema.name());
+        logger.info("Creating schema for {}", dataSchema.name());
 
         this.allocator = allocator;
         this.dataSchema = dataSchema;

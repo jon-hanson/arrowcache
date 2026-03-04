@@ -16,34 +16,33 @@ import org.apache.arrow.vector.types.pojo.ArrowType;
 import org.apache.arrow.vector.types.pojo.Field;
 import org.apache.arrow.vector.types.pojo.Schema;
 import org.apache.calcite.DataContext;
+import org.apache.calcite.adapter.java.AbstractQueryableTable;
 import org.apache.calcite.adapter.java.JavaTypeFactory;
 import org.apache.calcite.linq4j.Enumerable;
+import org.apache.calcite.linq4j.Enumerator;
 import org.apache.calcite.linq4j.QueryProvider;
 import org.apache.calcite.linq4j.Queryable;
-import org.apache.calcite.linq4j.tree.Expression;
 import org.apache.calcite.plan.RelOptCluster;
 import org.apache.calcite.plan.RelOptTable;
 import org.apache.calcite.rel.RelNode;
 import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.rel.type.RelDataTypeFactory;
-import org.apache.calcite.schema.QueryableTable;
 import org.apache.calcite.schema.SchemaPlus;
-import org.apache.calcite.schema.Schemas;
 import org.apache.calcite.schema.TranslatableTable;
-import org.apache.calcite.schema.impl.AbstractTable;
+import org.apache.calcite.schema.impl.AbstractTableQueryable;
 import org.apache.calcite.util.ImmutableIntList;
 import org.apache.calcite.util.Util;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.Closeable;
-import java.lang.reflect.Type;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
 
-public final class ArrowCacheTable extends AbstractTable
-        implements TranslatableTable, QueryableTable, Closeable {
+public final class ArrowCacheTable extends AbstractQueryableTable
+        implements TranslatableTable, Closeable {
 
     private static final Logger logger = LoggerFactory.getLogger(ArrowCacheTable.class);
 
@@ -54,6 +53,7 @@ public final class ArrowCacheTable extends AbstractTable
             BufferAllocator allocator,
             DataTable dataSchema
     ) {
+        super(Object[].class);
         this.allocator = allocator;
         this.dataTable = dataSchema;
     }
@@ -102,16 +102,18 @@ public final class ArrowCacheTable extends AbstractTable
             ImmutableIntList fields,
             List<String> conditions
     ) {
+        return queryImpl(fields, conditions);
+    }
+
+    private Enumerable<Object> queryImpl(
+            ImmutableIntList fields,
+            List<String> conditions
+    ) {
         Objects.requireNonNull(fields, "fields");
 
         final Schema arrowSchema = this.arrowSchema();
 
-        final Projector projector;
-        final Filter filter;
-
         if (conditions.isEmpty()) {
-            filter = null;
-
             final List<ExpressionTree> expressionTrees = new ArrayList<>();
             for (int fieldOrdinal : fields) {
                 final Field field = arrowSchema.getFields().get(fieldOrdinal);
@@ -119,14 +121,21 @@ public final class ArrowCacheTable extends AbstractTable
                 expressionTrees.add(TreeBuilder.makeExpression(node, field));
             }
 
+            final Projector projector;
             try {
                 projector = Projector.make(arrowSchema, expressionTrees);
             } catch (GandivaException ex) {
                 throw Util.toUnchecked(ex);
             }
-        } else {
-            projector = null;
 
+            return new ArrowEnumerable(
+                    this.allocator,
+                    arrowSchema,
+                    this.dataTable.arrowBatches(),
+                    fields,
+                    projector
+            );
+        } else {
             final List<TreeNode> conditionNodes = new ArrayList<>(conditions.size());
             for (String condition : conditions) {
                 final List<String> data = StringUtils.split(condition, ' ');
@@ -158,21 +167,22 @@ public final class ArrowCacheTable extends AbstractTable
                 filterCondition = TreeBuilder.makeCondition(treeNode);
             }
 
+            final Filter filter;
+
             try {
                 filter = Filter.make(arrowSchema, filterCondition);
             } catch (GandivaException e) {
                 throw Util.toUnchecked(e);
             }
-        }
 
-        return new ArrowEnumerable(
-                this.allocator,
-                arrowSchema,
-                this.dataTable.arrowBatches(),
-                fields,
-                projector,
-                filter
-        );
+            return new ArrowEnumerable(
+                    this.allocator,
+                    arrowSchema,
+                    this.dataTable.arrowBatches(),
+                    fields,
+                    filter
+            );
+        }
     }
 
     private static TreeNode makeLiteralNode(String literal, String type) {
@@ -204,21 +214,6 @@ public final class ArrowCacheTable extends AbstractTable
     }
 
     @Override
-    public <T> Queryable<T> asQueryable(QueryProvider queryProvider, SchemaPlus schema, String tableName) {
-        throw new UnsupportedOperationException();
-    }
-
-    @Override
-    public Type getElementType() {
-        return Object[].class;
-    }
-
-    @Override
-    public Expression getExpression(SchemaPlus schema, String tableName, Class clazz) {
-        return Schemas.tableExpression(schema, getElementType(), tableName, clazz);
-    }
-
-    @Override
     public RelNode toRel(RelOptTable.ToRelContext context, RelOptTable relOptTable) {
         final int fieldCount = relOptTable.getRowType().getFieldCount();
         final ImmutableIntList fields = ImmutableIntList.copyOf(Util.range(fieldCount));
@@ -230,5 +225,35 @@ public final class ArrowCacheTable extends AbstractTable
                 this,
                 fields
         );
+    }
+
+    @Override
+    public <T> Queryable<T> asQueryable(QueryProvider queryProvider, SchemaPlus schema, String tableName) {
+        return new TableQueryable<>(queryProvider, schema, tableName);
+    }
+
+    private class TableQueryable<T> extends AbstractTableQueryable<T> {
+        TableQueryable(
+                QueryProvider queryProvider,
+                SchemaPlus schema,
+                String tableName
+        ) {
+            super(queryProvider, schema, ArrowCacheTable.this, tableName);
+        }
+
+        @Override
+        public String toString() {
+            return "TableQueryable {table: " + tableName + "}";
+        }
+
+        @Override
+        public Enumerator<T> enumerator() {
+            final int fieldCount = arrowSchema().getFields().size();
+            final ImmutableIntList fields = ImmutableIntList.copyOf(Util.range(fieldCount));
+            return ((Enumerable) queryImpl(
+                    fields,
+                    Collections.emptyList()
+            )).enumerator();
+        }
     }
 }

@@ -31,14 +31,28 @@ public class ArrowEnumerable extends AbstractEnumerable<Object> {
             Schema arrowSchema,
             List<DataTable.Batch> arrowTableBatches,
             ImmutableIntList fields,
-            @Nullable Projector projector,
-            @Nullable Filter filter
+            Filter filter
+    ) {
+        this.allocator = allocator;
+        this.arrowSchema = arrowSchema;
+        this.arrowTableBatches = arrowTableBatches;
+        this.projector = null;
+        this.filter = filter;
+        this.fields = fields;
+    }
+
+    ArrowEnumerable(
+            BufferAllocator allocator,
+            Schema arrowSchema,
+            List<DataTable.Batch> arrowTableBatches,
+            ImmutableIntList fields,
+            Projector projector
     ) {
         this.allocator = allocator;
         this.arrowSchema = arrowSchema;
         this.arrowTableBatches = arrowTableBatches;
         this.projector = projector;
-        this.filter = filter;
+        this.filter = null;
         this.fields = fields;
     }
 
