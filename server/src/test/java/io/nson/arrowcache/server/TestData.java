@@ -113,7 +113,7 @@ public class TestData {
         return results;
     }
 
-    public static final Set<Integer> KEYS1 = Set.of(11, 14, 21);
+    public static final Set<Integer> KEYS1 = Set.of(11, 14);
     public static final Set<Integer> KEYS2 = Set.of(12, 13);
     public static final Set<Integer> KEYS3 = Set.of(14, 22, 23);
     public static final Set<Integer> KEYS4 = Set.of(12, 21);

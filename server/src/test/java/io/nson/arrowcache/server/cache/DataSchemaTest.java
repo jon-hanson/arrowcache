@@ -59,6 +59,16 @@ public class DataSchemaTest {
             testQuery(dataTable1, testData, "id", TestData.KEYS3);
 
             testQuery(dataTable1, testData, "id", TestData.KEYS4);
+
+            dataSchema.mergeTableBatches();
+
+            testQuery(dataTable1, testData, "id", TestData.KEYS1);
+
+            testQuery(dataTable1, testData, "id", TestData.KEYS2);
+
+            testQuery(dataTable1, testData, "id", TestData.KEYS3);
+
+            testQuery(dataTable1, testData, "id", TestData.KEYS4);
         }
     }
 
@@ -68,7 +78,7 @@ public class DataSchemaTest {
             String keyColumn,
             Set<?> keys
     ) {
-        logger.info("Testing filters: {}", keys);
+        logger.info("Testing get for keys: {}", keys);
 
         final Set<Map<String, Object>> actualResults = new HashSet<>();
         dataTable.get(keys, new ResultListener(actualResults));

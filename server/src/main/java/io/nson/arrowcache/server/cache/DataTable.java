@@ -98,38 +98,72 @@ public class DataTable implements AutoCloseable {
             deleted.add(rowIndex);
         }
 
-        public void writeActiveRecords(VectorSchemaRoot targetVsc) {
+        public void writeActiveRecords(VectorSchemaRoot tempVsc, VectorSchemaRoot targetVsc) {
             Objects.requireNonNull(arrowSchema);
 
             if (deleted.isEmpty()) {
-                try (final VectorSchemaRoot vsc = VectorSchemaRoot.create(arrowSchema, allocator)) {
-                    final VectorLoader loader = new VectorLoader(vsc);
-                    loader.load(arrowRecordBatch);
-                    VectorSchemaRootAppender.append(false, targetVsc, vsc);
-                }
+                final VectorLoader loader = new VectorLoader(tempVsc);
+                loader.load(arrowRecordBatch);
+                VectorSchemaRootAppender.append(false, targetVsc, tempVsc);
             } else {
-                try (final VectorSchemaRoot vsc = VectorSchemaRoot.create(arrowSchema, allocator)) {
-                    final VectorLoader loader = new VectorLoader(vsc);
-                    loader.load(arrowRecordBatch);
+                final VectorLoader loader = new VectorLoader(tempVsc);
+                loader.load(arrowRecordBatch);
 
-                    final VectorSchemaRoot[] vscSlices =
-                            CollectionUtils.slicesFromExcluded(
-                                            arrowRecordBatch.getLength(),
-                                            deleted
-                                    ).stream()
-                                    .map(slice -> vsc.slice(slice.start(), slice.length()))
-                                    .toArray(VectorSchemaRoot[]::new);
+                final VectorSchemaRoot[] vscSlices =
+                        CollectionUtils.slicesFromExcluded(
+                                        arrowRecordBatch.getLength(),
+                                        deleted
+                                ).stream()
+                                .map(slice -> tempVsc.slice(slice.start(), slice.length()))
+                                .toArray(VectorSchemaRoot[]::new);
 
-                    try {
-                        VectorSchemaRootAppender.append(false, targetVsc, vscSlices);
-                    } finally {
-                        for (VectorSchemaRoot vscSlice : vscSlices) {
-                            vscSlice.close();
-                        }
+                try {
+                    VectorSchemaRootAppender.append(false, targetVsc, vscSlices);
+                } finally {
+                    for (VectorSchemaRoot vscSlice : vscSlices) {
+                        vscSlice.close();
                     }
                 }
             }
+
+            if (tempVsc.getRowCount() > 0) {
+                tempVsc.clear();
+                tempVsc.allocateNew();
+            }
         }
+
+//        public void writeActiveRecords(VectorSchemaRoot targetVsc, int startIndexInc, int endIndexExc) {
+//            Objects.requireNonNull(arrowSchema);
+//
+//            if (deleted.isEmpty()) {
+//                try (final VectorSchemaRoot vsc = VectorSchemaRoot.create(arrowSchema, allocator)) {
+//                    final VectorLoader loader = new VectorLoader(vsc);
+//                    loader.load(arrowRecordBatch);
+//                    VectorSchemaRootAppender.append(false, targetVsc, vsc);
+//                }
+//            } else {
+//                try (final VectorSchemaRoot vsc = VectorSchemaRoot.create(arrowSchema, allocator)) {
+//                    final VectorLoader loader = new VectorLoader(vsc);
+//                    loader.load(arrowRecordBatch);
+//
+//                    final VectorSchemaRoot[] vscSlices =
+//                            CollectionUtils.slicesFromExcluded(
+//                                            arrowRecordBatch.getLength(),
+//                                            deleted
+//                                    ).stream()
+//                                    .map(slice -> vsc.slice(slice.start(), slice.length()))
+//                                    .toArray(VectorSchemaRoot[]::new);
+//
+//                    try {
+//                        VectorSchemaRootAppender.append(false, targetVsc, vscSlices);
+//                    } finally {
+//                        for (VectorSchemaRoot vscSlice : vscSlices) {
+//                            vscSlice.close();
+//                        }
+//                    }
+//                }
+//            }
+//        }
     }
 
     private final BufferAllocator allocator;
@@ -281,6 +315,8 @@ public class DataTable implements AutoCloseable {
                                 .toArray(VectorSchemaRoot[]::new);
 
                         if (vecSlices.length > 0) {
+                            resultVsc.clear();
+                            resultVsc.allocateNew();
                             VectorSchemaRootAppender.append(false, resultVsc, vecSlices);
                             listener.putNext();
                         }
@@ -313,13 +349,16 @@ public class DataTable implements AutoCloseable {
 
             logger.info("Merging {} batches into 1", this.batches.size());
 
-            try (final VectorSchemaRoot mergedVsc = VectorSchemaRoot.create(this.arrowSchema, this.allocator)) {
+            try (
+                    final VectorSchemaRoot tempVsc = VectorSchemaRoot.create(this.arrowSchema, this.allocator);
+                    final VectorSchemaRoot mergedVsc = VectorSchemaRoot.create(this.arrowSchema, this.allocator)
+            ) {
                 synchronized (this.rwLock.writeLock()) {
                     mergedVsc.allocateNew();
 
                     // Merge the active records from each batch into a single VectorSchemaRoot.
                     for (Batch batch : this.batches) {
-                        batch.writeActiveRecords(mergedVsc);
+                        batch.writeActiveRecords(tempVsc, mergedVsc);
                     }
 
                     // Regenerate the row coordinate map.
@@ -334,5 +373,35 @@ public class DataTable implements AutoCloseable {
                 }
             }
         }
+    }
+
+    public void mergeBatches(int batchSize) {
+//        if (this.batches.size() > 1) {
+//            Objects.requireNonNull(this.arrowSchema);
+//
+//            logger.info("Merging {} batches into batches of size {}", this.batches.size(), batchSize);
+//
+//            try (final VectorSchemaRoot mergedVsc = VectorSchemaRoot.create(this.arrowSchema, this.allocator)) {
+//                synchronized (this.rwLock.writeLock()) {
+//                    mergedVsc.allocateNew();
+//
+//                    int size = 0;
+//                    // Merge the active records from each batch into a single VectorSchemaRoot.
+//                    for (Batch batch : this.batches) {
+//                        size += batch.writeActiveRecords(mergedVsc, 0, batchSize);
+//                    }
+//
+//                    // Regenerate the row coordinate map.
+//                    this.rowCoordinateMap.clear();
+//                    this.updateRowCoordMap(0, mergedVsc);
+//
+//                    // Create a new batch from the merged VectorSchemaRoot.
+//                    final VectorUnloader unloader = new VectorUnloader(mergedVsc);
+//                    this.batches.forEach(Batch::close);
+//                    this.batches.clear();
+//                    this.batches.add(new Batch(unloader.getRecordBatch()));
+//                }
+//            }
+//        }
     }
 }
