@@ -110,11 +110,11 @@ public class DataTable implements AutoCloseable {
                 loader.load(arrowRecordBatch);
 
                 final VectorSchemaRoot[] vscSlices =
-                        CollectionUtils.slicesFromExcluded(
+                        CollectionUtils.rangesFromExcluded(
                                         arrowRecordBatch.getLength(),
                                         deleted
                                 ).stream()
-                                .map(slice -> tempVsc.slice(slice.start(), slice.length()))
+                                .map(range -> tempVsc.slice(range.start(), range.length()))
                                 .toArray(VectorSchemaRoot[]::new);
 
                 try {
@@ -127,43 +127,57 @@ public class DataTable implements AutoCloseable {
             }
 
             if (tempVsc.getRowCount() > 0) {
-                tempVsc.clear();
                 tempVsc.allocateNew();
             }
         }
 
-//        public void writeActiveRecords(VectorSchemaRoot targetVsc, int startIndexInc, int endIndexExc) {
-//            Objects.requireNonNull(arrowSchema);
-//
-//            if (deleted.isEmpty()) {
-//                try (final VectorSchemaRoot vsc = VectorSchemaRoot.create(arrowSchema, allocator)) {
-//                    final VectorLoader loader = new VectorLoader(vsc);
-//                    loader.load(arrowRecordBatch);
-//                    VectorSchemaRootAppender.append(false, targetVsc, vsc);
-//                }
-//            } else {
-//                try (final VectorSchemaRoot vsc = VectorSchemaRoot.create(arrowSchema, allocator)) {
-//                    final VectorLoader loader = new VectorLoader(vsc);
-//                    loader.load(arrowRecordBatch);
-//
-//                    final VectorSchemaRoot[] vscSlices =
-//                            CollectionUtils.slicesFromExcluded(
-//                                            arrowRecordBatch.getLength(),
-//                                            deleted
-//                                    ).stream()
-//                                    .map(slice -> vsc.slice(slice.start(), slice.length()))
-//                                    .toArray(VectorSchemaRoot[]::new);
-//
-//                    try {
-//                        VectorSchemaRootAppender.append(false, targetVsc, vscSlices);
-//                    } finally {
-//                        for (VectorSchemaRoot vscSlice : vscSlices) {
-//                            vscSlice.close();
-//                        }
-//                    }
-//                }
-//            }
-//        }
+        public void writeActiveRecords(
+                VectorSchemaRoot tempVsc,
+                VectorSchemaRoot targetVsc,
+                int startIndexInc,
+                int endIndexExc
+        ) {
+            Objects.requireNonNull(arrowSchema);
+
+            if (endIndexExc > tempVsc.getRowCount()) {
+                endIndexExc = tempVsc.getRowCount();
+            }
+
+            final VectorLoader tempLoader = new VectorLoader(tempVsc);
+            tempLoader.load(arrowRecordBatch);
+
+            if (deleted.isEmpty()) {
+                if (startIndexInc == 0 && endIndexExc == tempVsc.getRowCount()) {
+                    VectorSchemaRootAppender.append(false, targetVsc, tempVsc);
+                } else {
+                    VectorSchemaRootAppender.append(
+                            false,
+                            targetVsc,
+                            tempVsc.slice(startIndexInc, endIndexExc)
+                    );
+                }
+            } else {
+                final VectorSchemaRoot[] vscSlices =
+                        CollectionUtils.rangesFromExcluded(
+                                        arrowRecordBatch.getLength(),
+                                        deleted
+                                ).stream()
+                                .map(range -> tempVsc.slice(range.start(), range.length()))
+                                .toArray(VectorSchemaRoot[]::new);
+
+                try {
+                    VectorSchemaRootAppender.append(false, targetVsc, vscSlices);
+                } finally {
+                    for (VectorSchemaRoot vscSlice : vscSlices) {
+                        vscSlice.close();
+                    }
+                }
+            }
+
+            if (tempVsc.getRowCount() > 0) {
+                tempVsc.allocateNew();
+            }
+        }
     }
 
     private final BufferAllocator allocator;
@@ -306,17 +320,19 @@ public class DataTable implements AutoCloseable {
                     VectorSchemaRoot[] vecSlices = null;
 
                     try {
-                        final List<CollectionUtils.Slice> slices =
-                                CollectionUtils.slicesFromIncluded(matches);
+                        final List<CollectionUtils.Range> ranges =
+                                CollectionUtils.rangesFromIncluded(matches);
 
-                        vecSlices = slices.stream()
-                                .filter(slice -> slice.length() > 0)
-                                .map(slice -> batchVsc.slice(slice.start(), slice.length()))
+                        vecSlices = ranges.stream()
+                                .filter(range -> range.length() > 0)
+                                .map(range -> batchVsc.slice(range.start(), range.length()))
                                 .toArray(VectorSchemaRoot[]::new);
 
                         if (vecSlices.length > 0) {
-                            resultVsc.clear();
-                            resultVsc.allocateNew();
+                            if (resultVsc.getRowCount() > 0) {
+                                resultVsc.allocateNew();
+                            }
+
                             VectorSchemaRootAppender.append(false, resultVsc, vecSlices);
                             listener.putNext();
                         }

@@ -1,6 +1,5 @@
-package io.nson.arrowcache.server.utils;
+package io.nson.arrowcache.common.utils;
 
-import io.nson.arrowcache.common.utils.StringUtils;
 import org.junit.jupiter.api.Test;
 
 import java.util.List;

@@ -7,48 +7,71 @@ import java.util.SortedSet;
 public abstract class CollectionUtils extends io.nson.arrowcache.common.utils.CollectionUtils {
     private CollectionUtils() {}
 
-    public static class Slice {
+    public static class Range {
         // Start is inclusive.
-        private final int start;
+        private final int startIndexInc;
 
         // End is exclusive.
-        private final int end;
+        private final int endIndexExc;
 
-        public Slice(int start, int end) {
-            this.start = start;
-            this.end = end;
+        public Range(int startIndexInc, int endIndexExc) {
+            this.startIndexInc = startIndexInc;
+            this.endIndexExc = endIndexExc;
         }
 
         public int start() {
-            return start;
+            return startIndexInc;
         }
 
         public int length() {
-            return end - start;
+            return endIndexExc - startIndexInc;
         }
     }
 
-    public static List<Slice> slicesFromExcluded(int size, SortedSet<Integer> exclude) {
-        final List<Slice> slices = new ArrayList<>();
+    public static List<Range> rangesFromExcluded(int size, SortedSet<Integer> exclude) {
+        final List<Range> ranges = new ArrayList<>();
 
         int start = 0;
 
         for (int i : exclude) {
             if (start < i) {
-                slices.add(new Slice(start, i));
+                ranges.add(new Range(start, i));
             }
             start = i + 1;
         }
 
         if (start < size) {
-            slices.add(new Slice(start, size));
+            ranges.add(new Range(start, size));
         }
 
-        return slices;
+        return ranges;
     }
 
-    public static List<Slice> slicesFromIncluded(SortedSet<Integer> include) {
-        final List<Slice> slices = new ArrayList<>();
+    public static List<Range> rangesFromExcluded(
+            int startIndexInc,
+            int endIndexExc,
+            SortedSet<Integer> exclude
+    ) {
+        final List<Range> ranges = new ArrayList<>();
+
+        int start = startIndexInc;
+
+        for (int i : exclude) {
+            if (start < i && i <= endIndexExc) {
+                ranges.add(new Range(start, i));
+            }
+            start = i + 1;
+        }
+
+        if (start < endIndexExc) {
+            ranges.add(new Range(start, endIndexExc));
+        }
+
+        return ranges;
+    }
+
+    public static List<Range> rangesFromIncluded(SortedSet<Integer> include) {
+        final List<Range> ranges = new ArrayList<>();
 
         int start = -1;
         int last = -1;
@@ -57,14 +80,14 @@ public abstract class CollectionUtils extends io.nson.arrowcache.common.utils.Co
             if (start == -1) {
                 start = i;
             } else if (i != last + 1) {
-                slices.add(new Slice(start, last + 1));
+                ranges.add(new Range(start, last + 1));
                 start = i;
             }
             last = i;
         }
 
-        slices.add(new Slice(start, last + 1));
+        ranges.add(new Range(start, last + 1));
 
-        return slices;
+        return ranges;
     }
 }
