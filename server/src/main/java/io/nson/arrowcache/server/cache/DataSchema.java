@@ -13,6 +13,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.OptionalInt;
 import java.util.Set;
 import java.util.concurrent.ConcurrentMap;
 
@@ -66,9 +67,9 @@ public class DataSchema implements AutoCloseable {
     public void close() {
         try {
             logger.info("Closing DataSchema {}...", name);
-            this.childSchema.values().forEach(DataSchema::close);
-            this.tableMap.values().forEach(DataTable::close);
-            this.allocator.close();
+            childSchema.values().forEach(DataSchema::close);
+            tableMap.values().forEach(DataTable::close);
+            allocator.close();
         } catch (Exception ex) {
             logger.warn("Error while closing", ex);
             throw new RuntimeException("Error while closing", ex);
@@ -80,7 +81,7 @@ public class DataSchema implements AutoCloseable {
     }
 
     public DataSchema getSchema(String name) {
-        return Optional.ofNullable(this.childSchema.get(name))
+        return Optional.ofNullable(childSchema.get(name))
                 .orElseThrow(() -> new IllegalArgumentException("No such schema: " + name));
     }
 
@@ -96,43 +97,51 @@ public class DataSchema implements AutoCloseable {
         if (depth == path.size()) {
             return Optional.of(this);
         } else {
-            return Optional.ofNullable(this.childSchema.get(path.get(depth)))
+            return Optional.ofNullable(childSchema.get(path.get(depth)))
                     .flatMap(ds -> ds.getDataSchema(path, depth + 1));
         }
     }
 
     public Set<String> dataTableNames() {
-        return this.tableMap.keySet();
+        return tableMap.keySet();
     }
 
     public Optional<DataTable> getDataTable(String table) {
-        return Optional.ofNullable(this.tableMap.get(table));
+        return Optional.ofNullable(tableMap.get(table));
     }
+//
+//    public void mergeTableBatches() {
+//        tableMap.values().forEach(DataTable::mergeBatches);
+//    }
+//
+//    public void mergeTableBatches(Collection<String> tables) {
+//        synchronized(tableMap) {
+//            if (tableMap.keySet().containsAll(tables)) {
+//                tables.forEach(table -> tableMap.get(table).mergeBatches());
+//            } else {
+//                final Set<String> tables2 = new HashSet<>(tables);
+//                tables2.removeAll(tableMap.keySet());
+//                throw new IllegalArgumentException("The following tables are not found: " + tables2);
+//            }
+//        }
+//    }
+//
+//    public void mergeTableBatches(int batchSize) {
+//        tableMap.values().forEach(dt -> dt.mergeBatches(batchSize));
+//    }
 
-    public void mergeTableBatches() {
-        this.tableMap.values().forEach(DataTable::mergeBatches);
-    }
-
-    public void mergeTableBatches(Collection<String> tables) {
-        synchronized(this.tableMap) {
-            if (this.tableMap.keySet().containsAll(tables)) {
-                tables.forEach(table -> this.tableMap.get(table).mergeBatches());
-            } else {
-                final Set<String> tables2 = new HashSet<>(tables);
-                tables2.removeAll(this.tableMap.keySet());
-                throw new IllegalArgumentException("The following tables are not found: " + tables2);
-            }
-        }
-    }
-
-    public void mergeTableBatches(Collection<String> tables, int batchSize) {
-        synchronized(this.tableMap) {
-            if (this.tableMap.keySet().containsAll(tables)) {
-                tables.forEach(table -> this.tableMap.get(table).mergeBatches(batchSize));
-            } else {
-                final Set<String> tables2 = new HashSet<>(tables);
-                tables2.removeAll(this.tableMap.keySet());
-                throw new IllegalArgumentException("The following tables are not found: " + tables2);
+    public void mergeTableBatches(Collection<String> tables, OptionalInt batchSizeOpt) {
+        if (tables.isEmpty()) {
+            tableMap.values().forEach(dt -> dt.mergeBatches(batchSizeOpt));
+        } else {
+            synchronized (tableMap) {
+                if (tableMap.keySet().containsAll(tables)) {
+                    tables.forEach(table -> tableMap.get(table).mergeBatches(batchSizeOpt));
+                } else {
+                    final Set<String> tables2 = new HashSet<>(tables);
+                    tables2.removeAll(tableMap.keySet());
+                    throw new IllegalArgumentException("The following tables are not found: " + tables2);
+                }
             }
         }
     }

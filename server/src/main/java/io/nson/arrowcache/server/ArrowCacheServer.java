@@ -42,26 +42,26 @@ public class ArrowCacheServer implements AutoCloseable {
     public void close() throws Exception {
         logger.info("Closing for location {}...", location);
         AutoCloseables.close(
-                this.flightServer,
-                this.flightProducer,
-                this.allocator
+                flightServer,
+                flightProducer,
+                allocator
         );
     }
 
     public Location location() {
-        return this.location;
+        return location;
     }
 
     public int port() {
-        return this.flightServer.getPort();
+        return flightServer.getPort();
     }
 
     public void start() throws IOException {
-        this.flightServer.start();
+        flightServer.start();
     }
 
     public void awaitTermination() throws InterruptedException {
-        this.flightServer.awaitTermination();
+        flightServer.awaitTermination();
     }
 
     /*

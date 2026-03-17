@@ -27,5 +27,9 @@ public interface ClientAPI extends AutoCloseable {
 
     void mergeTableBatches(List<String> schemaPath);
 
+    void mergeTableBatches(List<String> schemaPath, int batchSize);
+
     void mergeTableBatches(List<String> schemaPath, Set<String> tables);
+
+    void mergeTableBatches(List<String> schemaPath, Set<String> tables, int batchSize);
 }

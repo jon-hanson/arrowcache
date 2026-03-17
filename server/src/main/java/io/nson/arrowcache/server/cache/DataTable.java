@@ -101,6 +101,10 @@ public class DataTable implements AutoCloseable {
         public void writeActiveRecords(VectorSchemaRoot tempVsc, VectorSchemaRoot targetVsc) {
             Objects.requireNonNull(arrowSchema);
 
+            if (tempVsc.getRowCount() > 0) {
+                tempVsc.allocateNew();
+            }
+
             if (deleted.isEmpty()) {
                 final VectorLoader loader = new VectorLoader(tempVsc);
                 loader.load(arrowRecordBatch);
@@ -125,58 +129,36 @@ public class DataTable implements AutoCloseable {
                     }
                 }
             }
-
-            if (tempVsc.getRowCount() > 0) {
-                tempVsc.allocateNew();
-            }
         }
+//
+//        public void writeActiveRecords(
+//                VectorSchemaRoot tempVsc,
+//                VectorSchemaRoot targetVsc,
+//                int batchSize
+//        ) {
+//            Objects.requireNonNull(arrowSchema);
+//
+//            if (tempVsc.getRowCount() > 0) {
+//                tempVsc.allocateNew();
+//            }
+//
+//            final VectorLoader loader = new VectorLoader(tempVsc);
+//            loader.load(arrowRecordBatch);
+//            VectorSchemaRootAppender.append(false, targetVsc, tempVsc);
+//        }
 
-        public void writeActiveRecords(
-                VectorSchemaRoot tempVsc,
-                VectorSchemaRoot targetVsc,
-                int startIndexInc,
-                int endIndexExc
-        ) {
+        List<VectorSchemaRoot> splitIntoSlices(int sliceSize, VectorSchemaRoot tempVsc) {
             Objects.requireNonNull(arrowSchema);
 
-            if (endIndexExc > tempVsc.getRowCount()) {
-                endIndexExc = tempVsc.getRowCount();
-            }
+            assert(deleted.isEmpty());
 
-            final VectorLoader tempLoader = new VectorLoader(tempVsc);
-            tempLoader.load(arrowRecordBatch);
+            final VectorLoader loader = new VectorLoader(tempVsc);
+            loader.load(arrowRecordBatch);
 
-            if (deleted.isEmpty()) {
-                if (startIndexInc == 0 && endIndexExc == tempVsc.getRowCount()) {
-                    VectorSchemaRootAppender.append(false, targetVsc, tempVsc);
-                } else {
-                    VectorSchemaRootAppender.append(
-                            false,
-                            targetVsc,
-                            tempVsc.slice(startIndexInc, endIndexExc)
-                    );
-                }
-            } else {
-                final VectorSchemaRoot[] vscSlices =
-                        CollectionUtils.rangesFromExcluded(
-                                        arrowRecordBatch.getLength(),
-                                        deleted
-                                ).stream()
-                                .map(range -> tempVsc.slice(range.start(), range.length()))
-                                .toArray(VectorSchemaRoot[]::new);
-
-                try {
-                    VectorSchemaRootAppender.append(false, targetVsc, vscSlices);
-                } finally {
-                    for (VectorSchemaRoot vscSlice : vscSlices) {
-                        vscSlice.close();
-                    }
-                }
-            }
-
-            if (tempVsc.getRowCount() > 0) {
-                tempVsc.allocateNew();
-            }
+            return CollectionUtils.generateSlices(arrowRecordBatch.getLength(), sliceSize)
+                    .stream()
+                    .map(range -> tempVsc.slice(range.start(), range.length()))
+                    .collect(Collectors.toList());
         }
     }
 
@@ -208,7 +190,7 @@ public class DataTable implements AutoCloseable {
     public void close() {
         logger.info("Closing {}...", name);
         batches.forEach(Batch::close);
-        this.allocator.close();
+        allocator.close();
     }
 
     public String name() {
@@ -231,54 +213,54 @@ public class DataTable implements AutoCloseable {
         addBatches(arrowSchema, Collections.singletonList(arb));
     }
 
-    public void addBatches(Schema arrowSchema, Collection<ArrowRecordBatch> batches) {
-        if (this.arrowSchema == null) {
-            this.arrowSchema = arrowSchema;
-            this.keyColumnIndex = ArrowServerUtils.findKeyColumn(arrowSchema, keyColumnName)
+    public void addBatches(Schema newSchema, Collection<ArrowRecordBatch> newBatches) {
+        if (arrowSchema == null) {
+            arrowSchema = newSchema;
+            keyColumnIndex = ArrowServerUtils.findKeyColumn(newSchema, keyColumnName)
                     .orElseThrow(() ->
                             ExceptionUtils.exception(
                                     logger,
                                     "Key column name '" + keyColumnName + "' not found in schema"
                             ).create(IllegalArgumentException::new)
                     );
-        } else if (!this.arrowSchema.equals(arrowSchema)) {
+        } else if (!arrowSchema.equals(newSchema)) {
             throw ExceptionUtils.exception(
                     logger,
                     "Cannot add batches with a different schema"
             ).create(IllegalArgumentException::new);
         }
 
-        synchronized (this.rwLock.writeLock()) {
-            try (VectorSchemaRoot vsc = VectorSchemaRoot.create(this.arrowSchema, this.allocator)) {
+        synchronized (rwLock.writeLock()) {
+            try (VectorSchemaRoot vsc = VectorSchemaRoot.create(arrowSchema, allocator)) {
                 final VectorLoader loader = new VectorLoader(vsc);
-                for (final ArrowRecordBatch batch : batches) {
+                for (final ArrowRecordBatch batch : newBatches) {
                     loader.load(batch);
-                    this.batches.add(new Batch(batch));
-                    updateRowCoordMap(this.batches.size() - 1, vsc);
+                    batches.add(new Batch(batch));
+                    updateRowCoordMap(batches.size() - 1, vsc);
                 }
             }
         }
     }
 
     private void updateRowCoordMap(int batchIndex, VectorSchemaRoot vsc) {
-        Objects.requireNonNull(this.keyColumnIndex);
+        Objects.requireNonNull(keyColumnIndex);
 
         final int rowCount = vsc.getRowCount();
-        final FieldVector fv = vsc.getFieldVectors().get(this.keyColumnIndex);
+        final FieldVector fv = vsc.getFieldVectors().get(keyColumnIndex);
         for (int rowIndex = 0; rowIndex < rowCount; ++rowIndex) {
             final Object key = fv.getObject(rowIndex);
-            final RowCoordinate oldRowCoordinate = this.rowCoordinateMap.get(key);
+            final RowCoordinate oldRowCoordinate = rowCoordinateMap.get(key);
             if (oldRowCoordinate != null) {
                 batches.get(oldRowCoordinate.batchIndex).markAsDeleted(oldRowCoordinate.rowIndex);
             }
-            this.rowCoordinateMap.put(key, new RowCoordinate(batchIndex, rowIndex));
+            rowCoordinateMap.put(key, new RowCoordinate(batchIndex, rowIndex));
         }
     }
 
     public void get(Set<?> keys, FlightProducer.ServerStreamListener listener) {
         synchronized (rwLock.readLock()) {
-            if (this.arrowSchema == null) {
-                try (VectorSchemaRoot vsc = VectorSchemaRoot.create(ArrowServerUtils.EMPTY_SCHEMA, this.allocator)) {
+            if (arrowSchema == null) {
+                try (VectorSchemaRoot vsc = VectorSchemaRoot.create(ArrowServerUtils.EMPTY_SCHEMA, allocator)) {
                     listener.start(vsc);
                     listener.completed();
                 }
@@ -300,12 +282,12 @@ public class DataTable implements AutoCloseable {
             Map<Integer, SortedSet<Integer>> batchMatches,
             FlightProducer.ServerStreamListener listener
     ) {
-        Objects.requireNonNull(this.arrowSchema);
+        Objects.requireNonNull(arrowSchema);
 
-        synchronized (this.rwLock.readLock()) {
+        synchronized (rwLock.readLock()) {
             try (
-                    final VectorSchemaRoot resultVsc = VectorSchemaRoot.create(this.arrowSchema, this.allocator);
-                    final VectorSchemaRoot batchVsc = VectorSchemaRoot.create(this.arrowSchema, this.allocator)
+                    final VectorSchemaRoot resultVsc = VectorSchemaRoot.create(arrowSchema, allocator);
+                    final VectorSchemaRoot batchVsc = VectorSchemaRoot.create(arrowSchema, allocator)
             ) {
                 resultVsc.allocateNew();
 
@@ -315,7 +297,7 @@ public class DataTable implements AutoCloseable {
 
                 // Extract the matched rows for each batch and write back to the listener.
                 batchMatches.forEach((batchIndex, matches) -> {
-                    final Batch batch = this.batches.get(batchIndex);
+                    final Batch batch = batches.get(batchIndex);
                     loader.load(batch.arrowRecordBatch);
                     VectorSchemaRoot[] vecSlices = null;
 
@@ -359,65 +341,88 @@ public class DataTable implements AutoCloseable {
         }
     }
 
-    public void mergeBatches() {
-        if (this.batches.size() > 1) {
-            Objects.requireNonNull(this.arrowSchema);
+    public void mergeBatches(OptionalInt batchSizeOpt) {
+        if (batchSizeOpt.isPresent()) {
+            mergeBatches(batchSizeOpt.getAsInt());
+        } else {
+            mergeBatches();
+        }
+    }
 
-            logger.info("Merging {} batches into 1", this.batches.size());
+    public void mergeBatches() {
+        if (batches.size() > 1) {
+            logger.info("Merging {} batches into 1 for table {}", batches.size(), name);
+            mergeBatchesImpl(true);
+        } else {
+            logger.warn("Only one batch, merging skipped for table '{}'" , name);
+        }
+    }
+
+    private void mergeBatchesImpl(boolean updateRowCoordMap) {
+        if (batches.size() > 1) {
+            Objects.requireNonNull(arrowSchema);
+
+            logger.info("Merging {} batches into a single batch", batches.size());
 
             try (
-                    final VectorSchemaRoot tempVsc = VectorSchemaRoot.create(this.arrowSchema, this.allocator);
-                    final VectorSchemaRoot mergedVsc = VectorSchemaRoot.create(this.arrowSchema, this.allocator)
+                    final VectorSchemaRoot tempVsc = VectorSchemaRoot.create(arrowSchema, allocator);
+                    final VectorSchemaRoot mergedVsc = VectorSchemaRoot.create(arrowSchema, allocator)
             ) {
-                synchronized (this.rwLock.writeLock()) {
+                synchronized (rwLock.writeLock()) {
                     mergedVsc.allocateNew();
 
                     // Merge the active records from each batch into a single VectorSchemaRoot.
-                    for (Batch batch : this.batches) {
+                    for (Batch batch : batches) {
                         batch.writeActiveRecords(tempVsc, mergedVsc);
                     }
 
-                    // Regenerate the row coordinate map.
-                    this.rowCoordinateMap.clear();
-                    this.updateRowCoordMap(0, mergedVsc);
-
                     // Create a new batch from the merged VectorSchemaRoot.
                     final VectorUnloader unloader = new VectorUnloader(mergedVsc);
-                    this.batches.forEach(Batch::close);
-                    this.batches.clear();
-                    this.batches.add(new Batch(unloader.getRecordBatch()));
+                    batches.forEach(Batch::close);
+                    batches.clear();
+                    batches.add(new Batch(unloader.getRecordBatch()));
+
+                    if (updateRowCoordMap) {
+                        // Regenerate the row coordinate map.
+                        rowCoordinateMap.clear();
+                        updateRowCoordMap(0, mergedVsc);
+                    }
                 }
             }
         }
     }
 
     public void mergeBatches(int batchSize) {
-//        if (this.batches.size() > 1) {
-//            Objects.requireNonNull(this.arrowSchema);
-//
-//            logger.info("Merging {} batches into batches of size {}", this.batches.size(), batchSize);
-//
-//            try (final VectorSchemaRoot mergedVsc = VectorSchemaRoot.create(this.arrowSchema, this.allocator)) {
-//                synchronized (this.rwLock.writeLock()) {
-//                    mergedVsc.allocateNew();
-//
-//                    int size = 0;
-//                    // Merge the active records from each batch into a single VectorSchemaRoot.
-//                    for (Batch batch : this.batches) {
-//                        size += batch.writeActiveRecords(mergedVsc, 0, batchSize);
-//                    }
-//
-//                    // Regenerate the row coordinate map.
-//                    this.rowCoordinateMap.clear();
-//                    this.updateRowCoordMap(0, mergedVsc);
-//
-//                    // Create a new batch from the merged VectorSchemaRoot.
-//                    final VectorUnloader unloader = new VectorUnloader(mergedVsc);
-//                    this.batches.forEach(Batch::close);
-//                    this.batches.clear();
-//                    this.batches.add(new Batch(unloader.getRecordBatch()));
-//                }
-//            }
-//        }
+        if (batches.isEmpty()) {
+            logger.warn("No batches to merge for table '{}'" , name);
+        } else {
+            logger.info("Merging {} batches into batches of size {} for table '{}'" ,batches.size(), batchSize,  name);
+
+            Objects.requireNonNull(arrowSchema);
+
+            // First merge the batches into a single batch.
+            mergeBatchesImpl(false);
+
+            assert(batches.size() == 1);
+
+            logger.info("Splitting single batch into batches of size {}", batchSize);
+
+            try (
+                    final VectorSchemaRoot tempVsc = VectorSchemaRoot.create(arrowSchema, allocator)
+            ) {
+                final List<VectorSchemaRoot> vscSlices = batches.get(0).splitIntoSlices(batchSize, tempVsc);
+                try {
+                    vscSlices.forEach(vecSlice -> {
+                        final VectorUnloader unloader = new VectorUnloader(vecSlice);
+                        addBatch(arrowSchema, unloader.getRecordBatch());
+                        vecSlice.close();
+                    });
+                } finally {
+                    for (VectorSchemaRoot vscSlice : vscSlices) {
+                        vscSlice.close();
+                    }
+                }
+            }
+        }
     }
 }

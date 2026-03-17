@@ -137,6 +137,13 @@
                     "type": "array",
                     "items": "string"
                 }
+            },{
+                  "name": "batchSize",
+                  "type": [
+                    "null",
+                    "int"
+                  ],
+                  "default": null
             }
         ]
     },{

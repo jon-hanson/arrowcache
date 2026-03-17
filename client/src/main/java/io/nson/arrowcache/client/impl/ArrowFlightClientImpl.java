@@ -20,6 +20,7 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
+import java.util.OptionalInt;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
 
@@ -209,7 +210,12 @@ public class ArrowFlightClientImpl implements ClientAPI {
 
     @Override
     public void mergeTableBatches(List<String> schemaPath) {
-        mergeTableBatchesImpl(schemaPath, Collections.emptySet());
+        mergeTableBatchesImpl(schemaPath, Collections.emptySet(), OptionalInt.empty());
+    }
+
+    @Override
+    public void mergeTableBatches(List<String> schemaPath, int batchSize) {
+        mergeTableBatchesImpl(schemaPath, Collections.emptySet(), OptionalInt.of(batchSize));
     }
 
     @Override
@@ -217,16 +223,30 @@ public class ArrowFlightClientImpl implements ClientAPI {
         if (tables.isEmpty()) {
             throw new RuntimeException("Merge called for an empty set of tables");
         } else {
-            mergeTableBatchesImpl(schemaPath, tables);
+            mergeTableBatchesImpl(schemaPath, tables, OptionalInt.empty());
         }
     }
 
-    private void mergeTableBatchesImpl(List<String> schemaPath, Set<String> tables) {
+    @Override
+    public void mergeTableBatches(List<String> schemaPath, Set<String> tables, int batchSize) {
+        if (tables.isEmpty()) {
+            throw new RuntimeException("Merge called for an empty set of tables");
+        } else {
+            mergeTableBatchesImpl(schemaPath, tables, OptionalInt.of(batchSize));
+        }
+    }
+
+    private void mergeTableBatchesImpl(List<String> schemaPath, Set<String> tables, OptionalInt batchSize) {
         try {
-            final MergeRequest mergeRequest = MergeRequest.newBuilder()
-                    .setSchemaPath(schemaPath)
-                    .setTables(new ArrayList<>(tables))
-                    .build();
+            final MergeRequest.Builder bdr =
+                    MergeRequest.newBuilder()
+                            .setSchemaPath(schemaPath)
+                            .setTables(new ArrayList<>(tables));
+
+            batchSize.ifPresent(bdr::setBatchSize);
+
+            final MergeRequest mergeRequest = bdr.build();
+
             final byte[] bytes = MergeRequest.getEncoder().encode(mergeRequest).array();
             final Action action = Actions.MERGE.createAction(bytes);
             final Iterator<Result> resultIter = flightClient.doAction(action);

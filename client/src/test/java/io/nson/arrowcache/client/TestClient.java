@@ -83,6 +83,7 @@ public class TestClient {
                 // Do delete action
                 final Iterator<Result> deleteActionResult = client.doAction(new Action("DELETE",
                         FLIGHT_DESC.getPath().get(0).getBytes(StandardCharsets.UTF_8)));
+
                 while (deleteActionResult.hasNext()) {
                     Result result = deleteActionResult.next();
                     logger.info("Client (Do Delete Action): {}", ArrowUtils.resultToString(result));

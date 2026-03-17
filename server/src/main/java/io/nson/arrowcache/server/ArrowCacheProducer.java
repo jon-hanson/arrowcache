@@ -13,6 +13,7 @@ import io.nson.arrowcache.server.cache.DataSchema;
 import io.nson.arrowcache.server.cache.DataTable;
 import io.nson.arrowcache.server.utils.ArrowServerUtils;
 import io.nson.arrowcache.server.utils.ByteUtils;
+import io.nson.arrowcache.server.utils.CollectionUtils;
 import io.nson.arrowcache.server.utils.ConcurrencyUtils;
 import org.apache.arrow.flight.*;
 import org.apache.arrow.memory.BufferAllocator;
@@ -28,6 +29,7 @@ import java.time.Instant;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.util.OptionalInt;
 import java.util.Set;
 import java.util.Timer;
 import java.util.TimerTask;
@@ -201,7 +203,7 @@ public class ArrowCacheProducer extends NoOpFlightProducer implements AutoClosea
                     logger.info("FlightDescriptor GetRequest: {} keys", keys.size());
                     requestExecutor = RequestExecutor.getRequestExecutor(location, dataTable, keys);
                 } else if (request instanceof QueryRequest) {
-                    final QueryRequest  queryRequest = (QueryRequest) request;
+                    final QueryRequest queryRequest = (QueryRequest) request;
                     final String sql = queryRequest.getSql();
 
                     logger.info("FlightDescriptor QueryRequest: {}", sql);
@@ -350,11 +352,8 @@ public class ArrowCacheProducer extends NoOpFlightProducer implements AutoClosea
                 final MergeRequest mergeRequest = MergeRequest.getDecoder().decode(action.getBody());
                 final DataSchema dataSchema = getDataSchema(mergeRequest.getSchemaPath());
                 final List<String> tables = mergeRequest.getTables();
-                if (tables.isEmpty()) {
-                    dataSchema.mergeTableBatches();
-                } else {
-                    dataSchema.mergeTableBatches(tables);
-                }
+                final OptionalInt batchSizeOpt = CollectionUtils.ofNullable(mergeRequest.getBatchSize());
+                dataSchema.mergeTableBatches(tables, batchSizeOpt);
 
                 listener.onCompleted();
             } else {

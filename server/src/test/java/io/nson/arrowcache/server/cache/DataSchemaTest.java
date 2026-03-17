@@ -19,9 +19,11 @@ import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
+import java.util.OptionalInt;
 import java.util.Set;
 
 import static java.util.stream.Collectors.toSet;
@@ -60,7 +62,7 @@ public class DataSchemaTest {
 
             testQuery(dataTable1, testData, "id", TestData.KEYS4);
 
-            dataSchema.mergeTableBatches();
+            dataSchema.mergeTableBatches(Collections.emptySet(), OptionalInt.of(3));
 
             testQuery(dataTable1, testData, "id", TestData.KEYS1);
 
