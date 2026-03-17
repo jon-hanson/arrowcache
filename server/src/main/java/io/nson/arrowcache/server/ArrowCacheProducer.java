@@ -279,7 +279,7 @@ public class ArrowCacheProducer extends NoOpFlightProducer implements AutoClosea
         logger.info("acceptPut: {}", context.peerIdentity());
 
         return () -> {
-            logger.info("acceptPut inside runnable");
+            logger.debug("acceptPut inside runnable");
 
             final Schema arrowSchema = flightStream.getSchema();
             try {

@@ -394,7 +394,7 @@ public class DataTable implements AutoCloseable {
 
     public void mergeBatches(int batchSize) {
         if (batches.isEmpty()) {
-            logger.warn("No batches to merge for table '{}'" , name);
+            logger.warn("No batches to merge for table '{}'", name);
         } else {
             logger.info("Merging {} batches into batches of size {} for table '{}'" ,batches.size(), batchSize,  name);
 
@@ -405,21 +405,34 @@ public class DataTable implements AutoCloseable {
 
             assert(batches.size() == 1);
 
-            logger.info("Splitting single batch into batches of size {}", batchSize);
+            final int currBatchSize = batches.get(0).arrowRecordBatch.getLength();
+            logger.info("Intermediate merged batch has size {}", currBatchSize);
 
-            try (
-                    final VectorSchemaRoot tempVsc = VectorSchemaRoot.create(arrowSchema, allocator)
-            ) {
-                final List<VectorSchemaRoot> vscSlices = batches.get(0).splitIntoSlices(batchSize, tempVsc);
-                try {
-                    vscSlices.forEach(vecSlice -> {
-                        final VectorUnloader unloader = new VectorUnloader(vecSlice);
-                        addBatch(arrowSchema, unloader.getRecordBatch());
-                        vecSlice.close();
-                    });
-                } finally {
-                    for (VectorSchemaRoot vscSlice : vscSlices) {
-                        vscSlice.close();
+            if (currBatchSize <= batchSize) {
+                logger.info("Single batch is smaller than requested batch size {}, nothing to do", batchSize);
+            } else {
+                logger.info("Splitting single batch into batches of size {}", batchSize);
+
+                try (
+                        final VectorSchemaRoot tempVsc = VectorSchemaRoot.create(arrowSchema, allocator)
+                ) {
+                    final List<VectorSchemaRoot> vscSlices = batches.get(0).splitIntoSlices(batchSize, tempVsc);
+                    try {
+                        batches.forEach(Batch::close);
+                        batches.clear();
+                        rowCoordinateMap.clear();
+
+                        vscSlices.forEach(vecSlice -> {
+                            final VectorUnloader unloader = new VectorUnloader(vecSlice);
+                            addBatch(arrowSchema, unloader.getRecordBatch());
+                            vecSlice.close();
+                        });
+
+                        logger.info("Finished splitting, now have {} batches", batches.size());
+                    } finally {
+                        for (VectorSchemaRoot vscSlice : vscSlices) {
+                            vscSlice.close();
+                        }
                     }
                 }
             }
