@@ -1,7 +1,7 @@
 package io.nson.arrowcache.client.impl;
 
 import io.nson.arrowcache.client.ClientAPI;
-import io.nson.arrowcache.common.Actions;
+import io.nson.arrowcache.common.ActionDescriptor;
 import io.nson.arrowcache.common.avro.DeleteRequest;
 import io.nson.arrowcache.common.avro.FlightInfoRequest;
 import io.nson.arrowcache.common.avro.GetRequest;
@@ -191,8 +191,8 @@ public class ArrowFlightClientImpl implements ClientAPI {
                     .setTable(table)
                     .setKeys(new ArrayList<>(keys))
                     .build();
-            final byte[] bytes = DeleteRequest.getEncoder().encode(deleteRequest).array();
-            final Action action = Actions.DELETE.createAction(bytes);
+
+            final Action action = ActionDescriptor.DELETE.encode(deleteRequest);
             final Iterator<Result> resultIter = flightClient.doAction(action);
 
             while (resultIter.hasNext()) {
@@ -247,8 +247,7 @@ public class ArrowFlightClientImpl implements ClientAPI {
 
             final MergeRequest mergeRequest = bdr.build();
 
-            final byte[] bytes = MergeRequest.getEncoder().encode(mergeRequest).array();
-            final Action action = Actions.MERGE.createAction(bytes);
+            final Action action = ActionDescriptor.MERGE.encode(mergeRequest);
             final Iterator<Result> resultIter = flightClient.doAction(action);
 
             while (resultIter.hasNext()) {

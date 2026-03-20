@@ -1,14 +1,12 @@
 package io.nson.arrowcache.server;
 
-import io.nson.arrowcache.common.Actions;
+import io.nson.arrowcache.common.ActionDescriptor;
 import io.nson.arrowcache.common.avro.CriteriaRequest;
 import io.nson.arrowcache.common.avro.DeleteRequest;
 import io.nson.arrowcache.common.avro.FlightInfoRequest;
 import io.nson.arrowcache.common.avro.GetRequest;
 import io.nson.arrowcache.common.avro.MergeRequest;
-import io.nson.arrowcache.common.avro.QueryRequest;
 import io.nson.arrowcache.common.utils.ArrowUtils;
-import io.nson.arrowcache.common.utils.ExceptionUtils;
 import io.nson.arrowcache.server.cache.DataSchema;
 import io.nson.arrowcache.server.cache.DataTable;
 import io.nson.arrowcache.server.utils.ArrowServerUtils;
@@ -140,8 +138,7 @@ public class ArrowCacheProducer extends NoOpFlightProducer implements AutoClosea
     @Override
     public void listActions(CallContext context, StreamListener<ActionType> listener) {
         logger.info("listActions: {}", context.peerIdentity());
-        listener.onNext(Actions.DELETE.actionType());
-        listener.onNext(Actions.MERGE.actionType());
+        ActionDescriptor.forEachType(listener::onNext);
         listener.onCompleted();
     }
 
@@ -202,18 +199,18 @@ public class ArrowCacheProducer extends NoOpFlightProducer implements AutoClosea
                     final List<Object> keys = getRequest.getKeys();
                     logger.info("FlightDescriptor GetRequest: {} keys", keys.size());
                     requestExecutor = RequestExecutor.getRequestExecutor(location, dataTable, keys);
-                } else if (request instanceof QueryRequest) {
-                    final QueryRequest queryRequest = (QueryRequest) request;
-                    final String sql = queryRequest.getSql();
-
-                    logger.info("FlightDescriptor QueryRequest: {}", sql);
-
-                    throw ArrowServerUtils.exception(
-                            CallStatus.INVALID_ARGUMENT,
-                            logger,
-                            "QueryRequest is not supported"
-                    ).toRuntimeException();
-                    //requestExecutor = RequestExecutor.queryRequestExecutor(sql);
+//                } else if (request instanceof QueryRequest) {
+//                    final QueryRequest queryRequest = (QueryRequest) request;
+//                    final String sql = queryRequest.getSql();
+//
+//                    logger.info("FlightDescriptor QueryRequest: {}", sql);
+//
+//                    throw ArrowServerUtils.exception(
+//                            CallStatus.INVALID_ARGUMENT,
+//                            logger,
+//                            "QueryRequest is not supported"
+//                    ).toRuntimeException();
+//                    requestExecutor = RequestExecutor.queryRequestExecutor(sql);
                 } else {
                     throw new IllegalArgumentException("Unsupported request type: " + request.getClass());
                 }
@@ -341,14 +338,14 @@ public class ArrowCacheProducer extends NoOpFlightProducer implements AutoClosea
         );
 
         try {
-            if (action.getType().equals(Actions.DELETE.name())) {
+            if (action.getType().equals(ActionDescriptor.DELETE.name())) {
                 final DeleteRequest deleteRequest = DeleteRequest.getDecoder().decode(action.getBody());
                 final DataTable table = getDataTable(deleteRequest.getSchemaPath(), deleteRequest.getTable());
 
                 table.deleteEntries(deleteRequest.getKeys());
 
                 listener.onCompleted();
-            } else if (action.getType().equals(Actions.MERGE.name())) {
+            } else if (action.getType().equals(ActionDescriptor.MERGE.name())) {
                 final MergeRequest mergeRequest = MergeRequest.getDecoder().decode(action.getBody());
                 final DataSchema dataSchema = getDataSchema(mergeRequest.getSchemaPath());
                 final List<String> tables = mergeRequest.getTables();
