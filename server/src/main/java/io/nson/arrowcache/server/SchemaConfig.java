@@ -6,7 +6,6 @@ import org.jspecify.annotations.Nullable;
 import java.util.Collections;
 import java.util.Map;
 
-@NullMarked
 public class SchemaConfig {
     protected final @Nullable Map<String, RootSchemaConfig.ChildSchemaConfig> childSchema;
     protected final @Nullable Map<String, RootSchemaConfig.TableConfig> tables;

@@ -81,4 +81,12 @@ public abstract class ArrowUtils {
                         " path=<" + descriptor.getPath()
                     ) + "}";
     }
+
+    public static FlightDescriptor checkIsPath(FlightDescriptor flightDescriptor) {
+        if (flightDescriptor.isCommand()) {
+            throw new RuntimeException("FlightDescriptor is not a path");
+        } else {
+            return flightDescriptor;
+        }
+    }
 }

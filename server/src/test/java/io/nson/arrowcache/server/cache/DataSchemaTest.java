@@ -13,6 +13,7 @@ import org.apache.arrow.vector.VectorUnloader;
 import org.apache.arrow.vector.dictionary.DictionaryProvider;
 import org.apache.arrow.vector.ipc.message.IpcOption;
 import org.apache.arrow.vector.util.Text;
+import org.jspecify.annotations.Nullable;
 import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -23,6 +24,7 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
+import java.util.Objects;
 import java.util.OptionalInt;
 import java.util.Set;
 
@@ -104,9 +106,9 @@ public class DataSchemaTest {
 
         private final Set<Map<String, Object>> results;
 
-        private VectorSchemaRoot vsc;
+        private @Nullable VectorSchemaRoot vsc = null;
 
-        private ResultListener(Set<Map<String, Object>>results) {
+        private ResultListener(Set<Map<String, Object>> results) {
             this.results = results;
         }
 
@@ -131,6 +133,8 @@ public class DataSchemaTest {
 
         @Override
         public void putNext() {
+            Objects.requireNonNull(vsc);
+
             ArrowUtils.toLines(logger::info, vsc);
 
             final Map<String, Object> row = new HashMap<>();

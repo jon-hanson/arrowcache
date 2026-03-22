@@ -34,6 +34,10 @@ public class TestClientAPI {
                 final ClientAPI clientAPI = ArrowFlightClientImpl.create(location);
                 final VectorSchemaRoot vsc = TestData.createTestDataVSC(allocator)
         ) {
+            logger.info("Fetching schema");
+            final ClientAPI.SchemaDescriptor schemaDesc = clientAPI.getSchema();
+            logger.info("Schema: {}", schemaDesc);
+
             logger.info("Loading testdata1.csv into server");
             TestData.loadTestDataIntoVsc(vsc, "testdata1.csv");
             clientAPI.put(SCHEMA, TABLE1, vsc);

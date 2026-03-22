@@ -1,7 +1,7 @@
 package io.nson.arrowcache.server;
 
 import io.nson.arrowcache.common.ActionDescriptor;
-import io.nson.arrowcache.common.avro.CriteriaRequest;
+import io.nson.arrowcache.common.avro.GetSchemaRequest;
 import io.nson.arrowcache.common.avro.DeleteRequest;
 import io.nson.arrowcache.common.avro.FlightInfoRequest;
 import io.nson.arrowcache.common.avro.GetRequest;
@@ -13,32 +13,36 @@ import io.nson.arrowcache.server.utils.ArrowServerUtils;
 import io.nson.arrowcache.server.utils.ByteUtils;
 import io.nson.arrowcache.server.utils.CollectionUtils;
 import io.nson.arrowcache.server.utils.ConcurrencyUtils;
-import org.apache.arrow.flight.*;
+import org.apache.arrow.flight.Action;
+import org.apache.arrow.flight.ActionType;
+import org.apache.arrow.flight.CallStatus;
+import org.apache.arrow.flight.Criteria;
+import org.apache.arrow.flight.FlightDescriptor;
+import org.apache.arrow.flight.FlightEndpoint;
+import org.apache.arrow.flight.FlightInfo;
+import org.apache.arrow.flight.FlightRuntimeException;
+import org.apache.arrow.flight.FlightStream;
+import org.apache.arrow.flight.Location;
+import org.apache.arrow.flight.NoOpFlightProducer;
+import org.apache.arrow.flight.PutResult;
+import org.apache.arrow.flight.Result;
+import org.apache.arrow.flight.Ticket;
 import org.apache.arrow.memory.BufferAllocator;
 import org.apache.arrow.vector.VectorUnloader;
 import org.apache.arrow.vector.ipc.message.ArrowRecordBatch;
 import org.apache.arrow.vector.types.pojo.Schema;
-import org.jspecify.annotations.NullMarked;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.time.Duration;
 import java.time.Instant;
-import java.util.Collections;
-import java.util.List;
-import java.util.Map;
-import java.util.OptionalInt;
-import java.util.Set;
-import java.util.Timer;
-import java.util.TimerTask;
-import java.util.UUID;
+import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.function.Function;
 
 import static java.util.stream.Collectors.toMap;
 
-@NullMarked
 public class ArrowCacheProducer extends NoOpFlightProducer implements AutoCloseable {
 
     private static final Logger logger = LoggerFactory.getLogger(ArrowCacheProducer.class);
@@ -145,12 +149,17 @@ public class ArrowCacheProducer extends NoOpFlightProducer implements AutoClosea
     @Override
     public void listFlights(CallContext context, Criteria criteria, StreamListener<FlightInfo> listener) {
         try {
-            final CriteriaRequest criteriaReq = CriteriaRequest.getDecoder().decode(criteria.getExpression());
+            final GetSchemaRequest getSchemaReq = GetSchemaRequest.getDecoder().decode(criteria.getExpression());
+            Collection<List<String>> schemaPaths = getSchemaReq.getSchemaPaths();
 
-            for (List<String> schemaPath : criteriaReq.getSchemaPaths()) {
+            if (schemaPaths.isEmpty()) {
+                schemaPaths = ArrowServerUtils.getSchemaPaths(rootSchema);
+            }
+
+            for (List<String> schemaPath : schemaPaths) {
                 final DataSchema schema = getDataSchema(schemaPath);
 
-                final Set<String> tableNames = schema.dataTableNames();
+                final Set<String> tableNames = schema.tableNames();
 
                 final FlightEndpoint flightEndpoint = new FlightEndpoint(
                         new Ticket(new byte[]{}),
@@ -158,7 +167,9 @@ public class ArrowCacheProducer extends NoOpFlightProducer implements AutoClosea
                 );
 
                 tableNames.forEach(tableName -> {
-                    final FlightDescriptor descriptor = FlightDescriptor.path(schema.name(), tableName);
+                    final ArrayList<String> fullPath = new ArrayList<>(schemaPath);
+                    fullPath.add(tableName);
+                    final FlightDescriptor descriptor = FlightDescriptor.path(fullPath);
                     final DataTable table = getDataTable(schema, tableName);
                     final FlightInfo flightInfo = new FlightInfo(
                             table.arrowSchema(),

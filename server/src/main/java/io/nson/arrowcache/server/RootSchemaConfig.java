@@ -5,7 +5,6 @@ import org.jspecify.annotations.NullMarked;
 
 import java.util.Map;
 
-@NullMarked
 public final class RootSchemaConfig extends SchemaConfig {
 
     public static final JsonCodec<RootSchemaConfig> CODEC = new JsonCodec<>(RootSchemaConfig.class) {};

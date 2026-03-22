@@ -21,7 +21,6 @@ import java.util.Set;
 import java.util.TreeSet;
 import java.util.UUID;
 
-@NullMarked
 public abstract class RequestExecutor implements Closeable {
     private static final Logger logger = LoggerFactory.getLogger(RequestExecutor.class);
 
@@ -111,7 +110,7 @@ public abstract class RequestExecutor implements Closeable {
 
         @Override
         public FlightInfo getFlightInfo(FlightDescriptor descriptor) {
-            return null;
+            throw new IllegalStateException();
         }
 
         @Override

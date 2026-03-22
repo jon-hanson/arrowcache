@@ -3,7 +3,6 @@ package io.nson.arrowcache.server.cache;
 import io.nson.arrowcache.server.RootSchemaConfig;
 import io.nson.arrowcache.server.SchemaConfig;
 import org.apache.arrow.memory.BufferAllocator;
-import org.jspecify.annotations.NullMarked;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -20,8 +19,7 @@ import java.util.concurrent.ConcurrentMap;
 import static java.util.stream.Collectors.toConcurrentMap;
 import static java.util.stream.Collectors.toUnmodifiableMap;
 
-@NullMarked
-public class DataSchema implements AutoCloseable {
+public class DataSchema implements AutoCloseable, SchemaHierarchy {
     private static final Logger logger = LoggerFactory.getLogger(DataSchema.class);
 
     private static Map<String, DataSchema> createSchemaMap(
@@ -80,9 +78,13 @@ public class DataSchema implements AutoCloseable {
         return name;
     }
 
+    public Map<String, DataSchema> childSchema() {
+        return childSchema;
+    }
+
     public DataSchema getSchema(String name) {
         return Optional.ofNullable(childSchema.get(name))
-                .orElseThrow(() -> new IllegalArgumentException("No such schema: " + name));
+                .orElseThrow(() -> new IllegalArgumentException("No such child schema: " + name));
     }
 
     public Optional<DataSchema> getDataSchema(List<String> path) {
@@ -102,7 +104,7 @@ public class DataSchema implements AutoCloseable {
         }
     }
 
-    public Set<String> dataTableNames() {
+    public Set<String> tableNames() {
         return tableMap.keySet();
     }
 

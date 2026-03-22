@@ -10,7 +10,6 @@ import org.jspecify.annotations.NullMarked;
 import java.io.IOException;
 import java.time.Duration;
 
-@NullMarked
 public class ServerConfig {
     public static final JsonCodec<ServerConfig> CODEC = new JsonCodec<>(ServerConfig.class) {
         @Override

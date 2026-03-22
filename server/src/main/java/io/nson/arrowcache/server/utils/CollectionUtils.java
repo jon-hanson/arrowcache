@@ -15,7 +15,7 @@ public abstract class CollectionUtils extends io.nson.arrowcache.common.utils.Co
         return new Range(startIndexInc, endIndexExc);
     }
 
-    public static class Range {
+    public static final class Range {
         // Start is inclusive.
         private final int startIndexInc;
 

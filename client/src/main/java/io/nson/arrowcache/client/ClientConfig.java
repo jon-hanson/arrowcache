@@ -1,6 +1,5 @@
 package io.nson.arrowcache.client;
 
-
 import io.nson.arrowcache.common.JsonCodec;
 
 public class ClientConfig {

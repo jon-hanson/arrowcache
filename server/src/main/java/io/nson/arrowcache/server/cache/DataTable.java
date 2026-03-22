@@ -27,7 +27,6 @@ import java.util.stream.Collectors;
 import static java.util.stream.Collectors.mapping;
 import static java.util.stream.Collectors.toCollection;
 
-@NullMarked
 public class DataTable implements AutoCloseable {
     private static final Logger logger = LoggerFactory.getLogger(DataTable.class);
 
@@ -150,7 +149,7 @@ public class DataTable implements AutoCloseable {
         List<VectorSchemaRoot> splitIntoSlices(int sliceSize, VectorSchemaRoot tempVsc) {
             Objects.requireNonNull(arrowSchema);
 
-            assert(deleted.isEmpty());
+            assert deleted.isEmpty();
 
             final VectorLoader loader = new VectorLoader(tempVsc);
             loader.load(arrowRecordBatch);

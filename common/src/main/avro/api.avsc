@@ -18,7 +18,7 @@
     },{
         "namespace": "io.nson.arrowcache.common.avro",
         "type": "record",
-        "name": "CriteriaRequest",
+        "name": "GetSchemaRequest",
         "fields": [
             {
                 "name": "schemaPaths",
@@ -28,7 +28,8 @@
                         "type": "array",
                         "items": "string"
                     }
-                }
+                },
+                "default": []
             },{
                 "name": "recursive",
                 "type": "boolean",
@@ -38,7 +39,7 @@
     },{
         "namespace": "io.nson.arrowcache.common.avro",
         "type": "record",
-        "name": "CriteriaResponse",
+        "name": "GetSchemaResponse",
         "fields": [
             {
                 "name": "schemaTables",

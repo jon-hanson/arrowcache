@@ -3,6 +3,7 @@ package io.nson.arrowcache.client;
 import org.apache.arrow.vector.VectorSchemaRoot;
 
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
 public interface ClientAPI extends AutoCloseable {
@@ -16,6 +17,16 @@ public interface ClientAPI extends AutoCloseable {
         void onError(Throwable ex);
         void onCompleted();
     }
+
+    interface SchemaDescriptor {
+        String name();
+
+        Set<String> tables() ;
+
+        Map<String, SchemaDescriptor> childSchema() ;
+    }
+
+    SchemaDescriptor getSchema();
 
     void put(List<String> schemaPath, String table, VectorSchemaRoot vsc, Source src);
 

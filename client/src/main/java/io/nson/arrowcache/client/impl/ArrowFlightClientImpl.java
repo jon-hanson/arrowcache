@@ -5,6 +5,7 @@ import io.nson.arrowcache.common.ActionDescriptor;
 import io.nson.arrowcache.common.avro.DeleteRequest;
 import io.nson.arrowcache.common.avro.FlightInfoRequest;
 import io.nson.arrowcache.common.avro.GetRequest;
+import io.nson.arrowcache.common.avro.GetSchemaRequest;
 import io.nson.arrowcache.common.avro.MergeRequest;
 import io.nson.arrowcache.common.utils.ArrowUtils;
 import io.nson.arrowcache.common.utils.ExceptionUtils;
@@ -16,19 +17,87 @@ import org.jspecify.annotations.NullMarked;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Map;
+import java.util.Objects;
 import java.util.OptionalInt;
 import java.util.Set;
+import java.util.TreeMap;
+import java.util.TreeSet;
 import java.util.concurrent.TimeUnit;
+import java.util.stream.StreamSupport;
 
-@NullMarked
+import static java.util.stream.Collectors.toList;
+
 public class ArrowFlightClientImpl implements ClientAPI {
     private static final Logger logger = LoggerFactory.getLogger(ArrowFlightClientImpl.class);
 
     private static final CallOption DEFAULT_CALL_TIMEOUT = CallOptions.timeout(1, TimeUnit.MINUTES);
+
+    static final class SchemaDescriptorImpl implements SchemaDescriptor {
+        private final String name;
+        private final Set<String> tables;
+        private final Map<String, SchemaDescriptor> childSchema;
+
+        public SchemaDescriptorImpl(
+                String name,
+                Set<String> tables,
+                Map<String, ClientAPI.SchemaDescriptor> childSchema
+        ) {
+            this.name = name;
+            this.tables = tables;
+            this.childSchema = childSchema;
+        }
+
+        public SchemaDescriptorImpl(String name) {
+            this(name, new TreeSet<>(), new TreeMap<>());
+        }
+
+        @Override
+        public String toString() {
+            return "SchemaDescriptorImpl{" +
+                    "name='" + name + '\'' +
+                    ", tables=" + tables +
+                    ", childSchema=" + childSchema +
+                    '}';
+        }
+
+        @Override
+        public boolean equals(Object rhs) {
+            if (rhs == null || getClass() != rhs.getClass()) {
+                return false;
+            } else {
+                final SchemaDescriptorImpl rhsT = (SchemaDescriptorImpl) rhs;
+                return Objects.equals(name, rhsT.name) &&
+                        Objects.equals(tables, rhsT.tables) &&
+                        Objects.equals(childSchema, rhsT.childSchema);
+            }
+        }
+
+        @Override
+        public int hashCode() {
+            return Objects.hash(name, tables, childSchema);
+        }
+
+        @Override
+        public String name() {
+            return name;
+        }
+
+        @Override
+        public Set<String> tables() {
+            return tables;
+        }
+
+        @Override
+        public Map<String, SchemaDescriptor> childSchema() {
+            return childSchema;
+        }
+    }
 
     public static ClientAPI create(BufferAllocator allocator, Location location, FlightClient flightClient) {
         return new ArrowFlightClientImpl(allocator, location, flightClient, DEFAULT_CALL_TIMEOUT);
@@ -71,6 +140,27 @@ public class ArrowFlightClientImpl implements ClientAPI {
         pathTable.addAll(schemaPath);
         pathTable.add(table);
         return FlightDescriptor.path(pathTable.toArray(new String[0]));
+    }
+
+    @Override
+    public SchemaDescriptor getSchema() {
+        try {
+            final GetSchemaRequest getSchemaRequest = GetSchemaRequest.newBuilder().build();
+            final byte[] bytes = GetSchemaRequest.getEncoder().encode(getSchemaRequest).array();
+            final Criteria criteria = new Criteria(bytes);
+
+            final List<List<String>> schemaPaths =
+                    StreamSupport.stream(
+                            flightClient.listFlights(criteria, DEFAULT_CALL_TIMEOUT).spliterator(),
+                            false
+                    ).map(FlightInfo::getDescriptor)
+                            .peek(ArrowUtils::checkIsPath)
+                            .map(FlightDescriptor::getPath)
+                            .collect(toList());
+            return ClientUtils.splice(schemaPaths);
+        } catch (IOException ex) {
+            throw new RuntimeException(ex);
+        }
     }
 
     @Override
