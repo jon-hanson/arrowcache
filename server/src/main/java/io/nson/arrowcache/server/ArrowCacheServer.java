@@ -7,7 +7,6 @@ import org.apache.arrow.flight.Location;
 import org.apache.arrow.memory.BufferAllocator;
 import org.apache.arrow.memory.RootAllocator;
 import org.apache.arrow.util.AutoCloseables;
-import org.jspecify.annotations.NullMarked;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -75,12 +74,13 @@ public class ArrowCacheServer implements AutoCloseable {
 
         final RootSchemaConfig schemaConfig =
                 FileUtils.loadFromResource(
-                        "schemaconfig.json",
+                        "config/simple/schemaconfig.json",
                         RootSchemaConfig.CODEC
                 );
+
         final ServerConfig serverConfig =
                 FileUtils.loadFromResource(
-                        "serverconfig.json",
+                        "config/simple/serverconfig.json",
                         ServerConfig.CODEC
                 );
 
