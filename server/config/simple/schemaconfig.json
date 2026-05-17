@@ -13,10 +13,10 @@
         }
     },
     "tables": {
-        "vwx": {
+        "person": {
             "keyColumn": "id"
         },
-        "xyz": {
+        "alcocons": {
             "keyColumn": "id"
         }
     }

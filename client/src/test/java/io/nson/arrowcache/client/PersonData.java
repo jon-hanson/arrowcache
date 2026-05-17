@@ -2,7 +2,6 @@ package io.nson.arrowcache.client;
 
 import io.nson.arrowcache.common.utils.FileUtils;
 import io.nson.arrowcache.common.utils.StringUtils;
-import org.apache.arrow.memory.BufferAllocator;
 import org.apache.arrow.vector.DateDayVector;
 import org.apache.arrow.vector.Float4Vector;
 import org.apache.arrow.vector.IntVector;
@@ -21,45 +20,32 @@ import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
-import java.util.Arrays;
 import java.util.List;
 import java.util.Set;
 
-public class TestData {
-    private static final Logger logger = LoggerFactory.getLogger(TestData.class);
+public class PersonData {
 
-    public static VectorSchemaRoot createTestDataVSC(BufferAllocator allocator) {
-
-        final Field idField = new Field(
-                "id",
-                FieldType.notNullable(new ArrowType.Int(32, true)),
-                null
-        );
-
-        final Field nameField = new Field(
-                "name",
-                FieldType.nullable(new ArrowType.Utf8()),
-                null
-        );
-
-        final Field ageField = new Field(
-                "age",
-                FieldType.nullable(new ArrowType.FloatingPoint(FloatingPointPrecision.SINGLE)),
-                null
-        );
-
-        final Field dateField = new Field(
-                "date",
-                FieldType.nullable(new ArrowType.Date(DateUnit.DAY)),
-                null
-        );
-
-        final Schema schema = new Schema(Arrays.asList(idField, nameField, ageField, dateField), null);
-
-        logger.debug("Schema: {}", schema.toJson());
-
-        return VectorSchemaRoot.create(schema, allocator);
-    }
+    public static final Schema SCHEMA =  new Schema(
+            List.of(
+                    new Field(
+                            "id",
+                            FieldType.notNullable(new ArrowType.Int(32, true)),
+                            null
+                    ), new Field(
+                            "name",
+                            FieldType.nullable(new ArrowType.Utf8()),
+                            null
+                    ), new Field(
+                            "age",
+                            FieldType.nullable(new ArrowType.FloatingPoint(FloatingPointPrecision.SINGLE)),
+                            null
+                    ), new Field(
+                            "date",
+                            FieldType.nullable(new ArrowType.Date(DateUnit.DAY)),
+                            null
+                    )
+            )
+    );
 
     public static void loadTestDataIntoVsc(VectorSchemaRoot vsc, String fileName) throws IOException {
 

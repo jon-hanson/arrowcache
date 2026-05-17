@@ -29,6 +29,7 @@
         <avro.version>1.12.0</avro.version>
         <calcite.version>1.41.0</calcite.version>
         <eisop.version>3.49.3-eisop1</eisop.version>
+        <fastcsv.version>4.2.0</fastcsv.version>
         <gson.version>2.13.2</gson.version>
         <jspecify.version>1.0.0</jspecify.version>
         <junit.version>6.0.1</junit.version>
@@ -134,6 +135,12 @@
                 <groupId>ch.qos.logback</groupId>
                 <artifactId>logback-core</artifactId>
                 <version>${logback.version}</version>
+            </dependency>
+
+            <dependency>
+                <groupId>de.siegmar</groupId>
+                <artifactId>fastcsv</artifactId>
+                <version>${fastcsv.version}</version>
             </dependency>
 
         </dependencies>

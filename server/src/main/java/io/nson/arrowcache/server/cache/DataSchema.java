@@ -82,7 +82,7 @@ public class DataSchema implements AutoCloseable, SchemaHierarchy {
         return childSchema;
     }
 
-    public DataSchema getSchema(String name) {
+    public DataSchema getDataSchema(String name) {
         return Optional.ofNullable(childSchema.get(name))
                 .orElseThrow(() -> new IllegalArgumentException("No such child schema: " + name));
     }
@@ -111,26 +111,6 @@ public class DataSchema implements AutoCloseable, SchemaHierarchy {
     public Optional<DataTable> getDataTable(String table) {
         return Optional.ofNullable(tableMap.get(table));
     }
-//
-//    public void mergeTableBatches() {
-//        tableMap.values().forEach(DataTable::mergeBatches);
-//    }
-//
-//    public void mergeTableBatches(Collection<String> tables) {
-//        synchronized(tableMap) {
-//            if (tableMap.keySet().containsAll(tables)) {
-//                tables.forEach(table -> tableMap.get(table).mergeBatches());
-//            } else {
-//                final Set<String> tables2 = new HashSet<>(tables);
-//                tables2.removeAll(tableMap.keySet());
-//                throw new IllegalArgumentException("The following tables are not found: " + tables2);
-//            }
-//        }
-//    }
-//
-//    public void mergeTableBatches(int batchSize) {
-//        tableMap.values().forEach(dt -> dt.mergeBatches(batchSize));
-//    }
 
     public void mergeTableBatches(Collection<String> tables, OptionalInt batchSizeOpt) {
         if (tables.isEmpty()) {

@@ -65,7 +65,7 @@ public final class ArrowCacheSchemaFactory implements SchemaFactory, Closeable {
             return rootArrowCacheSchema;
         } else {
             final DataSchema parentDataSchema = getSchema(parentSchema);
-            return new ArrowCacheSchema(allocator, parentDataSchema.getSchema(name));
+            return new ArrowCacheSchema(allocator, parentDataSchema.getDataSchema(name));
         }
     }
 
@@ -73,16 +73,12 @@ public final class ArrowCacheSchemaFactory implements SchemaFactory, Closeable {
         return rootArrowCacheSchema;
     }
 
-//    public ArrowCacheSchema create(String name) {
-//        return create(null, name, Collections.emptyMap());
-//    }
-
     private DataSchema getSchema(SchemaPlus schema) {
         if (schema.getParentSchema() == null) {
             return rootDataSchema;
         } else {
             final DataSchema parent = getSchema(schema.getParentSchema());
-            return parent.getSchema(schema.getName());
+            return parent.getDataSchema(schema.getName());
         }
     }
 }

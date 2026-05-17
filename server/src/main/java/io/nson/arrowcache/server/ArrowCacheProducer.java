@@ -39,6 +39,8 @@ import java.time.Instant;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
+import java.util.function.BiConsumer;
+import java.util.function.Consumer;
 import java.util.function.Function;
 
 import static java.util.stream.Collectors.toMap;
@@ -139,6 +141,13 @@ public class ArrowCacheProducer extends NoOpFlightProducer implements AutoClosea
                 );
     }
 
+    private DataTable getDataTable(List<String> path) {
+        final int n = path.size();
+        final List<String> schemaPath = path.subList(0, n - 1);
+        final String tableName =  path.get(n - 1);
+        return getDataTable(schemaPath, tableName);
+    }
+
     @Override
     public void listActions(CallContext context, StreamListener<ActionType> listener) {
         logger.info("listActions: {}", context.peerIdentity());
@@ -149,11 +158,17 @@ public class ArrowCacheProducer extends NoOpFlightProducer implements AutoClosea
     @Override
     public void listFlights(CallContext context, Criteria criteria, StreamListener<FlightInfo> listener) {
         try {
-            final GetSchemaRequest getSchemaReq = GetSchemaRequest.getDecoder().decode(criteria.getExpression());
-            Collection<List<String>> schemaPaths = getSchemaReq.getSchemaPaths();
-
-            if (schemaPaths.isEmpty()) {
+            Collection<List<String>> schemaPaths;
+            if (ArrowUtils.equals(criteria, Criteria.ALL)) {
                 schemaPaths = ArrowServerUtils.getSchemaPaths(rootSchema);
+            } else {
+                final GetSchemaRequest getSchemaReq = GetSchemaRequest.getDecoder().decode(criteria.getExpression());
+                schemaPaths = getSchemaReq.getSchemaPaths();
+
+
+                if (schemaPaths.isEmpty()) {
+                    schemaPaths = ArrowServerUtils.getSchemaPaths(rootSchema);
+                }
             }
 
             for (List<String> schemaPath : schemaPaths) {
@@ -192,6 +207,8 @@ public class ArrowCacheProducer extends NoOpFlightProducer implements AutoClosea
     @Override
     public FlightInfo getFlightInfo(CallContext context, FlightDescriptor descriptor) {
         try {
+            final RequestExecutor requestExecutor;
+
             if (descriptor.isCommand()) {
                 logger.info(
                         "getFlightInfo - context: {} descriptor: {}",
@@ -201,8 +218,6 @@ public class ArrowCacheProducer extends NoOpFlightProducer implements AutoClosea
 
                 final FlightInfoRequest flightInfoRequest = FlightInfoRequest.getDecoder().decode(descriptor.getCommand());
                 final Object request = flightInfoRequest.getRequest();
-
-                final RequestExecutor requestExecutor;
 
                 if (request instanceof GetRequest) {
                     final GetRequest getRequest = (GetRequest) request;
@@ -225,16 +240,15 @@ public class ArrowCacheProducer extends NoOpFlightProducer implements AutoClosea
                 } else {
                     throw new IllegalArgumentException("Unsupported request type: " + request.getClass());
                 }
-
-                pendingRequests.put(requestExecutor.uuid(), requestExecutor);
-                return requestExecutor.getFlightInfo(descriptor);
             } else {
-                throw ArrowServerUtils.exception(
-                        CallStatus.INVALID_ARGUMENT,
-                        logger,
-                        "Path-based FlightDescriptors are not supported"
-                ).toRuntimeException();
+                final List<String> flightPath = descriptor.getPath();
+                final DataTable dataTable = getDataTable(flightPath);
+                requestExecutor = RequestExecutor.getRequestExecutor(location, dataTable);
             }
+
+            pendingRequests.put(requestExecutor.uuid(), requestExecutor);
+
+            return requestExecutor.getFlightInfo(descriptor);
         } catch (FlightRuntimeException ex) {
             throw ex;
         } catch (Exception ex) {
@@ -246,6 +260,12 @@ public class ArrowCacheProducer extends NoOpFlightProducer implements AutoClosea
             .toRuntimeException();
         }
     }
+//
+//    private static void traverseSchema(DataSchema schema, Consumer<DataSchema> consumer) {
+//        consumer.accept(schema);
+//        schema.childSchema()
+//                .forEach((childName, childSchema) -> traverseSchema(childSchema, consumer));
+//    }
 
     @Override
     public void getStream(CallContext context, Ticket ticket, ServerStreamListener listener) {
@@ -309,9 +329,7 @@ public class ArrowCacheProducer extends NoOpFlightProducer implements AutoClosea
                         ).toRuntimeException();
                     }
 
-                    final List<String> schemaPath = flightPath.subList(0, flightDesc.getPath().size() - 1);
-                    final String tableName =  flightPath.get(flightDesc.getPath().size() - 1);
-                    final DataTable table = getDataTable(schemaPath, tableName);
+                    final DataTable table = getDataTable(flightPath);
 
                     long rows = 0;
                     while (flightStream.next()) {
@@ -320,7 +338,7 @@ public class ArrowCacheProducer extends NoOpFlightProducer implements AutoClosea
                         final VectorUnloader unloader = new VectorUnloader(flightStream.getRoot());
                         final ArrowRecordBatch arb = unloader.getRecordBatch();
 
-                        logger.debug("ArrowRecordBatch: {}", arb.toString());
+                        logger.debug("ArrowRecordBatch ({} records): {}", arb.getLength(), arb);
 
                         table.addBatch(arrowSchema, arb);
 
@@ -349,21 +367,24 @@ public class ArrowCacheProducer extends NoOpFlightProducer implements AutoClosea
         );
 
         try {
+            final byte[] body = action.getBody();
+
             if (action.getType().equals(ActionDescriptor.DELETE.name())) {
-                final DeleteRequest deleteRequest = DeleteRequest.getDecoder().decode(action.getBody());
+                final DeleteRequest deleteRequest = DeleteRequest.getDecoder().decode(body);
                 final DataTable table = getDataTable(deleteRequest.getSchemaPath(), deleteRequest.getTable());
 
-                table.deleteEntries(deleteRequest.getKeys());
-
-                listener.onCompleted();
+                if (deleteRequest.getKeys() == null) {
+                    table.clear();
+                } else {
+                    table.deleteEntries(deleteRequest.getKeys());
+                }
             } else if (action.getType().equals(ActionDescriptor.MERGE.name())) {
-                final MergeRequest mergeRequest = MergeRequest.getDecoder().decode(action.getBody());
+                final MergeRequest mergeRequest = MergeRequest.getDecoder().decode(body);
                 final DataSchema dataSchema = getDataSchema(mergeRequest.getSchemaPath());
                 final List<String> tables = mergeRequest.getTables();
                 final OptionalInt batchSizeOpt = CollectionUtils.ofNullable(mergeRequest.getBatchSize());
-                dataSchema.mergeTableBatches(tables, batchSizeOpt);
 
-                listener.onCompleted();
+                dataSchema.mergeTableBatches(tables, batchSizeOpt);
             } else {
                 listener.onError(
                         ArrowServerUtils.exception(
@@ -373,6 +394,8 @@ public class ArrowCacheProducer extends NoOpFlightProducer implements AutoClosea
                         ).toRuntimeException()
                 );
             }
+
+            listener.onCompleted();
         } catch (FlightRuntimeException ex) {
             throw ex;
         } catch (Exception ex) {

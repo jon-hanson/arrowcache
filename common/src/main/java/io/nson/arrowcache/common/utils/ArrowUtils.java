@@ -1,6 +1,7 @@
 package io.nson.arrowcache.common.utils;
 
 import org.apache.arrow.flight.Action;
+import org.apache.arrow.flight.Criteria;
 import org.apache.arrow.flight.FlightDescriptor;
 import org.apache.arrow.flight.FlightProducer;
 import org.apache.arrow.flight.Result;
@@ -11,6 +12,7 @@ import org.apache.arrow.vector.types.pojo.Schema;
 import org.apache.arrow.vector.util.Text;
 
 import java.nio.charset.StandardCharsets;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
@@ -87,6 +89,18 @@ public abstract class ArrowUtils {
             throw new RuntimeException("FlightDescriptor is not a path");
         } else {
             return flightDescriptor;
+        }
+    }
+
+    public static boolean equals(Criteria criteria1, Criteria criteria2) {
+        final byte[] expr1 = criteria1.getExpression();
+        final byte[] expr2 = criteria2.getExpression();
+        if (expr1 == null || expr1.length == 0) {
+            return expr2 == null || expr2.length == 0;
+        } else if (expr2 == null || expr2.length == 0) {
+            return false;
+        } else {
+            return Arrays.equals(expr1, expr2);
         }
     }
 }

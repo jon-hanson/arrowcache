@@ -47,7 +47,7 @@ public class ClientUtilsTest {
     @Test
     public void testSplice() {
         final ClientAPI.SchemaDescriptor actualDesc = ClientUtils.splice(SIMPLE_TABLE_PATHS);
-        System.out.println(actualDesc);
+        //System.out.println(actualDesc);
 
         assertEquals(SIMPLE_SCHEMA_DESC, actualDesc, "Spliced schema");
     }

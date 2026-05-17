@@ -32,40 +32,40 @@ public class TestClientAPI {
         try (
                 final RootAllocator allocator = new RootAllocator();
                 final ClientAPI clientAPI = ArrowFlightClientImpl.create(location);
-                final VectorSchemaRoot vsc = TestData.createTestDataVSC(allocator)
+                final VectorSchemaRoot vsc = VectorSchemaRoot.create(PersonData.SCHEMA, allocator);
         ) {
             logger.info("Fetching schema");
             final ClientAPI.SchemaDescriptor schemaDesc = clientAPI.getSchema();
             logger.info("Schema: {}", schemaDesc);
 
             logger.info("Loading testdata1.csv into server");
-            TestData.loadTestDataIntoVsc(vsc, "testdata1.csv");
+            PersonData.loadTestDataIntoVsc(vsc, "testdata1.csv");
             clientAPI.put(SCHEMA, TABLE1, vsc);
             vsc.clear();
 
             logger.info("Loading testdata2.csv into server");
-            TestData.loadTestDataIntoVsc(vsc, "testdata2.csv");
+            PersonData.loadTestDataIntoVsc(vsc, "testdata2.csv");
             clientAPI.put(SCHEMA, TABLE1, vsc);
             vsc.clear();
 
             logger.info("Loading testdata3.csv into server");
-            TestData.loadTestDataIntoVsc(vsc, "testdata3.csv");
+            PersonData.loadTestDataIntoVsc(vsc, "testdata3.csv");
             clientAPI.put(SCHEMA, TABLE2, vsc);
             vsc.clear();
 
             logger.info("Phase 1");
 
-            logger.info("Running query for table: {}.{} and keys: {}", SCHEMA, TABLE1, TestData.KEYS1);
-            clientAPI.get(SCHEMA, TABLE1, TestData.KEYS1, LISTENER);
+            logger.info("Running query for table: {}.{} and keys: {}", SCHEMA, TABLE1, PersonData.KEYS1);
+            clientAPI.get(SCHEMA, TABLE1, PersonData.KEYS1, LISTENER);
 
-            logger.info("Running query for table: {}.{} and keys: {}", SCHEMA, TABLE1, TestData.KEYS2);
-            clientAPI.get(SCHEMA, TABLE1, TestData.KEYS2, LISTENER);
+            logger.info("Running query for table: {}.{} and keys: {}", SCHEMA, TABLE1, PersonData.KEYS2);
+            clientAPI.get(SCHEMA, TABLE1, PersonData.KEYS2, LISTENER);
 
-            logger.info("Running query for table: {}.{} and keys: {}", SCHEMA, TABLE1, TestData.KEYS3);
-            clientAPI.get(SCHEMA, TABLE1, TestData.KEYS3, LISTENER);
+            logger.info("Running query for table: {}.{} and keys: {}", SCHEMA, TABLE1, PersonData.KEYS3);
+            clientAPI.get(SCHEMA, TABLE1, PersonData.KEYS3, LISTENER);
 
-            logger.info("Running query for table: {}.{} and keys: {}", SCHEMA, TABLE1, TestData.KEYS4);
-            clientAPI.get(SCHEMA, TABLE1, TestData.KEYS4, LISTENER);
+            logger.info("Running query for table: {}.{} and keys: {}", SCHEMA, TABLE1, PersonData.KEYS4);
+            clientAPI.get(SCHEMA, TABLE1, PersonData.KEYS4, LISTENER);
 
             logger.info("Phase 2");
 
@@ -73,37 +73,37 @@ public class TestClientAPI {
 
             clientAPI.mergeTableBatches(SCHEMA, Set.of(TABLE1), 3);
 
-            logger.info("Running query for table: {}.{} and keys: {}", SCHEMA, TABLE1, TestData.KEYS1);
-            clientAPI.get(SCHEMA, TABLE1, TestData.KEYS1, LISTENER);
+            logger.info("Running query for table: {}.{} and keys: {}", SCHEMA, TABLE1, PersonData.KEYS1);
+            clientAPI.get(SCHEMA, TABLE1, PersonData.KEYS1, LISTENER);
 
-            logger.info("Running query for table: {}.{} and keys: {}", SCHEMA, TABLE1, TestData.KEYS2);
-            clientAPI.get(SCHEMA, TABLE1, TestData.KEYS2, LISTENER);
+            logger.info("Running query for table: {}.{} and keys: {}", SCHEMA, TABLE1, PersonData.KEYS2);
+            clientAPI.get(SCHEMA, TABLE1, PersonData.KEYS2, LISTENER);
 
-            logger.info("Running query for table: {}.{} and keys: {}", SCHEMA, TABLE1, TestData.KEYS3);
-            clientAPI.get(SCHEMA, TABLE1, TestData.KEYS3, LISTENER);
+            logger.info("Running query for table: {}.{} and keys: {}", SCHEMA, TABLE1, PersonData.KEYS3);
+            clientAPI.get(SCHEMA, TABLE1, PersonData.KEYS3, LISTENER);
 
-            logger.info("Running query for table: {}.{} and keys: {}", SCHEMA, TABLE1, TestData.KEYS4);
-            clientAPI.get(SCHEMA, TABLE1, TestData.KEYS4, LISTENER);
+            logger.info("Running query for table: {}.{} and keys: {}", SCHEMA, TABLE1, PersonData.KEYS4);
+            clientAPI.get(SCHEMA, TABLE1, PersonData.KEYS4, LISTENER);
 
             logger.info("Phase 3");
 
-            logger.info("Running query for table: {}.{} and keys: {}", SCHEMA, TABLE2, TestData.KEYS1);
-            clientAPI.get(SCHEMA, TABLE2, TestData.KEYS1, LISTENER);
+            logger.info("Running query for table: {}.{} and keys: {}", SCHEMA, TABLE2, PersonData.KEYS1);
+            clientAPI.get(SCHEMA, TABLE2, PersonData.KEYS1, LISTENER);
 
-            logger.info("Running query for table: {}.{} and keys: {}", SCHEMA, TABLE2, TestData.KEYS2);
-            clientAPI.get(SCHEMA, TABLE2, TestData.KEYS2, LISTENER);
+            logger.info("Running query for table: {}.{} and keys: {}", SCHEMA, TABLE2, PersonData.KEYS2);
+            clientAPI.get(SCHEMA, TABLE2, PersonData.KEYS2, LISTENER);
 
-            logger.info("Running query for table: {}.{} and keys: {}", SCHEMA, TABLE2, TestData.KEYS3);
-            clientAPI.get(SCHEMA, TABLE2, TestData.KEYS3, LISTENER);
+            logger.info("Running query for table: {}.{} and keys: {}", SCHEMA, TABLE2, PersonData.KEYS3);
+            clientAPI.get(SCHEMA, TABLE2, PersonData.KEYS3, LISTENER);
 
-            logger.info("Running query for table: {}.{} and keys: {}", SCHEMA, TABLE2, TestData.KEYS4);
-            clientAPI.get(SCHEMA, TABLE2, TestData.KEYS4, LISTENER);
+            logger.info("Running query for table: {}.{} and keys: {}", SCHEMA, TABLE2, PersonData.KEYS4);
+            clientAPI.get(SCHEMA, TABLE2, PersonData.KEYS4, LISTENER);
 
-            logger.info("Deleting entries for table: {}.{} and keys: {}", SCHEMA, TABLE2, TestData.KEYS4);
-            clientAPI.remove(SCHEMA, TABLE2, TestData.KEYS4);
+            logger.info("Deleting entries for table: {}.{} and keys: {}", SCHEMA, TABLE2, PersonData.KEYS4);
+            clientAPI.remove(SCHEMA, TABLE2, PersonData.KEYS4);
 
-            logger.info("Running query for table: {}.{} and keys: {}", SCHEMA, TABLE2, TestData.KEYS4);
-            clientAPI.get(SCHEMA, TABLE2, TestData.KEYS4, LISTENER);
+            logger.info("Running query for table: {}.{} and keys: {}", SCHEMA, TABLE2, PersonData.KEYS4);
+            clientAPI.get(SCHEMA, TABLE2, PersonData.KEYS4, LISTENER);
 
             logger.info("Done");
         } catch (Exception ex) {

@@ -14,7 +14,6 @@ import org.apache.arrow.vector.VectorUnloader;
 import org.apache.arrow.vector.ipc.message.ArrowRecordBatch;
 import org.apache.arrow.vector.types.pojo.Schema;
 import org.apache.arrow.vector.util.VectorSchemaRootAppender;
-import org.jspecify.annotations.NullMarked;
 import org.jspecify.annotations.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -129,22 +128,6 @@ public class DataTable implements AutoCloseable {
                 }
             }
         }
-//
-//        public void writeActiveRecords(
-//                VectorSchemaRoot tempVsc,
-//                VectorSchemaRoot targetVsc,
-//                int batchSize
-//        ) {
-//            Objects.requireNonNull(arrowSchema);
-//
-//            if (tempVsc.getRowCount() > 0) {
-//                tempVsc.allocateNew();
-//            }
-//
-//            final VectorLoader loader = new VectorLoader(tempVsc);
-//            loader.load(arrowRecordBatch);
-//            VectorSchemaRootAppender.append(false, targetVsc, tempVsc);
-//        }
 
         List<VectorSchemaRoot> splitIntoSlices(int sliceSize, VectorSchemaRoot tempVsc) {
             Objects.requireNonNull(arrowSchema);
@@ -277,6 +260,26 @@ public class DataTable implements AutoCloseable {
         }
     }
 
+    public void get(FlightProducer.ServerStreamListener listener) {
+        synchronized (rwLock.readLock()) {
+            if (arrowSchema == null) {
+                try (VectorSchemaRoot vsc = VectorSchemaRoot.create(ArrowServerUtils.EMPTY_SCHEMA, allocator)) {
+                    listener.start(vsc);
+                    listener.completed();
+                }
+            } else {
+                final Map<Integer, SortedSet<Integer>> matches =
+                        rowCoordinateMap.values().stream()
+                                .collect(Collectors.groupingBy(
+                                        RowCoordinate::getBatchIndex,
+                                        mapping(RowCoordinate::getRowIndex, toCollection(TreeSet::new))
+                                ));
+
+                getImpl(matches, listener);
+            }
+        }
+    }
+
     protected void getImpl(
             Map<Integer, SortedSet<Integer>> batchMatches,
             FlightProducer.ServerStreamListener listener
@@ -337,6 +340,14 @@ public class DataTable implements AutoCloseable {
                     batches.get(rowCoord.batchIndex).markAsDeleted(rowCoord.rowIndex);
                 }
             });
+        }
+    }
+
+    public void clear() {
+        synchronized (rwLock.writeLock()) {
+            batches.forEach(Batch::close);
+            batches.clear();
+            rowCoordinateMap.clear();
         }
     }
 

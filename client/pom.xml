@@ -60,6 +60,12 @@
             <artifactId>junit-jupiter-api</artifactId>
         </dependency>
 
+        <dependency>
+            <groupId>de.siegmar</groupId>
+            <artifactId>fastcsv</artifactId>
+            <scope>test</scope>
+        </dependency>
+
     </dependencies>
 
 </project>

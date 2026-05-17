@@ -10,6 +10,7 @@ import org.apache.arrow.flight.FlightProducer;
 import org.apache.arrow.flight.Location;
 import org.apache.arrow.flight.Ticket;
 import org.jspecify.annotations.NullMarked;
+import org.jspecify.annotations.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -30,6 +31,13 @@ public abstract class RequestExecutor implements Closeable {
             Collection<Object> keys
     ) {
         return new GetRequestExecutor(location, dataTable, new TreeSet<>(keys));
+    }
+
+    public static GetRequestExecutor getRequestExecutor(
+            Location location,
+            DataTable dataTable
+    ) {
+        return new GetRequestExecutor(location, dataTable);
     }
 
     public static QueryRequestExecutor queryRequestExecutor(String sql) {
@@ -71,7 +79,7 @@ public abstract class RequestExecutor implements Closeable {
     public static class GetRequestExecutor extends RequestExecutor {
         private final Location location;
         private final DataTable dataTable;
-        private final Set<Object> keys;
+        private final @Nullable Set<Object> keys;
         private final int expectedRecordCount;
 
         public GetRequestExecutor(Location location, DataTable dataTable, Set<Object> keys) {
@@ -79,6 +87,13 @@ public abstract class RequestExecutor implements Closeable {
             this.dataTable = dataTable;
             this.keys = keys;
             this.expectedRecordCount = CollectionUtils.intersect(keys, dataTable.keys()).size();
+        }
+
+        public GetRequestExecutor(Location location, DataTable dataTable) {
+            this.location = location;
+            this.dataTable = dataTable;
+            this.keys = null;
+            this.expectedRecordCount = dataTable.keys().size();
         }
 
         @Override
@@ -97,7 +112,11 @@ public abstract class RequestExecutor implements Closeable {
 
         @Override
         public void execute(FlightProducer.ServerStreamListener listener) {
-            dataTable.get(keys, listener);
+            if (keys == null) {
+                dataTable.get(listener);
+            } else {
+                dataTable.get(keys, listener);
+            }
         }
     }
 

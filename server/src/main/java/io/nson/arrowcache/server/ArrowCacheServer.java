@@ -73,13 +73,13 @@ public class ArrowCacheServer implements AutoCloseable {
         logger.info("Starting");
 
         final RootSchemaConfig schemaConfig =
-                FileUtils.loadFromResource(
+                FileUtils.loadFile(
                         "config/simple/schemaconfig.json",
                         RootSchemaConfig.CODEC
                 );
 
         final ServerConfig serverConfig =
-                FileUtils.loadFromResource(
+                FileUtils.loadFile(
                         "config/simple/serverconfig.json",
                         ServerConfig.CODEC
                 );

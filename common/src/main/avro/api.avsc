@@ -115,10 +115,13 @@
                 "type": "string"
             },{
                 "name": "keys",
-                "type": {
-                    "type": "array",
-                    "items": ["int", "long", "string", "AvroDate"]
-                }
+                "type": [
+                    "null",
+                    {
+                        "type": "array",
+                        "items": ["int", "long", "string", "AvroDate"]
+                    }
+                ], "default": null
             }
         ]
     },{
