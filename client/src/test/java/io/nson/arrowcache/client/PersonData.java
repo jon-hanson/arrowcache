@@ -7,14 +7,7 @@ import org.apache.arrow.vector.Float4Vector;
 import org.apache.arrow.vector.IntVector;
 import org.apache.arrow.vector.VarCharVector;
 import org.apache.arrow.vector.VectorSchemaRoot;
-import org.apache.arrow.vector.types.DateUnit;
-import org.apache.arrow.vector.types.FloatingPointPrecision;
-import org.apache.arrow.vector.types.pojo.ArrowType;
-import org.apache.arrow.vector.types.pojo.Field;
-import org.apache.arrow.vector.types.pojo.FieldType;
 import org.apache.arrow.vector.types.pojo.Schema;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
@@ -25,34 +18,26 @@ import java.util.Set;
 
 public class PersonData {
 
+    private static final TypeMeta.TypedField<Long, IntVector> ID = TypeMeta.LONG.bind("id");
+    private static final TypeMeta.TypedField<String, VarCharVector> NAME = TypeMeta.STRING.bind("name");
+    private static final TypeMeta.TypedField<Float, Float4Vector> AGE = TypeMeta.FLOAT.bind("age");
+    private static final TypeMeta.TypedField<LocalDate, DateDayVector> DATE = TypeMeta.LOCALDATE.bind("date");
+
     public static final Schema SCHEMA =  new Schema(
             List.of(
-                    new Field(
-                            "id",
-                            FieldType.notNullable(new ArrowType.Int(32, true)),
-                            null
-                    ), new Field(
-                            "name",
-                            FieldType.nullable(new ArrowType.Utf8()),
-                            null
-                    ), new Field(
-                            "age",
-                            FieldType.nullable(new ArrowType.FloatingPoint(FloatingPointPrecision.SINGLE)),
-                            null
-                    ), new Field(
-                            "date",
-                            FieldType.nullable(new ArrowType.Date(DateUnit.DAY)),
-                            null
-                    )
+                    ID.notNullableField(),
+                    NAME.nullableField(),
+                    AGE.nullableField(),
+                    DATE.nullableField()
             )
     );
 
     public static void loadTestDataIntoVsc(VectorSchemaRoot vsc, String fileName) throws IOException {
 
-        final IntVector idVector = (IntVector) vsc.getVector("id");
-        final VarCharVector nameVector = (VarCharVector) vsc.getVector("name");
-        final Float4Vector ageVector = (Float4Vector) vsc.getVector("age");
-        final DateDayVector dateVector = (DateDayVector) vsc.getVector("date");
+        final IntVector idVector = ID.getVector(vsc);
+        final VarCharVector nameVector = NAME.getVector(vsc);
+        final Float4Vector ageVector = AGE.getVector(vsc);
+        final DateDayVector dateVector = DATE.getVector(vsc);
 
         final List<String> lines = FileUtils.openResourceAsLineList(fileName);
         final int rowCount = lines.size();

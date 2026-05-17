@@ -17,15 +17,17 @@ public interface ActionDescriptor<T extends SpecificRecord> {
             DeleteRequest.getEncoder(),
             DeleteRequest.getDecoder(),
             "DELETE",
-            "Delete table entries");
+            "Delete table entries"
+    );
 
     ActionDescriptor<MergeRequest> MERGE = new Impl<>(
             MergeRequest.getEncoder(),
             MergeRequest.getDecoder(),
             "MERGE",
-            "Merge each table");
+            "Merge each table"
+    );
 
-    static void forEach(Consumer<ActionDescriptor> cons) {
+    static void forEach(Consumer<ActionDescriptor<?>> cons) {
         Stream.of(DELETE, MERGE).forEach(cons);
     }
 

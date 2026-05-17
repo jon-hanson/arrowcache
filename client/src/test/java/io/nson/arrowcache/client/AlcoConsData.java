@@ -8,10 +8,6 @@ import org.apache.arrow.vector.IntVector;
 import org.apache.arrow.vector.UInt2Vector;
 import org.apache.arrow.vector.VarCharVector;
 import org.apache.arrow.vector.VectorSchemaRoot;
-import org.apache.arrow.vector.types.FloatingPointPrecision;
-import org.apache.arrow.vector.types.pojo.ArrowType;
-import org.apache.arrow.vector.types.pojo.Field;
-import org.apache.arrow.vector.types.pojo.FieldType;
 import org.apache.arrow.vector.types.pojo.Schema;
 
 import java.io.IOException;
@@ -25,49 +21,35 @@ import java.util.function.Function;
 import static java.util.stream.Collectors.toList;
 
 public class AlcoConsData {
+    private static final TypeMeta.TypedField<Long, IntVector> ID = TypeMeta.LONG.bind("id");
+    private static final TypeMeta.TypedField<String, VarCharVector> ENTITY = TypeMeta.STRING.bind("entity");
+    private static final TypeMeta.TypedField<String, VarCharVector> CODE = TypeMeta.STRING.bind("code");
+    private static final TypeMeta.TypedField<Integer, IntVector> YEAR = TypeMeta.INTEGER.bind("year");
+    private static final TypeMeta.TypedField<Float, Float4Vector> CONSUMPTION = TypeMeta.FLOAT.bind("consumption");
+    private static final TypeMeta.TypedField<Float, Float4Vector> GDP = TypeMeta.FLOAT.bind("gdp");
+    private static final TypeMeta.TypedField<String, VarCharVector> REGION = TypeMeta.STRING.bind("region");
+
     public static final Schema SCHEMA = new Schema(
             Arrays.asList(
-                    new Field(
-                            "id",
-                            FieldType.notNullable(new ArrowType.Int(32, true)),
-                            null
-                    ), new Field(
-                            "entity",
-                            FieldType.notNullable(new ArrowType.Utf8()),
-                            null
-                    ), new Field(
-                            "code",
-                            FieldType.notNullable(new ArrowType.Utf8()),
-                            null
-                    ), new Field(
-                            "year",
-                            FieldType.notNullable(new ArrowType.Int(16, false)),
-                            null
-                    ), new Field(
-                            "consumption",
-                            FieldType.nullable(new ArrowType.FloatingPoint(FloatingPointPrecision.SINGLE)),
-                            null
-                    ), new Field(
-                            "gdp",
-                            FieldType.nullable(new ArrowType.FloatingPoint(FloatingPointPrecision.SINGLE)),
-                            null
-                    ), new Field(
-                            "region",
-                            FieldType.nullable(new ArrowType.Utf8()),
-                            null
-                    )
+                    ID.notNullableField(),
+                    ENTITY.notNullableField(),
+                    CODE.notNullableField(),
+                    YEAR.notNullableField(),
+                    CONSUMPTION.nullableField(),
+                    GDP.nullableField(),
+                    REGION.nullableField()
             )
     );
 
     public static void loadTestDataIntoVsc(VectorSchemaRoot vsc, String name) throws IOException {
 
-        final IntVector idVector = (IntVector) vsc.getVector("id");
-        final VarCharVector entityVector = (VarCharVector) vsc.getVector("entity");
-        final VarCharVector codeVector = (VarCharVector) vsc.getVector("code");
-        final UInt2Vector yearVector = (UInt2Vector) vsc.getVector("year");
-        final Float4Vector consumptionVector = (Float4Vector) vsc.getVector("consumption");
-        final Float4Vector gdpVector = (Float4Vector) vsc.getVector("gdp");
-        final VarCharVector regionVector = (VarCharVector) vsc.getVector("region");
+        final IntVector idVector = ID.getVector(vsc);
+        final VarCharVector entityVector = ENTITY.getVector(vsc);
+        final VarCharVector codeVector = CODE.getVector(vsc);
+        final IntVector yearVector = YEAR.getVector(vsc);
+        final Float4Vector consumptionVector = CONSUMPTION.getVector(vsc);
+        final Float4Vector gdpVector = GDP.getVector(vsc);
+        final VarCharVector regionVector = REGION.getVector(vsc);
 
         final List<CsvRecord> csvRecs;
 

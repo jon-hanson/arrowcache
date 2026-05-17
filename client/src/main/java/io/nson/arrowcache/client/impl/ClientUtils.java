@@ -2,8 +2,10 @@ package io.nson.arrowcache.client.impl;
 
 import io.nson.arrowcache.client.ClientAPI;
 import io.nson.arrowcache.client.impl.ArrowFlightClientImpl.SchemaDescriptorImpl;
+import org.jspecify.annotations.NonNull;
 
 import java.util.List;
+import java.util.Objects;
 
 public abstract class ClientUtils {
     private ClientUtils() {}
@@ -27,7 +29,7 @@ public abstract class ClientUtils {
                 }
             }
 
-            return rootScemaDesc;
+            return Objects.requireNonNull(rootScemaDesc);
         }
     }
 
